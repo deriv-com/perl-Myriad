@@ -23,8 +23,9 @@ Myriad - microservice coördination
 use Myriad::Transport::Redis;
 use Myriad::Transport::HTTP;
 
+use Scalar::Util qw(blessed weaken);
 use Log::Any qw($log);
-use Log::Any::Adapter;
+use Log::Any::Adapter qw(Stderr), log_level => 'trace';
 
 =head2 loop
 
@@ -56,7 +57,7 @@ The L<Net::Async::Redis> (or compatible) instance used for service coördination
 sub redis {
     my ($self, %args) = @_;
     $self->{redis} //= do {
-        $loop->add(
+        $self->loop->add(
             my $redis = Myriad::Transport::Redis->new
         );
         $redis
@@ -73,15 +74,22 @@ Returns the service instance.
 
 sub add_service {
     my ($self, $srv, %args) = @_;
-    my $name = $args{name} || $srv->service_name;
     $srv = $srv->new(
         redis => $self->redis
     ) unless blessed($srv) and $srv->isa('Myriad::Service');
-    $loop->add(
+    my $name = $args{name} || $srv->service_name;
+    $log->infof('Add service [%s]', $name);
+    $self->loop->add(
         $srv
     );
     my $k = Scalar::Util::refaddr($srv);
-    $services{$k} = $srv;
+    Scalar::Util::weaken($self->{services_by_name}{$name} = $srv);
+    $self->{services}{$k} = $srv;
+}
+    
+sub service_by_name {
+    my ($self, $k) = @_;
+    $self->{services_by_name}{$k} // die 'service ' . $k . ' not found';
 }
 
 =head2 run
@@ -92,7 +100,15 @@ Starts the main loop.
 
 sub run {
     my ($self) = @_;
-    $self->loop->get;
+    $self->loop->attach_signal(TERM => sub {
+        $log->infof('TERM received, exit');
+        $self->loop->stop;
+    });
+    $self->loop->attach_signal(QUIT => sub {
+        $log->infof('QUIT received, exit');
+        $self->loop->stop;
+    });
+    $self->loop->run;
 }
 
 1;

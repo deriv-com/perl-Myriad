@@ -27,6 +27,8 @@ use Syntax::Keyword::Try;
 
 use Myriad::Redis::Pending;
 
+use Net::Async::Redis;
+
 use Log::Any qw($log);
 use List::Util qw(pairmap);
 
@@ -121,7 +123,8 @@ method next_id($id) {
 
 method _add_to_loop {
     $self->add_child(
-        $redis = Net::Async::Redis->new
+        $redis = Net::Async::Redis->new(
+        )
     );
 }
 

@@ -6,7 +6,14 @@ use warnings;
 no indirect;
 use Object::Pad;
 
-class Myriad::Notifier;
+{
+    package Myriad::Notifier::Empty;
+    sub new {
+        my ($class, %args) = @_;
+        bless \%args, $class
+    }
+}
+class Myriad::Notifier extends Myriad::Notifier::Empty;
 
 use parent qw(IO::Async::Notifier);
 

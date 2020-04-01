@@ -88,8 +88,10 @@ sub import {
 	strict->import;
 	warnings->import;
 	utf8->import;
-	feature->import(':5.26');
+	feature->import(':5.28');
 	indirect->unimport(qw(fatal));
+    # This one's needed for nested scope, e.g. { package XX; use microservice; method xxx (%args) ... }
+    experimental->import('signatures');
     mro::set_mro($pkg => 'c3');
 
     # Some well-designed modules provide direct support for import target
