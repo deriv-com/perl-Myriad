@@ -3,7 +3,6 @@ jobs:
   build:
     docker:
       - image: regentmarkets/async-perl
-        user: nobody
         auth:
           username: circle4regentmarkets
           password: $DOCKERHUB_PASSWORD
