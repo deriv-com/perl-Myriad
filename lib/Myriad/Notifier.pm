@@ -4,18 +4,9 @@ use strict;
 use warnings;
 
 no indirect;
-use Object::Pad;
+use Object::Pad 0.19;
 
-{
-    package Myriad::Notifier::Empty;
-    sub new {
-        my ($class, %args) = @_;
-        bless \%args, $class
-    }
-}
-class Myriad::Notifier extends Myriad::Notifier::Empty;
-
-use parent qw(IO::Async::Notifier);
+class Myriad::Notifier extends IO::Async::Notifier;
 
 =head1 NAME
 
@@ -24,19 +15,11 @@ Myriad::Notifier
 =head1 DESCRIPTION
 
 Provides a shim for L<Object::Pad> classes which want to inherit
-from L<IO::Async::Notifier>, due to RTx this fails due to the
-existing L<IO::Async::Notifier/new> method trying to call subclass
-methods before the instance pads have been set up.
+from L<IO::Async::Notifier>.
 
 =cut
 
 has $ryu;
-
-method BUILD (%args) {
-    $self->_init(\%args);
-    $self->configure(%args);
-    $self
-}
 
 =head2 ryu
 
