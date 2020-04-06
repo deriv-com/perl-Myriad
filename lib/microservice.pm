@@ -40,7 +40,7 @@ microservice
 
 =head1 DESCRIPTION
 
-Since this is suppoed to be a common standard across all our code, we get to enforce a few
+Since this is supposed to be a common standard across all our code, we get to enforce a few
 language features:
 
 =over 4
@@ -88,7 +88,7 @@ sub import {
 	strict->import;
 	warnings->import;
 	utf8->import;
-	feature->import(':5.28');
+	feature->import(':5.26');
 	indirect->unimport(qw(fatal));
     # This one's needed for nested scope, e.g. { package XX; use microservice; method xxx (%args) ... }
     experimental->import('signatures');
