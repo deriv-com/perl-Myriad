@@ -138,7 +138,7 @@ triggered by a fault or a Unix signal.
 
 sub shutdown_future {
 	my ($self) = @_;
-    
+
 	return $self->{shutdown_without_cancel} //= (
         $self->{shutdown} //= $self->loop->new_future->set_label('shutdown')
     )->without_cancel;

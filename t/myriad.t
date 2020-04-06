@@ -17,4 +17,3 @@ is($f->state, 'done', 'shutdown future marked as done');
 
 done_testing;
 
-
