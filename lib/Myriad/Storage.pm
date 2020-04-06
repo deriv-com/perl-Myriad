@@ -1,9 +1,12 @@
 use strict;
 use warnings;
 
+use Future::AsyncAwait;
 use Object::Pad;
 
 class Myriad::Storage;
+
+use experimental qw(signatures);
 
 =encoding utf8
 
@@ -199,8 +202,7 @@ Returns a L<Future> which will resolve to the scalar value for this key.
 =cut
 
 async method hash_get ($k, $hash_key) {
-    die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
-    await $redis_action->hset($k, $hash_key, $v);
+    await $redis_action->hget($k, $hash_key);
 }
 
 =head2 hash_add
