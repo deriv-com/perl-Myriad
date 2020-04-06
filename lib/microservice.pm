@@ -69,6 +69,7 @@ use Future::AsyncAwait;
 use Syntax::Keyword::Try;
 use Syntax::Keyword::Dynamically;
 use Object::Pad;
+use Scalar::Util;
 
 use Heap;
 use IO::Async::Notifier;
@@ -93,6 +94,9 @@ sub import {
     # This one's needed for nested scope, e.g. { package XX; use microservice; method xxx (%args) ... }
     experimental->import('signatures');
     mro::set_mro($pkg => 'c3');
+
+    # Helper functions which are used often enough to be valuable as a default
+    Scalar::Util->export_to_level(1, $pkg, qw(refaddr blessed weaken));
 
     # Some well-designed modules provide direct support for import target
     Syntax::Keyword::Try->import_into($pkg);
