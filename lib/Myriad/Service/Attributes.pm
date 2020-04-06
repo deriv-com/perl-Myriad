@@ -6,14 +6,14 @@ use warnings;
 use Attribute::Handlers;
 
 use Log::Any qw($log);
- 
+
 =head1 Attributes
 
 Each of these is an attribute that can be applied to a method.
 
 =head2 RPC
 
-Mark this method as 
+Mark this method as a callable RPC method.
 
 =cut
 

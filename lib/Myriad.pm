@@ -109,7 +109,7 @@ sub add_service {
     Scalar::Util::weaken($self->{services_by_name}{$name} = $srv);
     $self->{services}{$k} = $srv;
 }
-    
+
 sub service_by_name {
     my ($self, $k) = @_;
     $self->{services_by_name}{$k} // die 'service ' . $k . ' not found';
