@@ -50,13 +50,14 @@ Populate internal configuration.
 
 =cut
 
-method configure(%args) {
+method configure (%args) {
     $redis = delete $args{redis} if exists $args{redis};
     $service_name = delete $args{name} if exists $args{name};
     $self->next::method(%args);
 }
 
 method redis { $redis }
+
 method service_name { $service_name //= lc(ref($self) =~ s{::}{_}gr) }
 
 1;
