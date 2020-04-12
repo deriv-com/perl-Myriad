@@ -10,6 +10,7 @@ requires 'Ryu::Async', '>= 0.016';
 # IO::Async
 requires 'Heap';
 requires 'IO::Async::Notifier', '>= 0.75';
+requires 'IO::Async::Test', '>= 0.75';
 requires 'IO::Async::SSL', '>= 0.22';
 # Functionality
 requires 'Log::Any', '>= 1.708';
