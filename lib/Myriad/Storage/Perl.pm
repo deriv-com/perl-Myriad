@@ -21,6 +21,8 @@ Myriad::Storage::Perl - microservice storage abstraction
 use Attribute::Handlers;
 use Class::Method::Modifiers;
 
+use Log::Any qw($log);
+
 sub Defer : ATTR(CODE) {
     my ($package, $symbol, $referent, $attr, $data, $phase, $filename, $linenum) = @_;
     my $name = *{$symbol}{NAME} or die 'need a symbol name';
@@ -38,6 +40,9 @@ sub Defer : ATTR(CODE) {
         );
     }
 }
+
+# Common datastore
+my %data;
 
 =head2 get
 
@@ -109,9 +114,10 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-async method push : method ($k, @v) {
+async method push : Defer ($k, @v) {
     die 'value cannot be a reference for ' . $k . ' - ' . ref($_) for grep { ref } @v;
-    await $redis_action->rpush($k, @v);
+    push $data{$k}->@*, @v;
+    return 0+$data{$k}->@*;
 }
 
 =head2 unshift
@@ -128,9 +134,10 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-async method unshift : method ($k, @v) {
+async method unshift : Defer ($k, @v) {
     die 'value cannot be a reference for ' . $k . ' - ' . ref($_) for grep { ref } @v;
-    await $redis_action->lpush($k, @v);
+    unshift $data{$k}->@*, @v;
+    return 0+$data{$k}->@*;
 }
 
 =head2 pop
@@ -147,8 +154,8 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-async method pop : method ($k) {
-    await $redis_action->rpop($k);
+async method pop : Defer ($k) {
+    return pop $data{$k}->@*;
 }
 
 =head2 shift
@@ -165,8 +172,8 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-async method shift : method ($k) {
-    await $redis_action->lpop($k);
+async method shift : Defer ($k) {
+    return shift $data{$k}->@*;
 }
 
 =head2 hash_set
@@ -183,9 +190,13 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-async method hash_set ($k, $hash_key, $v) {
-    die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
-    await $redis_action->hset($k, $hash_key, $v);
+async method hash_set : Defer ($k, %args) {
+    for my $hash_key (sort keys %args) {
+        my $v = $args{$hash_key};
+        die 'value cannot be a reference for ' . $k . ' hash key ' . $hash_key . ' - ' . ref($v) if ref $v;
+    }
+    @{$data{$k}}{keys %args} = values %args;
+    return 0 + keys %args;
 }
 
 =head2 hash_get
@@ -202,8 +213,8 @@ Returns a L<Future> which will resolve to the scalar value for this key.
 
 =cut
 
-async method hash_get ($k, $hash_key) {
-    await $redis_action->hget($k, $hash_key);
+async method hash_get : Defer ($k, $hash_key) {
+    return $data{$k}{$hash_key};
 }
 
 =head2 hash_add
@@ -220,9 +231,10 @@ Returns a L<Future> indicating success or failure.
 
 =cut
 
-async method hash_add ($k, $hash_key, $v) {
+async method hash_add : Defer ($k, $hash_key, $v) {
     $v //= 1;
     die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
+    return $data{$k}{$hash_key} += $v;
 }
 
 =head2 hash_keys
@@ -239,7 +251,8 @@ Returns a L<Future> which will resolve to a list of the keys in no defined order
 
 =cut
 
-async method hash_keys ($k) {
+async method hash_keys : Defer ($k) {
+    return keys $data{$k}->%*;
 }
 
 =head2 hash_values
@@ -256,7 +269,8 @@ Returns a L<Future> which will resolve to a list of the values in no defined ord
 
 =cut
 
-async method hash_values ($k) {
+async method hash_values : Defer ($k) {
+    return values $data{$k}->%*;
 }
 
 =head2 hash_exists
@@ -273,7 +287,8 @@ Returns a L<Future> which will resolve to true if the key exists in this hash.
 
 =cut
 
-async method hash_exists ($k, $hash_key) {
+async method hash_exists : Defer ($k, $hash_key) {
+    return exists $data{$k}{$hash_key};
 }
 
 =head2 hash_count
@@ -290,7 +305,8 @@ Returns a L<Future> which will resolve to the count of the keys in this hash.
 
 =cut
 
-async method hash_count ($k) {
+async method hash_count : Defer ($k) {
+    return 0 + keys $data{$k}->%*;
 }
 
 =head2 hash_as_list
@@ -308,7 +324,8 @@ suitable for assigning to a hash.
 
 =cut
 
-async method hash_as_list ($k) {
+async method hash_as_list : Defer ($k) {
+    return $data{$k}->%*;
 }
 
 1;
