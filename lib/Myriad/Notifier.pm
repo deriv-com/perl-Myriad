@@ -29,11 +29,11 @@ Provides a common L<Ryu::Async> instance.
 
 method ryu { $ryu }
 
-method _add_to_loop {
+method _add_to_loop ($loop) {
     $self->add_child(
         $ryu = Ryu::Async->new
     );
-    $self->next::method;
+    $self->next::method($loop);
 }
 
 1;
