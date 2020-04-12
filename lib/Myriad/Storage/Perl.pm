@@ -20,6 +20,13 @@ Myriad::Storage::Perl - microservice storage abstraction
 
 =head1 SYNOPSIS
 
+=head1 DESCRIPTION
+
+This is intended for use in tests and standalone local services.
+There is no persistence, and no shared data across multiple
+processes, but the full L<Myriad::Storage> API should be exposed
+correctly.
+
 =cut
 
 use Role::Tiny::With;
@@ -31,6 +38,10 @@ use Log::Any qw($log);
 
 with 'Myriad::Storage';
 
+use constant RANDOM_DELAY => $ENV{MYRIAD_RANDOM_DELAY} || 0;
+
+# Helper method that allows us to return a not-quite-immediate
+# Future from some inherently non-async code.
 sub Defer : ATTR(CODE) {
     my ($package, $symbol, $referent, $attr, $data, $phase, $filename, $linenum) = @_;
     my $name = *{$symbol}{NAME} or die 'need a symbol name';
@@ -38,8 +49,12 @@ sub Defer : ATTR(CODE) {
     around join('::', $package, $name) => async sub {
         my ($code, $self, @args) = @_;
 
-        # effectively $loop->later
-        await $self->loop->delay_future(after => 0);
+        # effectively $loop->later, but in an await-compatible way:
+        # either zero (default behaviour) or if we have a random
+        # delay assigned, use that to drive a uniform rand() call
+        await $self->loop->delay_future(
+            after => RANDOM_DELAY && rand(RANDOM_DELAY)
+        );
 
         $log->tracef('deferred call to %s::%s', $package, $name);
 
