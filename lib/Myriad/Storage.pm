@@ -108,7 +108,7 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-async method push : method ($k, @v) {
+async method push ($k, @v) {
     die 'value cannot be a reference for ' . $k . ' - ' . ref($_) for grep { ref } @v;
     await $redis_action->rpush($k, @v);
 }
@@ -127,7 +127,7 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-async method unshift : method ($k, @v) {
+async method unshift ($k, @v) {
     die 'value cannot be a reference for ' . $k . ' - ' . ref($_) for grep { ref } @v;
     await $redis_action->lpush($k, @v);
 }
@@ -146,7 +146,7 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-async method pop : method ($k) {
+async method pop ($k) {
     await $redis_action->rpop($k);
 }
 
@@ -164,7 +164,7 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-async method shift : method ($k) {
+async method shift ($k) {
     await $redis_action->lpop($k);
 }
 
