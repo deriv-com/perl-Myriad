@@ -3,23 +3,27 @@ package Myriad::Service::Attributes;
 use strict;
 use warnings;
 
-use Attribute::Handlers;
-
-use Log::Any qw($log);
+# VERSION
 
 =head1 Attributes
 
 Each of these is an attribute that can be applied to a method.
+
+=cut
+
+use Attribute::Handlers;
+
+use Log::Any qw($log);
+
+use Exporter qw(import export_to_level);
+
+our @IMPORT = our @IMPORT_OK = qw(RPC);
 
 =head2 RPC
 
 Mark this method as a callable RPC method.
 
 =cut
-
-use Exporter qw(import export_to_level);
-
-our @IMPORT = our @IMPORT_OK = qw(RPC);
 
 sub RPC:ATTR {
     my ($package, $symbol, $referent, $attr, $data, $phase, $filename, $linenum) = @_;

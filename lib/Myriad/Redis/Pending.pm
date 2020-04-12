@@ -1,5 +1,9 @@
+package Myriad::Redis::Pending;
+
 use strict;
 use warnings;
+
+# VERSION
 
 use curry;
 use Object::Pad;

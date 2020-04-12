@@ -3,7 +3,9 @@ use warnings;
 
 use Object::Pad;
 
-class Myriad::Storage extends Future::Exception;
+# VERSION
+
+class Myriad::Exception extends Future::Exception;
 
 1;
 

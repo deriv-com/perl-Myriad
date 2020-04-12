@@ -3,6 +3,8 @@ package Myriad::Notifier;
 use strict;
 use warnings;
 
+# VERSION
+
 no indirect;
 use Object::Pad;
 

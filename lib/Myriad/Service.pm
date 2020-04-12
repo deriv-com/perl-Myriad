@@ -3,10 +3,13 @@ package Myriad::Service;
 use strict;
 use warnings;
 
+# VERSION
+
 use Object::Pad;
 use Future::AsyncAwait;
 
 class Myriad::Service extends Myriad::Notifier;
+
 use parent qw(
     Myriad::Service::Attributes
 );

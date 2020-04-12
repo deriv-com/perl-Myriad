@@ -3,6 +3,8 @@ package Myriad::Config;
 use strict;
 use warnings;
 
+# VERSION
+
 use Object::Pad;
 
 class Myriad::Config;

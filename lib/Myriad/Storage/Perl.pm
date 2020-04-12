@@ -4,7 +4,7 @@ use warnings;
 use Future::AsyncAwait;
 use Object::Pad;
 
-class Myriad::Storage::Perl;
+class Myriad::Storage::Perl extends Myriad::Notifier;
 
 use experimental qw(signatures);
 
