@@ -21,6 +21,8 @@ from L<IO::Async::Notifier>.
 
 =cut
 
+use Ryu::Async;
+
 has $ryu;
 
 =head2 ryu
