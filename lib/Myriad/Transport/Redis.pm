@@ -1,6 +1,10 @@
+package Myriad::Transport::Redis;
+
 use strict;
 use warnings;
 
+# VERSION
+#
 use utf8;
 use Object::Pad;
 

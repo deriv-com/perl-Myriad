@@ -3,6 +3,8 @@ package microservice;
 use strict;
 use warnings;
 
+# VERSION
+
 =head1 NAME
 
 microservice
