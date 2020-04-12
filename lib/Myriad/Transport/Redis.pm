@@ -54,7 +54,7 @@ Number of items to allow per batch (pending / readgroup calls).
 
 =cut
 
-method batch_count { $batch_count } 
+method batch_count { $batch_count }
 
 async method oldest_processed_id($stream) {
     my ($v) = await $redis->xinfo(GROUPS => $stream);

@@ -18,10 +18,14 @@ Myriad::Storage::Perl - microservice storage abstraction
 
 =cut
 
+use Role::Tiny::With;
+
 use Attribute::Handlers;
 use Class::Method::Modifiers;
 
 use Log::Any qw($log);
+
+with 'Myriad::Storage';
 
 sub Defer : ATTR(CODE) {
     my ($package, $symbol, $referent, $attr, $data, $phase, $filename, $linenum) = @_;
