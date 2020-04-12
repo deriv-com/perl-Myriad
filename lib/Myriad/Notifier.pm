@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 no indirect;
-use Object::Pad 0.19;
+use Object::Pad;
 
 class Myriad::Notifier extends IO::Async::Notifier;
 
