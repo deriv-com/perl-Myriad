@@ -1,5 +1,9 @@
+package Myriad::Storage::Redis;
+
 use strict;
 use warnings;
+
+# VERSION
 
 use Future::AsyncAwait;
 use Object::Pad;

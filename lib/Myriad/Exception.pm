@@ -1,9 +1,12 @@
+package Myriad::Exception;
+
 use strict;
 use warnings;
 
-use Object::Pad;
-
 # VERSION
+
+no indirect;
+use Object::Pad;
 
 class Myriad::Exception extends Future::Exception;
 
