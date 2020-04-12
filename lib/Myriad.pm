@@ -31,7 +31,7 @@ use Myriad::Transport::HTTP;
 
 use Scalar::Util qw(blessed weaken);
 use Log::Any qw($log);
-use Log::Any::Adapter qw(Stderr), log_level => 'trace';
+use Log::Any::Adapter qw(Stderr), log_level => 'info';
 
 =head2 loop
 
