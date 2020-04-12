@@ -26,6 +26,8 @@ scaling for larger systems.
 
 =cut
 
+use Myriad::Exception;
+
 use Myriad::Transport::Redis;
 use Myriad::Transport::HTTP;
 
@@ -110,9 +112,17 @@ sub add_service {
     $self->{services}{$k} = $srv;
 }
 
+=head2 service_by_name
+
+Looks up the given service, returning the instance if it exists.
+
+Will throw an exception if the service cannot be found.
+
+=cut
+
 sub service_by_name {
     my ($self, $k) = @_;
-    $self->{services_by_name}{$k} // die 'service ' . $k . ' not found';
+    $self->{services_by_name}{$k} // Myriad::Exception->throw('service ' . $k . ' not found');
 }
 
 =head2 shutdown
