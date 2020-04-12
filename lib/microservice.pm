@@ -83,16 +83,16 @@ use Myriad::Service;
 use Log::Any qw($log);
 
 sub import {
-	my ($called_on) = @_;
-	my $class = __PACKAGE__;
-	my $pkg = caller(0);
+    my ($called_on) = @_;
+    my $class = __PACKAGE__;
+    my $pkg = caller(0);
 
     # Apply core syntax and rules
-	strict->import;
-	warnings->import;
-	utf8->import;
-	feature->import(':5.26');
-	indirect->unimport(qw(fatal));
+    strict->import;
+    warnings->import;
+    utf8->import;
+    feature->import(':5.26');
+    indirect->unimport(qw(fatal));
     # This one's needed for nested scope, e.g. { package XX; use microservice; method xxx (%args) ... }
     experimental->import('signatures');
     mro::set_mro($pkg => 'c3');

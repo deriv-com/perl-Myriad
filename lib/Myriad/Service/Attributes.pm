@@ -53,5 +53,19 @@ sub Stream:ATTR {
     );
 }
 
+sub Batch:ATTR {
+    my ($package, $symbol, $referent, $attr, $data, $phase, $filename, $linenum) = @_;
+    die 'Invalid attribute - should be applied to a coderef' unless ref($referent) eq 'CODE';
+    $log->debugf(
+        'Marking %s::%s as a Stream method (%s) via %s at %s:%d',
+        $package,
+        *{$symbol}{NAME},
+        $data,
+        $phase,
+        $filename,
+        $linenum
+    );
+}
+
 1;
 
