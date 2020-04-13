@@ -8,11 +8,12 @@ requires 'Role::Tiny', '>= 2.000';
 requires 'Ryu', '>= 1.012';
 requires 'Ryu::Async', '>= 0.016';
 # IO::Async
-requires 'Heap';
+requires 'Heap', '>= 0.80';
 requires 'IO::Async::Notifier', '>= 0.75';
 requires 'IO::Async::Test', '>= 0.75';
 requires 'IO::Async::SSL', '>= 0.22';
 # Functionality
+requires 'Future', '>= 0.44';
 requires 'Log::Any', '>= 1.708';
 requires 'Log::Any::Adapter', '>= 1.708';
 requires 'Config::Any';
