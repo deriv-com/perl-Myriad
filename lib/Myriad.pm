@@ -81,11 +81,11 @@ and metrics.
 
 sub http {
     my ($self, %args) = @_;
-    $self->{redis} //= do {
+    $self->{http} //= do {
         $self->loop->add(
-            my $redis = Myriad::Transport::HTTP->new
+            my $http = Myriad::Transport::HTTP->new
         );
-        $redis
+        $http
     };
 }
 

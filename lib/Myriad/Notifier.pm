@@ -3,12 +3,19 @@ package Myriad::Notifier;
 use strict;
 use warnings;
 
-# VERSION
-
 no indirect;
 use Object::Pad;
 
-class Myriad::Notifier extends IO::Async::Notifier;
+{
+    package Myriad::Notifier::Empty;
+    sub new {
+        my ($class, %args) = @_;
+        bless \%args, $class
+    }
+}
+class Myriad::Notifier extends Myriad::Notifier::Empty;
+
+use parent qw(IO::Async::Notifier);
 
 =head1 NAME
 
@@ -17,13 +24,19 @@ Myriad::Notifier
 =head1 DESCRIPTION
 
 Provides a shim for L<Object::Pad> classes which want to inherit
-from L<IO::Async::Notifier>.
+from L<IO::Async::Notifier>, due to RTx this fails due to the
+existing L<IO::Async::Notifier/new> method trying to call subclass
+methods before the instance pads have been set up.
 
 =cut
 
-use Ryu::Async;
-
 has $ryu;
+
+method BUILD (%args) {
+    $self->_init(\%args);
+    $self->configure(%args);
+    $self
+}
 
 =head2 ryu
 
@@ -33,11 +46,11 @@ Provides a common L<Ryu::Async> instance.
 
 method ryu { $ryu }
 
-method _add_to_loop ($loop) {
+method _add_to_loop {
     $self->add_child(
         $ryu = Ryu::Async->new
     );
-    $self->next::method($loop);
+    $self->next::method;
 }
 
 1;
