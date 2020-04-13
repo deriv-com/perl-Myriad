@@ -22,6 +22,8 @@ requires 'Net::Async::HTTP';
 requires 'Net::Async::HTTP::Server';
 requires 'Net::Async::Redis', '>= 2.002_001';
 requires 'Net::Async::OpenTracing', '>= 0.001';
+# Introspection
+requires 'Devel::MAT::Dumper';
 
 on 'test' => sub {
     requires 'Test::More', '>= 0.98';
