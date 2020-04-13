@@ -27,6 +27,7 @@ on 'test' => sub {
     requires 'Test::More', '>= 0.98';
     requires 'Test::Deep', '>= 1.124';
     requires 'Test::Fatal', '>= 0.010';
+    requires 'Test::MemoryGrowth', '>= 0.003';
     requires 'Log::Any::Adapter::TAP';
     requires 'Log::Any::Test';
 };
