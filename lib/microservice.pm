@@ -14,26 +14,27 @@ microservice
  package Example::Service;
  use microservice;
 
- sub startup {
+ async method startup {
   $log->infof('Starting %s', __PACKAGE__);
  }
 
  # Trivial RPC call, provides the `example` method
  async method example : RPC {
-  my ($self) = @_;
   return { ok => 1 };
  }
 
- # Slightly more useful - return all the original parameters
- async sub echo : RPC {
-  my ($self, %args) = @_;
+ # Slightly more useful - return all the original parameters.
+ # Due to an unfortunate syntactical choice in core Perl, the
+ # whitespace before the (%args) is *mandatory*, without that
+ # you're actually passing (%args) to the RPC attribute...
+ async method echo : RPC (%args) {
   return \%args;
  }
 
  # Default internal diagnostics checks are performed automatically,
  # this method is called after the microservice status such as Redis
  # connections, exception status etc. are verified
- async sub diagnostics {
+ async method diagnostics ($level) {
   my ($self, $level) = @_;
   return 'ok';
  }
@@ -53,11 +54,17 @@ language features:
 
 =item * L<utf8>
 
+=item * L<perlsub/signatures>
+
 =item * no L<indirect>
 
 =item * L<Syntax::Keyword::Try>
 
+=item * L<Syntax::Keyword::Dynamically>
+
 =item * L<Future::AsyncAwait>
+
+=item * provides L<Scalar::Util/blessed>, L<Scalar::Util/weaken>, L<Scalar::Util/refaddr>
 
 =back
 
