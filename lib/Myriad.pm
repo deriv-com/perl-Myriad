@@ -122,7 +122,7 @@ Will throw an exception if the service cannot be found.
 
 sub service_by_name {
     my ($self, $k) = @_;
-    $self->{services_by_name}{$k} // Myriad::Exception->throw('service ' . $k . ' not found');
+    return $self->{services_by_name}{$k} // Myriad::Exception->throw('service ' . $k . ' not found');
 }
 
 =head2 shutdown
