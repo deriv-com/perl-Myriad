@@ -112,10 +112,13 @@ sub import {
     Syntax::Keyword::Dynamically->import_into($pkg);
     Future::AsyncAwait->import_into($pkg);
 
-    # So the eval isn't awesome, but it is nice and easy for injecting
-    # the class - without this, we have to repeat the package name :/
+    # For history here, see this:
+    # https://rt.cpan.org/Ticket/Display.html?id=132337
+    # At the time of writing, ->begin_class is undocumented
+    # but can be seen in action in this test:
+    # https://metacpan.org/source/PEVANS/Object-Pad-0.21/t/70mop-create-class.t#L30
     Object::Pad->import_into($pkg);
-    eval "package $pkg; class $pkg extends Myriad::Service;";
+    Object::Pad->begin_class($pkg, extends => 'Myriad::Service');
 
     {
         no strict 'refs';
