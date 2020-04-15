@@ -28,14 +28,22 @@ Myriad::Service - microservice coördination
 
 =cut
 
-use Myriad::Service::Attributes;
-
 # Member variables
+
+has $ryu;
 
 has $redis;
 has $service_name;
 
 =head1 METHODS
+
+=head2 ryu
+
+Provides a common L<Ryu::Async> instance.
+
+=cut
+
+method ryu { $ryu }
 
 =head2 diagnostics
 
@@ -62,6 +70,16 @@ method configure (%args) {
 method redis { $redis }
 
 method service_name { $service_name //= lc(ref($self) =~ s{::}{_}gr) }
+
+method _add_to_loop ($loop) {
+    $self->add_child(
+        $ryu = Ryu::Async->new
+    );
+    for my $batch (Myriad::Registry->batches_for(ref($self))) {
+
+    }
+    $self->next::method($loop);
+}
 
 1;
 

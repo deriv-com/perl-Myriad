@@ -30,27 +30,10 @@ methods before the instance pads have been set up.
 
 =cut
 
-has $ryu;
-
 method BUILD (%args) {
     $self->_init(\%args);
     $self->configure(%args);
     $self
-}
-
-=head2 ryu
-
-Provides a common L<Ryu::Async> instance.
-
-=cut
-
-method ryu { $ryu }
-
-method _add_to_loop {
-    $self->add_child(
-        $ryu = Ryu::Async->new
-    );
-    $self->next::method;
 }
 
 1;
