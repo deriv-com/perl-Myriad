@@ -28,6 +28,12 @@ Myriad::Service - microservice coördination
 
 =cut
 
+use Log::Any qw($log);
+use List::Util qw(min);
+
+# Only defer up to this many seconds between batch iterations
+use constant MAX_EXPONENTIAL_BACKOFF => 2;
+
 =head1 ATTRIBUTES
 
 These methods return instance variables.
@@ -101,15 +107,45 @@ This will trigger a number of actions:
 
 =cut
 
+has %active_batch;
 method _add_to_loop ($loop) {
     $self->add_child(
         $ryu = Ryu::Async->new
     );
 
-    for my $batch (Myriad::Registry->batches_for(ref($self))) {
-
+    if(my $batches = Myriad::Registry->batches_for(ref($self))) {
+        for my $k (keys $batches->%*) {
+            $log->tracef('Starting batch process %s for %s', $k, ref($self));
+            my $code = $batches->{$k};
+            my $src = $self->ryu->source(label => 'batch:' . $k);
+            $active_batch{$k} = [
+                $src,
+                $self->process_batch($k, $code, $src)
+            ];
+        }
     }
     $self->next::method($loop);
+}
+
+async method process_batch ($k, $code, $src) {
+    my $backoff;
+    $log->tracef('Start batch processing for %s', $k);
+    while(1) {
+        await $src->unblocked;
+        my $data = await $self->$code;
+        if($data->@*) {
+            $backoff = 0;
+            $src->emit($_) for $data->@*;
+            # Defer next processing, give other events a chance
+            await $self->loop->delay_future(after => 0);
+        } else {
+            $backoff = min(MAX_EXPONENTIAL_BACKOFF, ($backoff || 0.02) * 2);
+            $log->tracef('Batch for %s returned no results, delaying for %dms before retry', $k, $backoff * 1000.0);
+            await $self->loop->delay_future(
+                after => $backoff
+            );
+        }
+    }
 }
 
 =head1 ASYNC METHODS
