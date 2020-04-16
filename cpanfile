@@ -21,7 +21,7 @@ requires 'YAML::XS', '>= 0.81';
 # Integration
 requires 'Net::Async::HTTP';
 requires 'Net::Async::HTTP::Server';
-requires 'Net::Async::Redis', '>= 2.002_001';
+requires 'Net::Async::Redis', '>= 2.001';
 requires 'Net::Async::OpenTracing', '>= 0.001';
 # Introspection
 requires 'Devel::MAT::Dumper';
