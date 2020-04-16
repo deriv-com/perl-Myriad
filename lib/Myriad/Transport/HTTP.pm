@@ -3,6 +3,8 @@ package Myriad::Transport::HTTP;
 use strict;
 use warnings;
 
+# VERSION
+
 use Object::Pad;
 
 class Myriad::Transport::HTTP extends Myriad::Notifier;

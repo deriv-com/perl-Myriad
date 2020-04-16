@@ -3,6 +3,8 @@ package Myriad::Config;
 use strict;
 use warnings;
 
+# VERSION
+
 use Object::Pad;
 
 class Myriad::Config;
@@ -19,12 +21,13 @@ Configuration support.
 
 =cut
 
+use feature qw(current_sub);
+
 use Getopt::Long qw(GetOptionsFromArray);
 use Config::Any;
 use YAML::XS;
 use List::Util qw(pairmap);
 use Log::Any qw($log);
-use feature qw(current_sub);
 
 =head1 PACKAGE VARIABLES
 
@@ -56,10 +59,13 @@ our %SHORTCUTS_FOR = (
     redis_port  => [qw(p)],
 );
 
+# Our configuration so far. Populated via L</BUILD>,
+# can be updated by other mechanisms later.
 has $config;
 
 method BUILD (@args) {
     $config //= {};
+
     # Parameter order in decreasing order of preference:
     # - commandline parameter
     # - environment

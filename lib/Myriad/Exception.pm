@@ -1,9 +1,15 @@
+package Myriad::Exception;
+
 use strict;
 use warnings;
 
-use Object::Pad;
+# VERSION
 
-class Myriad::Storage extends Future::Exception;
+# Note that we aren't using Object::Pad here because Future::Exception
+# is arrayref-based, so Object::Pad does not have anywhere to store slots.
+use parent qw(Future::Exception);
+
+no indirect;
 
 1;
 

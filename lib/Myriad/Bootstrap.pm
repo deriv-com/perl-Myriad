@@ -5,6 +5,8 @@ use warnings;
 
 use 5.010;
 
+# VERSION
+
 =head1 NAME
 
 Myriad::Bootstrap - starts up a Myriad child process ready for loading modules
