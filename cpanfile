@@ -1,6 +1,7 @@
 # Syntax
 requires 'Syntax::Keyword::Dynamically', '>= 0.04';
 requires 'Syntax::Keyword::Try', '>= 0.11';
+requires 'Future', '>= 0.45';
 requires 'Future::AsyncAwait', '>= 0.40';
 requires 'Object::Pad', '>= 0.22';
 requires 'Role::Tiny', '>= 2.000';
@@ -18,6 +19,7 @@ requires 'Log::Any', '>= 1.708';
 requires 'Log::Any::Adapter', '>= 1.708';
 requires 'Config::Any';
 requires 'YAML::XS', '>= 0.81';
+requires 'OpenTracing::Any', '>= 0.004';
 # Integration
 requires 'Net::Async::HTTP';
 requires 'Net::Async::HTTP::Server';
