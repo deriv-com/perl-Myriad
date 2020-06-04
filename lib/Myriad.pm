@@ -188,6 +188,48 @@ sub run {
 
 1;
 
+__END__
+
+=head1 SEE ALSO
+
+=head2 Perl
+
+Microservices are hardly a new concept, and there's a lot of prior art out there.
+Here are a list of the Perl implementations that we're aware of:
+
+=head2 Java
+
+As the textbook "enterprise-scale platform", Java naturally fits a microservice theme.
+
+=over 4
+
+=item * L<Spring Boot|https://spring.io/guides/gs/spring-boot/>
+
+=item * L<Micronaut|https://micronaut.io/>
+
+=item * L<DropWizard|https://www.dropwizard.io/en/stable/>
+
+=back
+
+
+
+=head2 Python
+
+=head2 Rust
+
+=head2 JS
+
+Cloud platforms also have some degree of microservice support:
+
+=over 4
+
+=item * L<AWS Lambda|https://aws.amazon.com/lambda> - trigger small containers based on logic, typically combined
+with other AWS services for data storage, message sending and other actions
+
+=item * L<Google App Engine> - Google's own attempt
+
+=back
+
 =head1 AUTHOR
 
 Binary Group Services Ltd. C<< BINARY@cpan.org >>
