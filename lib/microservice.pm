@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 # VERSION
+# AUTHORITY
 
 =head1 NAME
 
@@ -68,7 +69,9 @@ language features:
 
 =back
 
-This also makes available a L<Log::Any> instance in the C<$log> package variable.
+This also makes available a L<Log::Any> instance in the C<$log> package variable,
+and for L<OpenTracing::Any> support you get C<$tracer> as an L<OpenTracing::Tracer>
+instance.
 
 =cut
 
@@ -88,6 +91,7 @@ use Net::Async::HTTP;
 use Myriad::Service;
 
 use Log::Any qw($log);
+use OpenTracing::Any qw($log);
 
 sub import {
     my ($called_on) = @_;
@@ -129,6 +133,11 @@ sub import {
         *{$pkg . '::log'} = \Log::Any->get_logger(
             category => $pkg
         );
+    }
+
+    {
+        no strict 'refs';
+        *{$pkg . '::tracer'} = \(OpenTracing->global_tracer);
     }
 }
 

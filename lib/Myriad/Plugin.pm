@@ -1,4 +1,4 @@
-package Myriad::Exception;
+package Myriad::Plugin;
 
 use strict;
 use warnings;
@@ -6,11 +6,22 @@ use warnings;
 # VERSION
 # AUTHORITY
 
-# Note that we aren't using Object::Pad here because Future::Exception
-# is arrayref-based, so Object::Pad does not have anywhere to store slots.
-use parent qw(Future::Exception);
+use Role::Tiny;
 
-no indirect;
+=head1 NAME
+
+Myriad::Plugin
+
+=head1 DESCRIPTION
+
+The plugin system allows sharing of various features between service implementations.
+Examples might include database or API access.
+
+=cut
+
+=head1 METHODS
+
+=cut
 
 1;
 

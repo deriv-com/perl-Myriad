@@ -6,6 +6,7 @@ use warnings;
 use 5.010;
 
 # VERSION
+# AUTHORITY
 
 =head1 NAME
 

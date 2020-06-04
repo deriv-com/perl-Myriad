@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 # VERSION
+# AUTHORITY
 
 use Object::Pad;
 
@@ -63,7 +64,7 @@ our %SHORTCUTS_FOR = (
 # can be updated by other mechanisms later.
 has $config;
 
-method BUILD (@args) {
+BUILD (@args) {
     $config //= {};
 
     # Parameter order in decreasing order of preference:
@@ -85,7 +86,7 @@ method BUILD (@args) {
     $config->{config_path} //= $DEFAULTS{config_path};
     if(defined $config->{config_path} and -r $config->{config_path}) {
         my ($override) = Config::Any->load_files({
-            files => [ $config->{config_path} ],
+            files   => [ $config->{config_path} ],
             use_ext => 1
         })->@*;
         $log->debugf('override is %s', $override);
