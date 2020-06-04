@@ -24,6 +24,15 @@ Myriad provides a framework for dealing with asynchronous, microservice-based co
 It is intended for use in an environment such as Kubernetes to support horizontal
 scaling for larger systems.
 
+=head2 Do you need this?
+
+If you expect to be dealing with more traffic than a single server can handle,
+or you have a development team larger than 30-50 or so, this might be of interest.
+
+For a smaller system with a handful of users, it's I<probably> overkill!
+
+=head1 METHODS
+
 =cut
 
 use Myriad::Exception;
