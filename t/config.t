@@ -4,6 +4,7 @@ use warnings;
 use Test::More;
 use Test::Fatal;
 use Log::Any::Adapter qw(TAP);
+
 use Myriad::Config;
 
 is(exception {
