@@ -203,21 +203,37 @@ As the textbook "enterprise-scale platform", Java naturally fits a microservice 
 
 =over 4
 
-=item * L<Spring Boot|https://spring.io/guides/gs/spring-boot/>
+=item * L<Spring Boot|https://spring.io/guides/gs/spring-boot/> - One of the frameworks that integrate well 
+with the traditional Java ecosystem depends on HTTP as a transport, there is no unified storage layer the developer can import DB connector of his choice.
 
-=item * L<Micronaut|https://micronaut.io/>
+=item * L<Micronaut|https://micronaut.io/> - This framework has many integrations with industry-standard solutions like (SQL, MongoDB, Kafka, Redis, gRPC)
+they have integration guides with cloud-native solutions (AWS, GCP ...etc).
 
-=item * L<DropWizard|https://www.dropwizard.io/en/stable/>
+=item * L<DropWizard|https://www.dropwizard.io/en/stable/> - A minimal framework that provides a RESTful interface and storage layer using Hibernate.
 
-=item * L<Helidon|https://helidon.io/>
+=item * L<Helidon|https://helidon.io/> - Oracle's open source attempt, provides support for two types of transport and SQL access layer using standard Java's packages,
+ built with cloud-native deployment in mind.
 
 =back
 
 =head2 Python
 
+Most of Python's frameworks provide tools to facilitate building logic blocks behind APIs (Flask, Django ..etc)
+for work distribution L<Celery|https://docs.celeryproject.org/en/stable/> is used as a task queue abstraction.
+
 =head2 Rust
 
 =head2 JS
+
+JS has many frameworks that help to implement the microservice architecture, some are:
+
+=over 4
+
+=item * L<Moleculer|https://moleculer.services/>
+
+=item * L<Seneca|https://senecajs.org/>
+
+=back
 
 Cloud platforms also have some degree of microservice support:
 
@@ -228,15 +244,8 @@ with other AWS services for data storage, message sending and other actions
 
 =item * L<Google App Engine> - Google's own attempt
 
-=back
-
-=over 4
-
-Also, JS has many frameworks that help to implement the microservice architecture, some are:
-
-=item * L<Moleculer|https://moleculer.services/>
-
-=item * L<Seneca|https://senecajs.org/>
+=item * L<Heroku|https://www.heroku.com/> - Allow developers to build a microservices architecture based on the services they provide
+like the example they mentioned in this L<blog|https://devcenter.heroku.com/articles/event-driven-microservices-with-apache-kafka>
 
 =back
 
