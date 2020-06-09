@@ -209,9 +209,9 @@ As the textbook "enterprise-scale platform", Java naturally fits a microservice 
 
 =item * L<DropWizard|https://www.dropwizard.io/en/stable/>
 
+=item * L<Helidon|https://helidon.io/>
+
 =back
-
-
 
 =head2 Python
 
@@ -227,6 +227,16 @@ Cloud platforms also have some degree of microservice support:
 with other AWS services for data storage, message sending and other actions
 
 =item * L<Google App Engine> - Google's own attempt
+
+=back
+
+=over 4
+
+Also, JS has many frameworks that help to implement the microservice architecture, some are:
+
+=item * L<Moleculer|https://moleculer.services/>
+
+=item * L<Seneca|https://senecajs.org/>
 
 =back
 
