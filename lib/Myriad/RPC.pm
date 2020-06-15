@@ -5,6 +5,7 @@ use warnings;
 
 # VERSION
 
+use Sys::Hostname;
 use Future::AsyncAwait;
 use Myriad::RPC::Message;
 use Object::Pad;
@@ -30,11 +31,11 @@ Myriad RPC implementation to serve the requests of the service clients.
 has $redis;
 has $service;
 
-has $stream_name;
 has $group_name;
 
 has $ryu;
 has $rpc_map;
+has $whoami;
 
 method ryu {$ryu}
 method rpc_map :lvalue {$rpc_map}
@@ -43,7 +44,7 @@ method configure(%args) {
     $redis = delete $args{redis} // die 'Redis Transport is required';
     $service = delete $args{service} // die 'Service name is required';
 
-    $stream_name = $service;
+    $whoami = hostname . '-' . $$;
     $group_name = 'processors';
 }
 
@@ -56,7 +57,7 @@ method _add_to_loop($loop) {
 }
 
 async method listen {
-    my $stream_config = { stream => $stream_name, group => $group_name, client => "me" };
+    my $stream_config = { stream => $service, group => $group_name, client => $whoami };
     my $incoming_request = $redis->iterate(%$stream_config);
     my $pending_requests = $redis->pending(%$stream_config);
 
@@ -78,7 +79,7 @@ async method listen {
 
 async method reply($message) {
     await $redis->publish($message->who, $message->encode);
-    await $redis->ack($stream_name, 'me', $message->id);
+    await $redis->ack($service, $whoami, $message->id);
 }
 
 1;

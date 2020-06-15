@@ -181,8 +181,10 @@ method iterate(%args) {
                             $id,
                             $args
                         );
-                        push @$args, ("message_id", $id);
-                        $src->emit($args);
+                        if($args) {
+                            push @$args, ("message_id", $id);
+                            $src->emit($args);
+                        }
                     }
                 }
             }
@@ -311,8 +313,10 @@ method pending(%args) {
                     my $claim = await $redis->xclaim($stream, $group, $client, 10, $id);
                     $log->tracef('Claim is %s', $claim);
                     my $args = $claim->[0]->[1];
-                    push @$args, ("message_id", $id);
-                    $src->emit($args);
+                    if($args) {
+                        push @$args, ("message_id", $id);
+                        $src->emit($args);
+                    }
                 }
                 last unless @$pending >= $self->batch_count;
             }
