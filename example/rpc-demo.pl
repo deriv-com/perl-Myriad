@@ -24,6 +24,7 @@ no indirect;
 use Syntax::Keyword::Try;
 use Future::AsyncAwait;
 use Log::Any qw($log);
+use Log::Any::Adapter qw(Stdout), log_level => 'info';
 use Net::Async::Redis;
 use IO::Async::Loop;
 

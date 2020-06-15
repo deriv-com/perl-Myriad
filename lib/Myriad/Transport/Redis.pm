@@ -42,7 +42,7 @@ has $batch_count = 50;
 
 has $ryu;
 
-method ryu {$ryu }
+method ryu {$ryu}
 
 =head2 wait_time
 
@@ -158,7 +158,7 @@ method iterate(%args) {
     my $group = $args{group};
     my $client = $args{client};
     Future->wait_any(
-        $src->completed,
+        $src->completed->without_cancel,
         (async sub {
             while (1) {
                 await $src->unblocked;
@@ -188,7 +188,7 @@ method iterate(%args) {
                     }
                 }
             }
-        })->()
+        })->()->without_cancel
     )->retain;
     $src;
 }
@@ -295,7 +295,7 @@ method pending(%args) {
     my $group = $args{group};
     my $client = $args{client};
     Future->wait_any(
-        $src->completed,
+        $src->completed->without_cancel,
         (async sub {
             my $start = '-';
             while (1) {
@@ -325,12 +325,77 @@ method pending(%args) {
     $src;
 }
 
+=head2 publish
+
+Publish a message through a Redis channel (pub/sub system)
+
+=over 4
+
+=item * C<channel> - The channel name.
+
+=item * C<message> - The message we want to publish (string).
+
+=back
+
+=cut
+
 async method publish($channel, $message) {
     await $redis->publish($channel, "$message");
 }
 
-async method ack($stream, $client, $message_id) {
-    await $redis->xack($stream, $client, $message_id);
+
+=head2 ack
+
+Acknowledge a message from a Redis stream.
+
+=over 4
+
+=item * C<stream> - The stream name.
+
+=item * C<group> - The group name.
+
+=item * C<message_id> - The id of the message we want to acknowledge.
+
+=back
+
+=cut
+
+async method ack($stream, $group, $message_id) {
+    await $redis->xack($stream, $group, $message_id);
+}
+
+
+=head2 create_group
+
+Create a Redis consumer group if it does NOT exist.
+
+It'll also send the MKSTREAM option to create the stream if it doesn't exist.
+
+=over 4
+
+=item * C<stream> - The name of the stream we want to attach the group to.
+
+=item * C<group> - The group name.
+
+=item * C<start_from> - The id of the message that is going to be considered the start of the stream for this group's point of view
+by default it's `$` which means the last message.
+
+=back
+
+=cut
+
+
+async method create_group($stream, $group, $start_from = '$') {
+    try {
+        await $redis->xgroup('CREATE', $stream, $group, $start_from, 'MKSTREAM');
+    }
+    catch {
+        if($@ =~ /BUSYGROUP/){
+            return;
+        } else {
+            die $@;
+        }
+    }
 }
 
 1;

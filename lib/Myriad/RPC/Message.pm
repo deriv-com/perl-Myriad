@@ -9,6 +9,8 @@ use Object::Pad;
 use Syntax::Keyword::Try;
 use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8);
 
+use Myriad::Exception::BadMessageEncoding;
+
 class Myriad::RPC::Message;
 
 has $rpc;
@@ -36,29 +38,29 @@ method BUILD(%raw_message) {
         $args = decode_json_utf8($raw_message{args});
         $stash = decode_json_utf8($raw_message{stash});
         $response = {};
-        # $trace = $raw_message{trace} ? {} : decode_json_utf8($raw_message{trace});
+        $trace = $raw_message{trace} ? decode_json_utf8($raw_message{trace}) : {};
     }
     catch {
-        # Usually decode_json errors are ugly
-        die 'Failed to decode one the message JSON fields.';
+        warn $@;
+        Myriad::Exception::BadMessageEncoding->new();
     }
 }
 
 method encode {
     try {
         return encode_json_utf8({
-            rpc      => $rpc,
-            id       => $id,
-            who      => $who,
-            deadline => $deadline,
-            args     => encode_json_utf8($args),
-            stash    => encode_json_utf8($stash),
-            response => encode_json_utf8($response),
-            # trace    => encode_json_utf8($trace),
+            rpc        => $rpc,
+            message_id => $id,
+            who        => $who,
+            deadline   => $deadline,
+            args       => encode_json_utf8($args),
+            stash      => encode_json_utf8($stash),
+            response   => encode_json_utf8($response),
+            trace      => encode_json_utf8($trace),
         });
     }
     catch {
-        die 'Failed to encode the message into JSON string'
+        Myriad::Exception::BadMessageEncoding->new();
     }
 }
 

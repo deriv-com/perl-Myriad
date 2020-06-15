@@ -10,6 +10,7 @@ use Future::AsyncAwait;
 use Syntax::Keyword::Try;
 
 use Myriad::RPC;
+use Myriad::Exception;
 
 class Myriad::Service extends Myriad::Notifier;
 

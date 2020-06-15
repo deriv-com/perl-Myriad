@@ -7,8 +7,10 @@ use warnings;
 
 use Sys::Hostname;
 use Future::AsyncAwait;
-use Myriad::RPC::Message;
 use Object::Pad;
+use Log::Any qw($log);
+
+use Myriad::RPC::Message;
 
 class Myriad::RPC extends Myriad::Notifier;
 
@@ -44,7 +46,7 @@ method configure(%args) {
     $redis = delete $args{redis} // die 'Redis Transport is required';
     $service = delete $args{service} // die 'Service name is required';
 
-    $whoami = hostname . '-' . $$;
+    $whoami = hostname;
     $group_name = 'processors';
 }
 
@@ -57,29 +59,40 @@ method _add_to_loop($loop) {
 }
 
 async method listen {
+    await $redis->create_group($service, $group_name);
     my $stream_config = { stream => $service, group => $group_name, client => $whoami };
-    my $incoming_request = $redis->iterate(%$stream_config);
     my $pending_requests = $redis->pending(%$stream_config);
-
-    await $incoming_request->merge($pending_requests)->map(sub {
-        my %args = @$_;
-        return \%args;
-    })->map(sub {
-        my ($data) = @_;
-        Myriad::RPC::Message->new($data->%*);
-    })->each(sub {
-        if (my $method = $rpc_map->{$_->rpc}) {
-            $method->[0]->emit($_)
-        }
-        else {
-            $rpc_map->{'__NOTFOUND'}->[0]->emit($method);
-        }
-    })->completed;
+    my $incoming_request = $redis->iterate(%$stream_config);
+    try {
+        await $incoming_request->merge($pending_requests)->map(sub {
+            # Redis response is array ref we need a hashref
+            my %args = @$_;
+            return \%args;
+        })->map(sub {
+            my ($data) = @_;
+            Myriad::RPC::Message->new($data->%*);
+        })->each(sub {
+            if ($_->isa('Myriad::Exception')) {
+                warn "internal";
+                # $rpc_map->{'__ERRORS'}->[0]->emit($_);
+            }
+            else {
+                if (my $method = $rpc_map->{$_->rpc}) {
+                    $method->[0]->emit($_)
+                }
+                else {
+                    $rpc_map->{'__NOTFOUND'}->[0]->emit($method);
+                }
+            }
+        })->completed;
+    } catch {
+        $log->fatalf("RPC listener stopped due: %s", $@);
+    }
 }
 
 async method reply($message) {
     await $redis->publish($message->who, $message->encode);
-    await $redis->ack($service, $whoami, $message->id);
+    await $redis->ack($service, $group_name, $message->id);
 }
 
 1;
