@@ -48,15 +48,21 @@ Mark this async method as a callable RPC method.
 sub RPC : ATTR {
     my ($package, $symbol, $referent, $attr, $data, $phase, $filename, $linenum) = @_;
     die 'Invalid attribute - should be applied to a coderef' unless ref($referent) eq 'CODE';
+    my $method = *{$symbol}{NAME};
     $log->tracef(
         'Marking %s::%s as an RPC method (%s) via %s at %s:%d',
         $package,
-        *{$symbol}{NAME},
+        $method,
         $data,
         $phase,
         $filename,
         $linenum
     );
+    Myriad::Registry->add_rpc(
+        $package,
+        $method,
+        $referent
+    )
 }
 
 =head2 Stream
@@ -80,14 +86,20 @@ and is responsible for streaming data into that sink until cancelled.
 sub Stream : ATTR {
     my ($package, $symbol, $referent, $attr, $data, $phase, $filename, $linenum) = @_;
     die 'Invalid attribute - should be applied to a coderef' unless ref($referent) eq 'CODE';
+    my $method = *{$symbol}{NAME};
     $log->tracef(
         'Marking %s::%s as a Stream method (%s) via %s at %s:%d',
         $package,
-        *{$symbol}{NAME},
+        $method,
         $data,
         $phase,
         $filename,
         $linenum
+    );
+    Myriad::Registry->add_stream(
+        $package,
+        $method,
+        $referent
     );
 }
 

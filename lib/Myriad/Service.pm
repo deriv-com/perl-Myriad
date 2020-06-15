@@ -7,6 +7,9 @@ use warnings;
 
 use Object::Pad;
 use Future::AsyncAwait;
+use Syntax::Keyword::Try;
+
+use Myriad::RPC;
 
 class Myriad::Service extends Myriad::Notifier;
 
@@ -45,7 +48,7 @@ Provides a common L<Ryu::Async> instance.
 =cut
 
 has $ryu;
-method ryu { $ryu }
+method ryu {$ryu}
 
 =head2 redis
 
@@ -54,7 +57,7 @@ The L<Myriad::Storage> instance.
 =cut
 
 has $redis;
-method redis { $redis }
+method redis {$redis}
 
 =head2 myriad
 
@@ -63,7 +66,7 @@ The L<Myriad> instance which owns this service. Stored internally as a weak refe
 =cut
 
 has $myriad;
-method myriad { $myriad }
+method myriad {$myriad}
 
 =head2 service_name
 
@@ -72,7 +75,9 @@ The name of the service, defaults to the package name.
 =cut
 
 has $service_name;
-method service_name { $service_name //= lc(ref($self) =~ s{::}{_}gr) }
+method service_name {$service_name //= lc(ref($self) =~ s{::}{_}gr)}
+
+has $rpc;
 
 =head1 METHODS
 
@@ -82,7 +87,7 @@ Populate internal configuration.
 
 =cut
 
-method configure (%args) {
+method configure(%args) {
     $redis = delete $args{redis} if exists $args{redis};
     $service_name = delete $args{name} if exists $args{name};
     Scalar::Util::weaken($myriad = delete $args{myriad}) if exists $args{myriad};
@@ -108,12 +113,37 @@ This will trigger a number of actions:
 =cut
 
 has %active_batch;
-method _add_to_loop ($loop) {
+has %rpc_map;
+
+method _add_to_loop($loop) {
     $self->add_child(
         $ryu = Ryu::Async->new
     );
 
-    if(my $batches = Myriad::Registry->batches_for(ref($self))) {
+    $self->add_child(
+        $rpc = Myriad::RPC->new(redis => $redis, service => ref($self))
+    );
+
+    if (my $rpc_calls = Myriad::Registry->rpc_for(ref($self))) {
+        foreach my $method (keys $rpc_calls->%*) {
+            my $code = $rpc_calls->{$method};
+            my $src = $ryu->source(lable => "rpc:$method");
+            $rpc_map{$method} = [
+                $src,
+                $self->setup_rpc($code, $src)
+            ];
+        }
+        # Setup default handler
+        my $src = $ryu->source(lable => "rpc:__NOTFOUND");
+        $rpc_map{__NOTFOUND} = [
+        $src,
+            $self->setup_rpc(async sub($method) {die "No such method: $method"}, $src)
+            ];
+
+        $rpc->rpc_map = \%rpc_map;
+    }
+
+    if (my $batches = Myriad::Registry->batches_for(ref($self))) {
         for my $k (keys $batches->%*) {
             $log->tracef('Starting batch process %s for %s', $k, ref($self));
             my $code = $batches->{$k};
@@ -124,21 +154,23 @@ method _add_to_loop ($loop) {
             ];
         }
     }
+
     $self->next::method($loop);
 }
 
-async method process_batch ($k, $code, $src) {
+async method process_batch($k, $code, $src) {
     my $backoff;
     $log->tracef('Start batch processing for %s', $k);
-    while(1) {
+    while (1) {
         await $src->unblocked;
         my $data = await $self->$code;
-        if($data->@*) {
+        if ($data->@*) {
             $backoff = 0;
             $src->emit($_) for $data->@*;
             # Defer next processing, give other events a chance
             await $self->loop->delay_future(after => 0);
-        } else {
+        }
+        else {
             $backoff = min(MAX_EXPONENTIAL_BACKOFF, ($backoff || 0.02) * 2);
             $log->tracef('Batch for %s returned no results, delaying for %dms before retry', $k, $backoff * 1000.0);
             await $self->loop->delay_future(
@@ -146,6 +178,30 @@ async method process_batch ($k, $code, $src) {
             );
         }
     }
+}
+
+method setup_rpc($code, $src) {
+    $src->map(async sub {
+        my $message = shift;
+
+        try {
+            my $data = await $self->$code($message->args->%*);
+            $message->response = { response => $data }
+        }
+        catch {
+            my $error = $@;
+            $message->response = { error => { code => 'internal', message => $error } };
+        };
+
+        try {
+            await $rpc->reply($message);
+        }
+        catch {
+            $log->warnf("Failed to reply to RPC message due error: %s", $@)
+        }
+
+    })->
+    resolve->retain();
 }
 
 =head1 ASYNC METHODS

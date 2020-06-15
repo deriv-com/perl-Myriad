@@ -93,7 +93,7 @@ Returns a hashref of batch methods for the given class.
 
 sub batches_for {
     my ($class, $pkg) = @_;
-    return $BATCH{$pkg} // Myriad::Exception->throw('unknown package ' . $pkg);
+    return $BATCH{$pkg} ;
 }
 
 1;

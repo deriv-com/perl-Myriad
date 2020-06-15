@@ -20,6 +20,7 @@ requires 'Log::Any::Adapter', '>= 1.708';
 requires 'Config::Any';
 requires 'YAML::XS', '>= 0.81';
 requires 'OpenTracing::Any', '>= 0.004';
+requires 'JSON::MaybeUTF8', '>= 1.002';
 # Integration
 requires 'Net::Async::HTTP';
 requires 'Net::Async::HTTP::Server';
