@@ -5,11 +5,10 @@ use warnings;
 
 # VERSION
 
-# Note that we aren't using Object::Pad here because Future::Exception
-# is arrayref-based, so Object::Pad does not have anywhere to store slots.
-use parent qw(Future::Exception);
-
 no indirect;
+use Object::Pad 0.23;
+
+class Myriad::Exception extends Future::Exception;
 
 1;
 
