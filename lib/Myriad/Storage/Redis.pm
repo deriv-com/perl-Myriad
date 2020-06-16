@@ -32,7 +32,7 @@ has $redis_action;
 # And this one stayed at home
 has $redis_subscription;
 
-method BUILD (%args) {
+BUILD (%args) {
     $redis_action = delete $args{redis_action} // die 'need a Redis instance';
     $redis_subscription = delete $args{redis_subscription} // die 'need a Redis instance for subscriptions';
 }

@@ -33,7 +33,7 @@ methods before the instance pads have been set up.
 
 =cut
 
-method BUILD (%args) {
+BUILD (%args) {
     $self->_init(\%args);
     $self->configure(%args);
     $self
