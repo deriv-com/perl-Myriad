@@ -31,6 +31,108 @@ or you have a development team larger than 30-50 or so, this might be of interes
 
 For a smaller system with a handful of users, it's I<probably> overkill!
 
+=head1 Modules and code layout
+
+=over 4
+
+=item * L<Myriad::Storage> - abstraction layer for storage, available as C<< $self->storage >> within services
+
+=item * L<Myriad::RPC> - the RPC abstraction layer, in C<< $self->rpc >>
+
+=item * L<Myriad::Subscription> - the subscription handling layer, in C<< $self->subscription >>
+
+=back
+
+Each of the three abstractions has various implementations, you'd set one on startup
+and that would provide functionality through the top-level abstraction layer.
+
+=head2 Storage
+
+The L<Myriad::Storage> abstract API is a good starting point here.
+
+For storage, we have:
+
+=over 4
+
+=item * L<Myriad::Storage::Redis>
+
+=item * L<Myriad::Storage::PostgreSQL>
+
+=item * L<Myriad::Storage::Perl>
+
+=back
+
+=head2 RPC
+
+Simple request/response patterns are handled with the L<Myriad::RPC> layer ("remote procedure call").
+
+Details on the request are in L<Myriad::RPC::Request> and the response to be sent back is in L<Myriad::RPC::Response>.
+
+=over 4
+
+=item * L<Myriad::RPC::Redis>
+
+=item * L<Myriad::RPC::PostgreSQL>
+
+=item * L<Myriad::RPC::Perl>
+
+=item * L<Myriad::RPC::AMQP>
+
+=back
+
+and subscriptions:
+
+=over 4
+
+=item * L<Myriad::Subscription::Redis>
+
+=item * L<Myriad::Subscription::PostgreSQL>
+
+=item * L<Myriad::Subscription::Perl>
+
+=item * L<Myriad::Subscription::AMQP>
+
+=back
+
+Note that I<some layers don't have implementations for all transports> - MQ for example does not really provide a concept of "storage".
+
+Each of these implementations is supposed to separate out the logic from the actual transport calls, so there's a separate ::Transport set of classes here:
+
+=over 4
+
+=item * L<Myriad::Transport::Redis>
+
+=item * L<Myriad::Transport::PostgreSQL>
+
+=item * L<Myriad::Transport::Perl>
+
+=item * L<Myriad::Transport::AMQP>
+
+=back
+
+which deal with the lower-level interaction with the protocol, connection management and so on. More details on that
+can be found in L<Myriad::Transport> - but it's typically only useful for people working on the L<Myriad> implementation itself.
+
+Other classes of note:
+
+=over 4
+
+=item * L<Myriad::Exception> - generic errors, provides L<Myriad::Exception/throw> and we recommend that all errors inherit from this
+
+=item * L<Myriad::Plugin> - adds specific functionality to services
+
+=item * L<Myriad::Bootstrap> - startup used in C<myriad.pl> for providing autorestart and other functionality
+
+=item * L<Myriad::Service> - base class for a service
+
+=item * L<Myriad::Registry> - support for registering services and methods within the current process
+
+=item * L<Myriad::Config> - general config support, commandline/file/storage
+
+=item * L<Myriad::Notifier> - L<IO::Async::Notifier> layer, probably due for removal
+
+=back
+
 =head1 METHODS
 
 =cut
@@ -42,7 +144,7 @@ use Myriad::Transport::HTTP;
 
 use Scalar::Util qw(blessed weaken);
 use Log::Any qw($log);
-use Log::Any::Adapter qw(Stderr), log_level => 'info';
+use Log::Any::Adapter;
 
 =head2 loop
 
@@ -165,6 +267,20 @@ sub shutdown_future {
     )->without_cancel;
 }
 
+=head2 setup_logging
+
+Prepare for logging.
+
+=cut
+
+sub setup_logging {
+    my ($self) = @_;
+    Log::Any::Adapter->import(
+        qw(Stderr),
+        log_level => 'info'
+    );
+}
+
 =head2 run
 
 Starts the main loop.
@@ -192,22 +308,50 @@ __END__
 
 =head1 SEE ALSO
 
-=head2 Perl
-
 Microservices are hardly a new concept, and there's a lot of prior art out there.
-Here are a list of the Perl implementations that we're aware of:
 
-=head2 Java
-
-As the textbook "enterprise-scale platform", Java naturally fits a microservice theme.
+Key features that we attempt to provide:
 
 =over 4
 
-=item * L<Spring Boot|https://spring.io/guides/gs/spring-boot/> - One of the frameworks that integrate well 
-with the traditional Java ecosystem depends on HTTP as a transport, there is no unified storage layer the developer can import DB connector of his choice.
+=item * B<atomic storage> - being able to record something in storage as part of the same transaction as acknowledging a message
 
-=item * L<Micronaut|https://micronaut.io/> - This framework has many integrations with industry-standard solutions like (SQL, MongoDB, Kafka, Redis, gRPC)
-they have integration guides with cloud-native solutions (AWS, GCP ...etc).
+=item * B<flexible backends> - support for various storage, RPC and subscription implementations, allowing for mix+match
+
+=item * B<zero transport option> - for testing and smaller deployments, you might want to run everything in a single process
+
+=item * B<language-agnostic> - implementations should be possible in languages other than Perl
+
+=item * B<first-class Kubernetes support> - k8s is not required, but when available we should play to its strengths
+
+=item * B<minimal boilerplate> - with an emphasis on rapid prototyping
+
+=back
+
+
+=head2 Perl
+
+Here are a list of the Perl microservice implementations that we're aware of:
+
+=over 4
+
+=item * L<https://github.com/jmico/beekeeper> - MQ-based (via STOMP), using L<AnyEvent>
+
+=item * L<https://mojolicious.org> - more of a web framework, but a popular one
+
+=back
+
+=head2 Java
+
+Although this is the textbook "enterprise-scale platform", Java naturally fits a microservice theme.
+
+=over 4
+
+=item * L<Spring Boot|https://spring.io/guides/gs/spring-boot/> - One of the frameworks that integrates well
+with the traditional Java ecosystem, depends on HTTP as a transport. Although there is no unified storage layer,
+database access is available through connectors.
+
+=item * L<Micronaut|https://micronaut.io/> - This framework has many integrations with industry-standard solutions - SQL, MongoDB, Kafka, Redis, gRPC - and they have integration guides for cloud-native solutions such as AWS or GCP.
 
 =item * L<DropWizard|https://www.dropwizard.io/en/stable/> - A minimal framework that provides a RESTful interface and storage layer using Hibernate.
 
@@ -218,10 +362,20 @@ they have integration guides with cloud-native solutions (AWS, GCP ...etc).
 
 =head2 Python
 
-Most of Python's frameworks provide tools to facilitate building logic blocks behind APIs (Flask, Django ..etc)
-for work distribution L<Celery|https://docs.celeryproject.org/en/stable/> is used as a task queue abstraction.
+Most of Python's frameworks provide tools to facilitate building logic blocks behind APIs (Flask, Django ..etc).
+
+For work distribution, L<Celery|https://docs.celeryproject.org/en/stable/> is commonly used as a task queue abstraction.
 
 =head2 Rust
+
+=over 4
+
+=item * L<https://rocket.rs/> - although this is a web framework, rather than a complete microservice system,
+it's reasonably popular for the request/response part of the equation
+
+=item * L<https://actix.rs/> - another web framework, this time with a focus on the actor pattern
+
+=back
 
 =head2 JS
 
@@ -235,7 +389,9 @@ JS has many frameworks that help to implement the microservice architecture, som
 
 =back
 
-Cloud platforms also have some degree of microservice support:
+=head2 Cloud providers
+
+Microservice support at the provider level:
 
 =over 4
 
@@ -260,6 +416,8 @@ Binary Group Services Ltd. C<< BINARY@cpan.org >>
 =item * Tom Molesworth C<< TEAM@cpan.org >>
 
 =item * Paul Evans C<< PEVANS@cpan.org >>
+
+=item * Eyad Arnabeh
 
 =back
 
