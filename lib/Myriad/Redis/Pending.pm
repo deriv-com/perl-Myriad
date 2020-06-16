@@ -43,7 +43,7 @@ This is probably in the wrong place - better to have this as a simple abstract c
 
 =cut
 
-async method finish {
+async method finish () {
     await $redis->xack($stream, $group, $id)
 }
 
