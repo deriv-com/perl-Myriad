@@ -4,31 +4,48 @@ use strict;
 use warnings;
 
 # VERSION
+# AUTHORITY
 
-use Sys::Hostname;
 use Future::AsyncAwait;
 use Object::Pad;
-use Log::Any qw($log);
-
+use Syntax::Keyword::Try;
 use Myriad::RPC::Message;
+use Sys::Hostname;
 
+use Log::Any qw($log);
 class Myriad::RPC extends Myriad::Notifier;
 
 use experimental qw(signatures);
 
-use utf8;
+=encoding utf8
 
-use Syntax::Keyword::Try;
+=head1 NAME
 
-=encoding utf8;
+Myriad::RPC - microservice RPC abstraction
 
 =head1 SYNOPSIS
 
+ my $rpc = $myriad->rpc;
+
 =head1 DESCRIPTION
 
-Myriad RPC implementation to serve the requests of the service clients.
+=head1 Implementation
+
+Note that this is defined as a rôle, so it does not provide
+a concrete implementation - instead, see classes such as:
+
+=over 4
+
+=item * L<Myriad::RPC::Implementation::Redis>
+
+=item * L<Myriad::RPC::Implementation::Perl>
+
+=back
 
 =cut
+
+use Role::Tiny;
+
 
 has $redis;
 has $service;
@@ -96,3 +113,16 @@ async method reply($message) {
 }
 
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Binary Group Services Ltd. C<< BINARY@cpan.org >>.
+
+See L<Myriad/CONTRIBUTORS> for full details.
+
+=head1 LICENSE
+
+Copyright Binary Group Services Ltd 2020. Licensed under the same terms as Perl itself.
+
