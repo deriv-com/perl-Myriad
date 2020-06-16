@@ -33,7 +33,7 @@ it has been acknowledged.
 
 =cut
 
-method finished { $finished }
+method finished () { $finished }
 
 =head2 finish
 

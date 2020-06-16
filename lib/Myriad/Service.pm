@@ -46,7 +46,7 @@ Provides a common L<Ryu::Async> instance.
 =cut
 
 has $ryu;
-method ryu { $ryu }
+method ryu () { $ryu }
 
 =head2 redis
 
@@ -55,7 +55,7 @@ The L<Myriad::Storage> instance.
 =cut
 
 has $redis;
-method redis { $redis }
+method redis () { $redis }
 
 =head2 myriad
 
@@ -64,7 +64,7 @@ The L<Myriad> instance which owns this service. Stored internally as a weak refe
 =cut
 
 has $myriad;
-method myriad { $myriad }
+method myriad () { $myriad }
 
 =head2 service_name
 
@@ -73,7 +73,7 @@ The name of the service, defaults to the package name.
 =cut
 
 has $service_name;
-method service_name { $service_name //= lc(ref($self) =~ s{::}{_}gr) }
+method service_name () { $service_name //= lc(ref($self) =~ s{::}{_}gr) }
 
 =head1 METHODS
 

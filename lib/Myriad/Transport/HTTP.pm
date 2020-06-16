@@ -28,7 +28,7 @@ method on_request ($srv, $req) {
     $requests->emit($req);
 }
 
-method listen_port { 80 }
+method listen_port () { 80 }
 
 method _add_to_loop {
     $self->next::method;
