@@ -30,7 +30,7 @@ method on_request ($srv, $req) {
 
 method listen_port () { 80 }
 
-method _add_to_loop {
+method _add_to_loop ($) {
     $self->next::method;
     $requests = $self->ryu->source;
 

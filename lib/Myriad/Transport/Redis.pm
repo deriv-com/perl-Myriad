@@ -126,7 +126,7 @@ method next_id($id) {
     $left . '-' . $right
 }
 
-method _add_to_loop {
+method _add_to_loop($) {
     $self->add_child(
         $redis = Net::Async::Redis->new(
         )
