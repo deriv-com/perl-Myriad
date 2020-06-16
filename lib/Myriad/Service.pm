@@ -157,6 +157,7 @@ Runs any internal diagnostics.
 
 =cut
 
+# TODO: What should this have as a signature?
 async method diagnostics {
     return;
 }
