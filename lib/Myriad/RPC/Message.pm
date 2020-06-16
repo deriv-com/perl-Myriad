@@ -10,6 +10,7 @@ use Syntax::Keyword::Try;
 use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8);
 
 use Myriad::Exception::BadMessageEncoding;
+use Myriad::Exception::BadMessage;
 
 class Myriad::RPC::Message;
 
@@ -30,19 +31,18 @@ method who {$who};
 method response :lvalue {$response}
 
 method BUILD(%raw_message) {
-    $rpc = $raw_message{rpc} // die 'need the RPC name';
-    $id = $raw_message{message_id} // die 'need the message id';
-    $who = $raw_message{who} // die 'need the sender identifier "who"';
-    $deadline = $raw_message{deadline} // die 'need a deadline';
+    $rpc = $raw_message{rpc} // Myriad::Exception::BadMessage->throw('rpc');
+    $id = $raw_message{message_id} // Myriad::Exception::BadMessage->throw('id');
+    $who = $raw_message{who} // Myriad::Exception::BadMessage->throw('who');
+    $deadline = $raw_message{deadline} // Myriad::Exception::BadMessage->throw('deadline');
     try {
-        $args = decode_json_utf8($raw_message{args});
-        $stash = decode_json_utf8($raw_message{stash});
-        $response = {};
+        $args = $raw_message{args} ? decode_json_utf8($raw_message{args}) : Myriad::Exception::BadMessage->throw('args');
+        $stash = $raw_message{stash} ? decode_json_utf8($raw_message{stash}) : {};
         $trace = $raw_message{trace} ? decode_json_utf8($raw_message{trace}) : {};
+        $response = {};
     }
     catch {
-        warn $@;
-        Myriad::Exception::BadMessageEncoding->new();
+        Myriad::Exception::BadMessageEncoding->throw();
     }
 }
 
@@ -60,7 +60,7 @@ method encode {
         });
     }
     catch {
-        Myriad::Exception::BadMessageEncoding->new();
+        Myriad::Exception::BadMessageEncoding->throw();
     }
 }
 

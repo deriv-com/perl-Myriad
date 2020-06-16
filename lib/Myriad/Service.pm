@@ -10,7 +10,7 @@ use Object::Pad;
 use Future::AsyncAwait;
 use Syntax::Keyword::Try;
 
-use Myriad::RPC;
+use Myriad::RPC::Implementation::Redis;
 use Myriad::Exception;
 
 class Myriad::Service extends Myriad::Notifier;
@@ -123,7 +123,7 @@ method _add_to_loop($loop) {
     );
 
     $self->add_child(
-        $rpc = Myriad::RPC->new(redis => $redis, service => ref($self))
+        $rpc = Myriad::RPC::Implementation::Redis->new(redis => $redis, service => ref($self), ryu => $ryu)
     );
 
     if (my $rpc_calls = Myriad::Registry->rpc_for(ref($self))) {
@@ -135,13 +135,8 @@ method _add_to_loop($loop) {
                 $self->setup_rpc($code, $src)
             ];
         }
-        # Setup default handler
-        my $src = $ryu->source(lable => "rpc:__NOTFOUND");
-        $rpc_map{__NOTFOUND} = [
-        $src,
-            $self->setup_rpc(async sub($method) {die "No such method: $method"}, $src)
-            ];
 
+        $self->setup_default_routes();
         $rpc->rpc_map = \%rpc_map;
     }
 
@@ -185,25 +180,43 @@ async method process_batch($k, $code, $src) {
 method setup_rpc($code, $src) {
     $src->map(async sub {
         my $message = shift;
-
         try {
             my $data = await $self->$code($message->args->%*);
-            $message->response = { response => $data }
-        }
-        catch {
+            await $rpc->reply_success($message, $data);
+        } catch {
             my $error = $@;
-            $message->response = { error => { code => 'internal', message => $error } };
-        };
-
-        try {
-            await $rpc->reply($message);
+            await $rpc->reply_error($message, $error)
         }
-        catch {
-            $log->warnf("Failed to reply to RPC message due error: %s", $@)
-        }
+    })->resolve->retain();
+}
 
-    })->
-    resolve->retain();
+
+method setup_default_routes() {
+    my $error_src = $ryu->source(label => "rpc:__ERROR");
+    $rpc_map{__ERROR} = [
+        $error_src,
+        async sub {
+            await $rpc->reply_error($_->{message}, $_->{error});
+        }];
+
+
+    my $dead_src = $ryu->source(lable => "rpc:__DEAD_MSG");
+
+    $rpc_map{__DEAD_MSG} = [
+        $dead_src,
+        async sub {
+            await $rpc->drop(@_);
+        }];
+
+    for my $key (qw /__ERROR __DEAD_MSG/) {
+        $rpc_map{$key}->[0]->map(async sub {
+           try {
+               await $rpc_map{$key}->[1]($_);
+           } catch {
+               $log->warnf("Failed to handle RPC error $key due: %s", $@);
+           }
+        })->resolve->retain();
+    }
 }
 
 =head1 ASYNC METHODS
