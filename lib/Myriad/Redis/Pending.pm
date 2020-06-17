@@ -18,8 +18,7 @@ has $group;
 has $id;
 has $finished;
 
-method BUILD {
-    my (%args) = @_;
+BUILD (%args) {
     $redis = $args{redis} // die 'need a redis';
     $stream = $args{stream} // die 'need a stream';
     $group = $args{group} // die 'need a group';
