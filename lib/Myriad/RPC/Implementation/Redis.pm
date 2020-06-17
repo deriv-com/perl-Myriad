@@ -27,7 +27,7 @@ has $group_name;
 has $whoami;
 has $service;
 has $rpc_map;
-method rpc_map :lvalue {$rpc_map}
+method rpc_map :lvalue { $rpc_map }
 
 method BUILD(%args) {
     $whoami = hostname;
@@ -68,7 +68,7 @@ async method listen() {
         })->each(sub {
             if (my $error = $_->{error}) {
                 $log->warnf("error while parsing the incoming messages: %s", $error->message);
-                $rpc_map->{__DEAD_MSG}->[0]->emit({ id => $_->{id}});
+                $rpc_map->{__DEAD_MSG}->[0]->emit($_->{id});
             } else {
                 my $message = $_->{message};
                 if (my $method = $rpc_map->{$message->rpc}) {
@@ -104,8 +104,7 @@ async method reply_error($message, $error) {
     await $self->_reply($message);
 }
 
-async method drop($args) {
-    my $id  = $args->{id};
+async method drop($id) {
     $log->debugf("Going to drop message: %s", $id);
     await $redis->ack($service, $group_name, $id);
 }
