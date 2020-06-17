@@ -26,7 +26,7 @@ like(exception {
         delete $args->{$key};
         Myriad::RPC::Message->new(%$args);
     }
-}, qr/need/, "->new without a required key should not succeed");
+}, qr/Bad RPC Message/, "->new without a required key should not succeed");
 
 my $message = Myriad::RPC::Message->new(%$message_args);
 is(exception { $message->encode() }, undef, '->encode should succeed');
