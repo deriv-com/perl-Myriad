@@ -7,7 +7,7 @@ use warnings;
 
 use Object::Pad;
 use Syntax::Keyword::Try;
-use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8);
+use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8 encode_json_text);
 
 use Myriad::Exception::BadMessageEncoding;
 use Myriad::Exception::BadMessage;
@@ -53,10 +53,10 @@ method encode {
             message_id => $id,
             who        => $who,
             deadline   => $deadline,
-            args       => encode_json_utf8($args),
-            stash      => encode_json_utf8($stash),
-            response   => encode_json_utf8($response),
-            trace      => encode_json_utf8($trace),
+            args       => encode_json_text($args),
+            stash      => encode_json_text($stash),
+            response   => encode_json_text($response),
+            trace      => encode_json_text($trace),
         });
     }
     catch {
