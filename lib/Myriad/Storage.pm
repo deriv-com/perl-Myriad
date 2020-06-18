@@ -61,10 +61,10 @@ $metrics->make_timer( elapsed =>
     labels      => [qw( method status )],
 );
 
-sub _wrap_method_for_metrics ($method) {
-    around $method => sub ($orig, $self, @args) {
+sub _make_wrapped_method_for_metrics ($method, $inner) {
+    my $code = sub ($self, @args) {
         my $start = [Time::HiRes::gettimeofday()];
-        return $self->$orig(@args)
+        return $self->$inner(@args)
             ->then_with_f( sub {
                 my ($f) = @_;
                 $metrics->report_timer( elapsed => Time::HiRes::tv_interval($start),
@@ -77,7 +77,12 @@ sub _wrap_method_for_metrics ($method) {
                     { method => $method, status => "failure" } );
                 $f;
             });
-        };
+    };
+
+    # TODO: An implementation based on Object::Pad would likely use
+    # __PACKAGE__->META->add_method( ... );
+    no strict 'refs';
+    *$method = $code;
 }
 
 =head2 get
@@ -94,9 +99,8 @@ Returns a L<Future> which will resolve to the corresponding value, or C<undef> i
 
 =cut
 
-requires 'get';
-
-_wrap_method_for_metrics 'get';
+requires '_get';
+_make_wrapped_method_for_metrics get => '_get';
 
 =head2 set
 
@@ -117,9 +121,8 @@ Returns a L<Future> which will resolve on completion.
 
 =cut
 
-requires 'set';
-
-_wrap_method_for_metrics 'set';
+requires '_set';
+_make_wrapped_method_for_metrics set => '_set';
 
 =head2 observe
 
@@ -147,9 +150,8 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-requires 'push';
-
-_wrap_method_for_metrics 'push';
+requires '_push';
+_make_wrapped_method_for_metrics push => '_push';
 
 =head2 unshift
 
@@ -165,9 +167,8 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-requires 'unshift';
-
-_wrap_method_for_metrics 'unshift';
+requires '_unshift';
+_make_wrapped_method_for_metrics unshift => '_unshift';
 
 =head2 pop
 
@@ -183,9 +184,8 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-requires 'pop';
-
-_wrap_method_for_metrics 'pop';
+requires '_pop';
+_make_wrapped_method_for_metrics pop => '_pop';
 
 =head2 shift
 
@@ -201,9 +201,8 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-requires 'shift';
-
-_wrap_method_for_metrics 'shift';
+requires '_shift';
+_make_wrapped_method_for_metrics shift => '_shift';
 
 =head2 hash_set
 
@@ -219,9 +218,8 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-requires 'hash_set';
-
-_wrap_method_for_metrics 'hash_set';
+requires '_hash_set';
+_make_wrapped_method_for_metrics hash_set => '_hash_set';
 
 =head2 hash_get
 
@@ -237,9 +235,8 @@ Returns a L<Future> which will resolve to the scalar value for this key.
 
 =cut
 
-requires 'hash_get';
-
-_wrap_method_for_metrics 'hash_get';
+requires '_hash_get';
+_make_wrapped_method_for_metrics hash_get => '_hash_get';
 
 =head2 hash_add
 
@@ -255,9 +252,8 @@ Returns a L<Future> indicating success or failure.
 
 =cut
 
-requires 'hash_add';
-
-_wrap_method_for_metrics 'hash_add';
+requires '_hash_add';
+_make_wrapped_method_for_metrics hash_add => '_hash_add';
 
 =head2 hash_keys
 
@@ -273,9 +269,8 @@ Returns a L<Future> which will resolve to a list of the keys in no defined order
 
 =cut
 
-requires 'hash_keys';
-
-_wrap_method_for_metrics 'hash_keys';
+requires '_hash_keys';
+_make_wrapped_method_for_metrics hash_keys => '_hash_keys';
 
 =head2 hash_values
 
@@ -291,9 +286,8 @@ Returns a L<Future> which will resolve to a list of the values in no defined ord
 
 =cut
 
-requires 'hash_values';
-
-_wrap_method_for_metrics 'hash_values';
+requires '_hash_values';
+_make_wrapped_method_for_metrics hash_values => '_hash_values';
 
 =head2 hash_exists
 
@@ -309,9 +303,8 @@ Returns a L<Future> which will resolve to true if the key exists in this hash.
 
 =cut
 
-requires 'hash_exists';
-
-_wrap_method_for_metrics 'hash_exists';
+requires '_hash_exists';
+_make_wrapped_method_for_metrics hash_exists => '_hash_exists';
 
 =head2 hash_count
 
@@ -327,9 +320,8 @@ Returns a L<Future> which will resolve to the count of the keys in this hash.
 
 =cut
 
-requires 'hash_count';
-
-_wrap_method_for_metrics 'hash_count';
+requires '_hash_count';
+_make_wrapped_method_for_metrics hash_count => '_hash_count';
 
 =head2 hash_as_list
 
@@ -346,9 +338,8 @@ suitable for assigning to a hash.
 
 =cut
 
-requires 'hash_as_list';
-
-_wrap_method_for_metrics 'hash_as_list';
+requires '_hash_as_list';
+_make_wrapped_method_for_metrics hash_as_list => '_hash_as_list';
 
 1;
 

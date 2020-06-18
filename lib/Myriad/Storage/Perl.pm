@@ -84,7 +84,7 @@ Returns a L<Future> which will resolve to the corresponding value, or C<undef> i
 
 =cut
 
-async method get : Defer ($k) {
+async method _get : Defer ($k) {
     return $data{$k};
 }
 
@@ -107,7 +107,7 @@ Returns a L<Future> which will resolve on completion.
 
 =cut
 
-async method set : Defer ($k, $v) {
+async method _set : Defer ($k, $v) {
     die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
     return $data{$k} = $v;
 }
@@ -140,7 +140,7 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-async method push : Defer ($k, @v) {
+async method _push : Defer ($k, @v) {
     die 'value cannot be a reference for ' . $k . ' - ' . ref($_) for grep { ref } @v;
     push $data{$k}->@*, @v;
     return 0+$data{$k}->@*;
@@ -160,7 +160,7 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-async method unshift : Defer ($k, @v) {
+async method _unshift : Defer ($k, @v) {
     die 'value cannot be a reference for ' . $k . ' - ' . ref($_) for grep { ref } @v;
     unshift $data{$k}->@*, @v;
     return 0+$data{$k}->@*;
@@ -180,7 +180,7 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-async method pop : Defer ($k) {
+async method _pop : Defer ($k) {
     return pop $data{$k}->@*;
 }
 
@@ -198,7 +198,7 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-async method shift : Defer ($k) {
+async method _shift : Defer ($k) {
     return shift $data{$k}->@*;
 }
 
@@ -216,7 +216,7 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-async method hash_set : Defer ($k, %args) {
+async method _hash_set : Defer ($k, %args) {
     for my $hash_key (sort keys %args) {
         my $v = $args{$hash_key};
         die 'value cannot be a reference for ' . $k . ' hash key ' . $hash_key . ' - ' . ref($v) if ref $v;
@@ -239,7 +239,7 @@ Returns a L<Future> which will resolve to the scalar value for this key.
 
 =cut
 
-async method hash_get : Defer ($k, $hash_key) {
+async method _hash_get : Defer ($k, $hash_key) {
     return $data{$k}{$hash_key};
 }
 
@@ -257,7 +257,7 @@ Returns a L<Future> indicating success or failure.
 
 =cut
 
-async method hash_add : Defer ($k, $hash_key, $v) {
+async method _hash_add : Defer ($k, $hash_key, $v) {
     $v //= 1;
     die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
     return $data{$k}{$hash_key} += $v;
@@ -277,7 +277,7 @@ Returns a L<Future> which will resolve to a list of the keys in no defined order
 
 =cut
 
-async method hash_keys : Defer ($k) {
+async method _hash_keys : Defer ($k) {
     return keys $data{$k}->%*;
 }
 
@@ -295,7 +295,7 @@ Returns a L<Future> which will resolve to a list of the values in no defined ord
 
 =cut
 
-async method hash_values : Defer ($k) {
+async method _hash_values : Defer ($k) {
     return values $data{$k}->%*;
 }
 
@@ -313,7 +313,7 @@ Returns a L<Future> which will resolve to true if the key exists in this hash.
 
 =cut
 
-async method hash_exists : Defer ($k, $hash_key) {
+async method _hash_exists : Defer ($k, $hash_key) {
     return exists $data{$k}{$hash_key};
 }
 
@@ -331,7 +331,7 @@ Returns a L<Future> which will resolve to the count of the keys in this hash.
 
 =cut
 
-async method hash_count : Defer ($k) {
+async method _hash_count : Defer ($k) {
     return 0 + keys $data{$k}->%*;
 }
 
@@ -350,7 +350,7 @@ suitable for assigning to a hash.
 
 =cut
 
-async method hash_as_list : Defer ($k) {
+async method _hash_as_list : Defer ($k) {
     return $data{$k}->%*;
 }
 
