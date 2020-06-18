@@ -37,6 +37,8 @@ use Class::Method::Modifiers;
 
 use Log::Any qw($log);
 
+use Sub::Util ();
+
 with 'Myriad::Storage';
 
 use constant RANDOM_DELAY => $ENV{MYRIAD_RANDOM_DELAY} || 0;
@@ -45,9 +47,9 @@ use constant RANDOM_DELAY => $ENV{MYRIAD_RANDOM_DELAY} || 0;
 # Future from some inherently non-async code.
 sub Defer : ATTR(CODE) {
     my ($package, $symbol, $referent, $attr, $data, $phase, $filename, $linenum) = @_;
-    my $name = *{$symbol}{NAME} or die 'need a symbol name';
-    $log->tracef('will defer handler for %s::%s', $package, $name);
-    around join('::', $package, $name) => async sub {
+    my $name = Sub::Util::subname($referent);
+    $log->tracef('will defer handler for %s', $name);
+    around $name => async sub {
         my ($code, $self, @args) = @_;
 
         # effectively $loop->later, but in an await-compatible way:
@@ -57,7 +59,7 @@ sub Defer : ATTR(CODE) {
             after => RANDOM_DELAY && rand(RANDOM_DELAY)
         );
 
-        $log->tracef('deferred call to %s::%s', $package, $name);
+        $log->tracef('deferred call to %s', $name);
 
         return await $self->$code(
             @args
