@@ -46,7 +46,7 @@ for my $class (qw(Myriad::Storage::Perl)) {
                 $storage->hash_get('some_hash_key', 'key'),
             )->get;
             ()
-        } calls => 2_000,
+        } calls => 1_000,
           'ensure basic storage operations do not leak memory';
 
         done_testing;
