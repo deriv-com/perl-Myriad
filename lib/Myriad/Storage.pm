@@ -11,6 +11,8 @@ use Object::Pad;
 
 class Myriad::Storage;
 
+use Role::Tiny;
+
 use experimental qw(signatures);
 
 =encoding utf8
@@ -48,8 +50,6 @@ a concrete implementation - instead, see classes such as:
 =back
 
 =cut
-
-use Role::Tiny;
 
 =head2 get
 
