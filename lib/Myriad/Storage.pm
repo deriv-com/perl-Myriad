@@ -65,17 +65,13 @@ sub _make_wrapped_method_for_metrics ($method, $inner) {
     my $code = sub ($self, @args) {
         my $start = [Time::HiRes::gettimeofday()];
         return $self->$inner(@args)
-            ->then_with_f( sub {
-                my ($f) = @_;
+            ->on_done(sub {
                 $metrics->report_timer( elapsed => Time::HiRes::tv_interval($start),
                     { method => $method, status => "success" } );
-                $f;
             })
-            ->else_with_f( sub {
-                my ($f) = @_;
+            ->on_fail(sub {
                 $metrics->report_timer( elapsed => Time::HiRes::tv_interval($start),
                     { method => $method, status => "failure" } );
-                $f;
             });
     };
 
