@@ -51,7 +51,7 @@ Time to wait for items, in milliseconds.
 
 =cut
 
-method wait_time {$wait_time}
+method wait_time () { $wait_time }
 
 =head2 batch_count
 
@@ -59,7 +59,7 @@ Number of items to allow per batch (pending / readgroup calls).
 
 =cut
 
-method batch_count {$batch_count}
+method batch_count () { $batch_count }
 
 async method oldest_processed_id($stream) {
     my ($v) = await $redis->xinfo(GROUPS => $stream);
@@ -130,7 +130,7 @@ method next_id($id) {
     $left . '-' . $right
 }
 
-method _add_to_loop {
+method _add_to_loop($) {
     $self->add_child(
         $redis = Net::Async::Redis->new(
         ),
