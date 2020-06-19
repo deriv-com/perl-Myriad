@@ -41,13 +41,17 @@ has $redis;
 has $wait_time = 15_000;
 has $batch_count = 50;
 
+has $ryu;
+
+method ryu {$ryu}
+
 =head2 wait_time
 
 Time to wait for items, in milliseconds.
 
 =cut
 
-method wait_time { $wait_time }
+method wait_time {$wait_time}
 
 =head2 batch_count
 
@@ -55,7 +59,7 @@ Number of items to allow per batch (pending / readgroup calls).
 
 =cut
 
-method batch_count { $batch_count }
+method batch_count {$batch_count}
 
 async method oldest_processed_id($stream) {
     my ($v) = await $redis->xinfo(GROUPS => $stream);
@@ -129,8 +133,12 @@ method next_id($id) {
 method _add_to_loop {
     $self->add_child(
         $redis = Net::Async::Redis->new(
-        )
+        ),
     );
+
+    $self->add_child(
+        $ryu = Ryu::Async->new
+    )
 }
 
 method source(@args) {
@@ -151,14 +159,14 @@ method iterate(%args) {
     my $group = $args{group};
     my $client = $args{client};
     Future->wait_any(
-        $src->completed,
+        $src->completed->without_cancel,
         (async sub {
-            while(1) {
+            while (1) {
                 await $src->unblocked;
                 my ($batch) = await $redis->xreadgroup(
                     BLOCK   => $self->wait_time,
                     GROUP   => $group, $client,
-                    COUNT   => $self->pending_count,
+                    COUNT   => $self->batch_count,
                     STREAMS => (
                         $stream, '>'
                     )
@@ -174,17 +182,14 @@ method iterate(%args) {
                             $id,
                             $args
                         );
-                        my $msg = Myriad::Redis::Pending->new(
-                            redis  => $self,
-                            stream => $stream,
-                            id     => $id,
-                        );
-                        $src->emit($msg);
-                        await $redis->xack($stream, 'first_group', $id);
+                        if($args) {
+                            push @$args, ("message_id", $id);
+                            $src->emit($args);
+                        }
                     }
                 }
             }
-        })->()
+        })->()->without_cancel
     )->retain;
     $src;
 }
@@ -220,7 +225,7 @@ async method cleanup(%args) {
     my $oldest = await $self->oldest_processed_id($stream);
     $log->debugf('Earliest ID to care about: %s', $oldest);
 
-    if($oldest and $oldest ne '0-0' and compare_id($oldest, $info{first_entry}[0]) > 0) {
+    if ($oldest and $oldest ne '0-0' and compare_id($oldest, $info{first_entry}[0]) > 0) {
         # At this point we know we have some older items that can go. We'll need to finesse
         # the direction to search: for now, take the naïve but workable assumption that we
         # have an even distribution of values. This means we go forwards from the start if
@@ -234,13 +239,13 @@ async method cleanup(%args) {
         my $direction = do {
             no warnings 'numeric';
             ($oldest - $info{first_entry}[0]) > ($info{last_entry}[0] - $oldest)
-            ? 'xrevrange'
-            : 'xrange'
+                ? 'xrevrange'
+                : 'xrange'
         };
         my $limit = 200;
         my $endpoint = $direction eq 'xrevrange' ? '+' : '-';
         my $total = 0;
-        while(1) {
+        while (1) {
             # XRANGE / XREVRANGE conveniently have switched start/end parameters, so we don't need to swap $endpoint
             # and $oldest depending on type here.
             my ($v) = await $redis->$direction($stream, $endpoint, $oldest, COUNT => $limit);
@@ -259,7 +264,8 @@ async method cleanup(%args) {
         my ($trim) = await $redis->xtrim($stream, MAXLEN => $total);
         my ($after) = await $redis->memory_usage($stream);
         $log->tracef('Size changed from %d to %d after trim which removed %d items', $before, $after, $trim);
-    } else {
+    }
+    else {
         $log->tracef('No point in trimming: oldest is %s and this compares to %s', $oldest, $info{first_entry}[0]);
     }
 }
@@ -290,36 +296,107 @@ method pending(%args) {
     my $group = $args{group};
     my $client = $args{client};
     Future->wait_any(
-        $src->completed,
+        $src->completed->without_cancel,
         (async sub {
             my $start = '-';
-            while(1) {
+            while (1) {
                 await $src->unblocked;
                 my ($pending) = await $redis->xpending(
                     $stream,
                     $group,
                     $start, '+',
-                    $self->pending_count,
+                    $self->batch_count,
                     $client,
                 );
                 for my $item ($pending->@*) {
                     my ($id, $consumer, $age, $delivery_count) = $item->@*;
                     $log->tracef('Claiming pending message %s from %s, age %s, %d prior deliveries', $id, $consumer, $age, $delivery_count);
-                    my $claim = await $redis->xclaim($stream, 'first_group', 'first_client', 10, $id);
+                    my $claim = await $redis->xclaim($stream, $group, $client, 10, $id);
                     $log->tracef('Claim is %s', $claim);
-                    $start = $id;
-                    my $msg = Myriad::Redis::Pending->new(
-                        redis  => $self,
-                        stream => $stream,
-                        id     => $id,
-                    );
-                    $src->emit($msg);
+                    my $args = $claim->[0]->[1];
+                    if($args) {
+                        push @$args, ("message_id", $id);
+                        $src->emit($args);
+                    }
                 }
-                last unless @$pending >= $self->pending_count;
+                last unless @$pending >= $self->batch_count;
             }
         })->(),
     )->retain;
     $src;
+}
+
+=head2 publish
+
+Publish a message through a Redis channel (pub/sub system)
+
+=over 4
+
+=item * C<channel> - The channel name.
+
+=item * C<message> - The message we want to publish (string).
+
+=back
+
+=cut
+
+async method publish($channel, $message) {
+    await $redis->publish($channel, "$message");
+}
+
+
+=head2 ack
+
+Acknowledge a message from a Redis stream.
+
+=over 4
+
+=item * C<stream> - The stream name.
+
+=item * C<group> - The group name.
+
+=item * C<message_id> - The id of the message we want to acknowledge.
+
+=back
+
+=cut
+
+async method ack($stream, $group, $message_id) {
+    await $redis->xack($stream, $group, $message_id);
+}
+
+
+=head2 create_group
+
+Create a Redis consumer group if it does NOT exist.
+
+It'll also send the MKSTREAM option to create the stream if it doesn't exist.
+
+=over 4
+
+=item * C<stream> - The name of the stream we want to attach the group to.
+
+=item * C<group> - The group name.
+
+=item * C<start_from> - The id of the message that is going to be considered the start of the stream for this group's point of view
+by default it's `$` which means the last message.
+
+=back
+
+=cut
+
+
+async method create_group($stream, $group, $start_from = '$') {
+    try {
+        await $redis->xgroup('CREATE', $stream, $group, $start_from, 'MKSTREAM');
+    }
+    catch {
+        if($@ =~ /BUSYGROUP/){
+            return;
+        } else {
+            die $@;
+        }
+    }
 }
 
 1;
