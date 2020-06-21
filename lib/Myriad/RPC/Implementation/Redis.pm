@@ -29,7 +29,7 @@ has $service;
 has $rpc_map;
 method rpc_map :lvalue { $rpc_map }
 
-method BUILD(%args) {
+BUILD(%args) {
     $whoami = hostname;
     $group_name = 'processors';
 }
