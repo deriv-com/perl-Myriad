@@ -136,7 +136,7 @@ method _add_to_loop($loop) {
     if (my $rpc_calls = Myriad::Registry->rpc_for(ref($self))) {
         foreach my $method (keys $rpc_calls->%*) {
             my $code = $rpc_calls->{$method};
-            my $src = $ryu->source(lable => "rpc:$method");
+            my $src = $ryu->source(label => "rpc:$method");
             $rpc_map{$method} = [
                 $src,
                 $self->setup_rpc($code, $src)
