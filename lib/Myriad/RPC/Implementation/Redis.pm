@@ -11,8 +11,6 @@ use Object::Pad;
 
 class Myriad::RPC::Implementation::Redis extends Myriad::Notifier;
 
-use experimental qw(signatures);
-
 use Future::AsyncAwait;
 use Syntax::Keyword::Try;
 use Role::Tiny::With;

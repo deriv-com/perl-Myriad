@@ -11,8 +11,6 @@ use Object::Pad;
 
 class Myriad::Subscription;
 
-use experimental qw(signatures);
-
 =encoding utf8
 
 =head1 NAME

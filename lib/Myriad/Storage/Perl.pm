@@ -11,8 +11,6 @@ use Object::Pad;
 
 class Myriad::Storage::Perl extends Myriad::Notifier;
 
-use experimental qw(signatures);
-
 =encoding utf8
 
 =head1 NAME
