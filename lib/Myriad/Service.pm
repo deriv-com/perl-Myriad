@@ -90,7 +90,7 @@ Populate internal configuration.
 
 =cut
 
-method configure(%args) {
+method configure (%args) {
     $redis = delete $args{redis} if exists $args{redis};
     $service_name = delete $args{name} if exists $args{name};
     Scalar::Util::weaken($myriad = delete $args{myriad}) if exists $args{myriad};
@@ -118,7 +118,7 @@ This will trigger a number of actions:
 has %active_batch;
 has %rpc_map;
 
-method _add_to_loop($loop) {
+method _add_to_loop ($loop) {
     $self->add_child(
         $ryu = Ryu::Async->new
     );
@@ -156,7 +156,7 @@ method _add_to_loop($loop) {
     $self->next::method($loop);
 }
 
-async method process_batch($k, $code, $src) {
+async method process_batch ($k, $code, $src) {
     my $backoff;
     $log->tracef('Start batch processing for %s', $k);
     while (1) {
@@ -178,7 +178,7 @@ async method process_batch($k, $code, $src) {
     }
 }
 
-method setup_rpc($code, $src) {
+method setup_rpc ($code, $src) {
     $src->map(async sub {
         my $message = shift;
         try {
@@ -192,7 +192,7 @@ method setup_rpc($code, $src) {
 }
 
 
-method setup_default_routes() {
+method setup_default_routes () {
     my $error_src = $ryu->source(label => "rpc:__ERROR");
     $rpc_map{__ERROR} = [
         $error_src,

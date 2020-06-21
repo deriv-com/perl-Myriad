@@ -29,21 +29,21 @@ has $service;
 has $rpc_map;
 method rpc_map :lvalue { $rpc_map }
 
-BUILD(%args) {
+BUILD (%args) {
     $whoami = hostname;
     $group_name = 'processors';
 }
 
-method configure(%args) {
+method configure (%args) {
     $redis = delete $args{redis} if exists $args{redis};
     $service = delete $args{service} if exists $args{service};
 }
 
-method _add_to_loop($loop) {
+method _add_to_loop ($loop) {
     $self->listen()->retain();
 }
 
-async method listen() {
+async method listen () {
     await $redis->create_group($service, $group_name);
     my $stream_config = { stream => $service, group => $group_name, client => $whoami };
     my $pending_requests = $redis->pending(%$stream_config);
@@ -84,7 +84,7 @@ async method listen() {
     }
 }
 
-async method _reply($message) {
+async method _reply ($message) {
     try {
         await $redis->publish($message->who, $message->encode);
         await $redis->ack($service, $group_name, $message->id);
@@ -94,17 +94,17 @@ async method _reply($message) {
     }
 }
 
-async method reply_success($message, $response) {
+async method reply_success ($message, $response) {
     $message->response = { response => $response };
     await $self->_reply($message);
 }
 
-async method reply_error($message, $error) {
+async method reply_error ($message, $error) {
     $message->response = { error => { code => $error->category, message => $error->message } };
     await $self->_reply($message);
 }
 
-async method drop($id) {
+async method drop ($id) {
     $log->debugf("Going to drop message: %s", $id);
     await $redis->ack($service, $group_name, $id);
 }

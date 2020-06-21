@@ -61,7 +61,7 @@ Number of items to allow per batch (pending / readgroup calls).
 
 method batch_count () { $batch_count }
 
-async method oldest_processed_id($stream) {
+async method oldest_processed_id ($stream) {
     my ($v) = await $redis->xinfo(GROUPS => $stream);
     my $oldest;
     for my $group (@$v) {
@@ -105,7 +105,7 @@ comparison.
 
 =cut
 
-method compare_id($x, $y) {
+method compare_id ($x, $y) {
     $x //= '0-0';
     $y //= '0-0';
     # Do they match?
@@ -124,13 +124,13 @@ the right-hand part of the identifier.
 
 =cut
 
-method next_id($id) {
+method next_id ($id) {
     my ($left, $right) = split /-/, $id, 2;
     ++$right;
     $left . '-' . $right
 }
 
-method _add_to_loop($) {
+method _add_to_loop ($) {
     $self->add_child(
         $redis = Net::Async::Redis->new(
         ),
@@ -141,7 +141,7 @@ method _add_to_loop($) {
     )
 }
 
-method source(@args) {
+method source (@args) {
     $self->ryu->source(@args)
 }
 
@@ -153,7 +153,7 @@ Returns a L<Ryu::Source> which emits L<Myriad::Redis::Pending> items.
 
 =cut
 
-method iterate(%args) {
+method iterate (%args) {
     my $src = $self->source;
     my $stream = $args{stream};
     my $group = $args{group};
@@ -194,7 +194,7 @@ method iterate(%args) {
     $src;
 }
 
-async method stream_info($stream) {
+async method stream_info ($stream) {
     my ($v) = await $redis->xinfo(
         STREAM => $stream
     );
@@ -215,7 +215,7 @@ Clear up old entries from a stream when it grows too large.
 
 =cut
 
-async method cleanup(%args) {
+async method cleanup (%args) {
     my $stream = $args{stream};
     # Check on our status - can we clean up any old queue items?
     my %info = await $self->stream_info($stream)->%*;
@@ -290,7 +290,7 @@ Returns a L<Ryu::Source> for the pending items in this stream.
 
 =cut
 
-method pending(%args) {
+method pending (%args) {
     my $src = $self->source;
     my $stream = $args{stream};
     my $group = $args{group};
@@ -340,7 +340,7 @@ Publish a message through a Redis channel (pub/sub system)
 
 =cut
 
-async method publish($channel, $message) {
+async method publish ($channel, $message) {
     await $redis->publish($channel, "$message");
 }
 
@@ -361,7 +361,7 @@ Acknowledge a message from a Redis stream.
 
 =cut
 
-async method ack($stream, $group, $message_id) {
+async method ack ($stream, $group, $message_id) {
     await $redis->xack($stream, $group, $message_id);
 }
 
@@ -386,7 +386,7 @@ by default it's `$` which means the last message.
 =cut
 
 
-async method create_group($stream, $group, $start_from = '$') {
+async method create_group ($stream, $group, $start_from = '$') {
     try {
         await $redis->xgroup('CREATE', $stream, $group, $start_from, 'MKSTREAM');
     }
