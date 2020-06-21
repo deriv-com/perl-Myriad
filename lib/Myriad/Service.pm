@@ -13,6 +13,8 @@ use Syntax::Keyword::Try;
 use Myriad::RPC::Implementation::Redis;
 use Myriad::Exception;
 
+use Ryu::Async;
+
 class Myriad::Service extends Myriad::Notifier;
 
 use parent qw(
