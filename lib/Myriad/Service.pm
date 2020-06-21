@@ -81,6 +81,9 @@ has $service_name;
 method service_name () { $service_name //= lc(ref($self) =~ s{::}{_}gr) }
 
 has $rpc;
+method _build_rpc () {
+    $rpc = Myriad::RPC::Implementation::Redis->new(redis => $redis, service => ref($self), ryu => $ryu)
+}
 
 =head1 METHODS
 
@@ -92,6 +95,7 @@ Populate internal configuration.
 
 method configure(%args) {
     $redis = delete $args{redis} if exists $args{redis};
+    $rpc = delete $args{rpc} if exists $args{rpc};
     $service_name = delete $args{name} if exists $args{name};
     Scalar::Util::weaken($myriad = delete $args{myriad}) if exists $args{myriad};
     $self->next::method(%args);
@@ -124,7 +128,7 @@ method _add_to_loop($loop) {
     );
 
     $self->add_child(
-        $rpc = Myriad::RPC::Implementation::Redis->new(redis => $redis, service => ref($self), ryu => $ryu)
+        $rpc //= $self->_build_rpc
     );
 
     if (my $rpc_calls = Myriad::Registry->rpc_for(ref($self))) {
