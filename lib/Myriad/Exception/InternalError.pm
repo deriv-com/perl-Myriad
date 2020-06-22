@@ -1,4 +1,4 @@
-package Myriad::Exception::BadMessage;
+package Myriad::Exception::InternalError;
 
 use strict;
 use warnings;
@@ -7,11 +7,13 @@ use warnings;
 
 use parent qw(Myriad::Exception);
 
-no indirect;
+no indirect qw(fatal);
+
+use mro;
 
 sub throw {
     my ($self, $details) = @_;
-    $self->SUPER::throw("Internal error!", "INTERNAL", $details);
+    $self->next::method("Internal error!", "INTERNAL", $details);
 }
 
 1;

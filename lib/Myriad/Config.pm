@@ -10,7 +10,7 @@ use Object::Pad;
 
 class Myriad::Config;
 
-no indirect;
+no indirect qw(fatal);
 
 =head1 NAME
 
@@ -116,11 +116,11 @@ BUILD (@args) {
 
 =head1 AUTHOR
 
-Binary Group Services Ltd. C<< BINARY@cpan.org >>.
+Deriv Group Services Ltd. C<< DERIV@cpan.org >>.
 
 See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Binary Group Services Ltd 2020. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020. Licensed under the same terms as Perl itself.
 

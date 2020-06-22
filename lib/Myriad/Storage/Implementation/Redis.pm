@@ -1,4 +1,4 @@
-package Myriad::Storage;
+package Myriad::Storage::Redis;
 
 use strict;
 use warnings;
@@ -9,7 +9,7 @@ use warnings;
 use Future::AsyncAwait;
 use Object::Pad;
 
-class Myriad::Storage;
+class Myriad::Storage::Redis;
 
 use experimental qw(signatures);
 
@@ -17,39 +17,25 @@ use experimental qw(signatures);
 
 =head1 NAME
 
-Myriad::Storage - microservice storage abstraction
+Myriad::Storage::Redis - microservice storage abstraction
 
 =head1 SYNOPSIS
 
- my $storage = $myriad->storage;
- await $storage->get('some_key');
- await $storage->hash_add('some_key', 'hash_key', 13);
-
-=head1 DESCRIPTION
-
-Provides an abstraction over the Redis-based data model used by L<Myriad> services.
-
-For more information on the API design, please see the official
-L<Redis commands list|https://redis.io/commands>. This model was
-used as the basis for the methods even when non-Redis backend
-storage systems are used.
-
-=head1 Implementation
-
-Note that this is defined as a rôle, so it does not provide
-a concrete implementation - instead, see classes such as:
-
-=over 4
-
-=item * L<Myriad::Storage::Implementation::Redis>
-
-=item * L<Myriad::Storage::Implementation::Perl>
-
-=back
-
 =cut
 
-use Role::Tiny;
+use Role::Tiny::With;
+
+with 'Myriad::Role::Storage';
+
+# This one went to market
+has $redis_action;
+# And this one stayed at home
+has $redis_subscription;
+
+BUILD (%args) {
+    $redis_action = delete $args{redis_action} // die 'need a Redis instance';
+    $redis_subscription = delete $args{redis_subscription} // die 'need a Redis instance for subscriptions';
+}
 
 =head2 get
 
@@ -65,7 +51,9 @@ Returns a L<Future> which will resolve to the corresponding value, or C<undef> i
 
 =cut
 
-requires 'get';
+async method get ($k) {
+    await $redis_action->get($k);
+}
 
 =head2 set
 
@@ -86,7 +74,10 @@ Returns a L<Future> which will resolve on completion.
 
 =cut
 
-requires 'set';
+async method set ($k, $v) {
+    die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
+    await $redis_action->set($k => $v);
+}
 
 =head2 observe
 
@@ -96,7 +87,9 @@ Returns a L<Ryu::Source> which will emit the current and all subsequent values.
 
 =cut
 
-requires 'observe';
+method observe ($k) {
+    return $redis_subscription->subscribe($k)
+}
 
 =head2 push
 
@@ -114,7 +107,10 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-requires 'push';
+async method push ($k, @v) {
+    die 'value cannot be a reference for ' . $k . ' - ' . ref($_) for grep { ref } @v;
+    await $redis_action->rpush($k, @v);
+}
 
 =head2 unshift
 
@@ -130,7 +126,10 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-requires 'unshift';
+async method unshift ($k, @v) {
+    die 'value cannot be a reference for ' . $k . ' - ' . ref($_) for grep { ref } @v;
+    await $redis_action->lpush($k, @v);
+}
 
 =head2 pop
 
@@ -146,7 +145,9 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-requires 'pop';
+async method pop ($k) {
+    await $redis_action->rpop($k);
+}
 
 =head2 shift
 
@@ -162,7 +163,9 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-requires 'shift';
+async method shift ($k) {
+    await $redis_action->lpop($k);
+}
 
 =head2 hash_set
 
@@ -178,7 +181,10 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-requires 'hash_set';
+async method hash_set ($k, $hash_key, $v) {
+    die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
+    await $redis_action->hset($k, $hash_key, $v);
+}
 
 =head2 hash_get
 
@@ -194,7 +200,9 @@ Returns a L<Future> which will resolve to the scalar value for this key.
 
 =cut
 
-requires 'hash_get';
+async method hash_get ($k, $hash_key) {
+    await $redis_action->hget($k, $hash_key);
+}
 
 =head2 hash_add
 
@@ -210,7 +218,10 @@ Returns a L<Future> indicating success or failure.
 
 =cut
 
-requires 'hash_add';
+async method hash_add ($k, $hash_key, $v) {
+    $v //= 1;
+    die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
+}
 
 =head2 hash_keys
 
@@ -226,7 +237,8 @@ Returns a L<Future> which will resolve to a list of the keys in no defined order
 
 =cut
 
-requires 'hash_keys';
+async method hash_keys ($k) {
+}
 
 =head2 hash_values
 
@@ -242,7 +254,8 @@ Returns a L<Future> which will resolve to a list of the values in no defined ord
 
 =cut
 
-requires 'hash_values';
+async method hash_values ($k) {
+}
 
 =head2 hash_exists
 
@@ -258,7 +271,8 @@ Returns a L<Future> which will resolve to true if the key exists in this hash.
 
 =cut
 
-requires 'hash_exists';
+async method hash_exists ($k, $hash_key) {
+}
 
 =head2 hash_count
 
@@ -274,7 +288,8 @@ Returns a L<Future> which will resolve to the count of the keys in this hash.
 
 =cut
 
-requires 'hash_count';
+async method hash_count ($k) {
+}
 
 =head2 hash_as_list
 
@@ -291,17 +306,18 @@ suitable for assigning to a hash.
 
 =cut
 
-requires 'hash_as_list';
+async method hash_as_list ($k) {
+}
 
 1;
 
 =head1 AUTHOR
 
-Binary Group Services Ltd. C<< BINARY@cpan.org >>.
+Deriv Group Services Ltd. C<< DERIV@cpan.org >>.
 
 See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Binary Group Services Ltd 2020. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020. Licensed under the same terms as Perl itself.
 

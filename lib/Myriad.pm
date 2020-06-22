@@ -1,11 +1,13 @@
 package Myriad;
+# ABSTRACT: async microservice framework
 
 use strict;
 use warnings;
 
-use utf8;
-
 our $VERSION = '0.001';
+# AUTHORITY
+
+use utf8;
 
 =encoding utf8
 
@@ -16,13 +18,18 @@ Myriad - microservice coördination
 =head1 SYNOPSIS
 
  use Myriad;
- Myriad->new(@ARGV)->run;
+ Myriad->new->run;
 
 =head1 DESCRIPTION
 
 Myriad provides a framework for dealing with asynchronous, microservice-based code.
 It is intended for use in an environment such as Kubernetes to support horizontal
 scaling for larger systems.
+
+Overall this framework encourages - but does not enforce - single-responsibility
+in each microservice: each service should integrate with at most one external system,
+and integration should be kept in separate services from business logic or aggregation.
+This is at odds with common microservice frameworks, so perhaps it would be more accurate to say that this framework is aimed at developing "nanoservices" instead.
 
 =head2 Do you need this?
 
@@ -35,22 +42,28 @@ For a smaller system with a handful of users, it's I<probably> overkill!
 
 =over 4
 
-=item * L<Myriad::Storage> - abstraction layer for storage, available as C<< $self->storage >> within services
+=item * L<Myriad::Service> - load this in your own code to turn it into a microservice
 
 =item * L<Myriad::RPC> - the RPC abstraction layer, in C<< $self->rpc >>
+
+=item * L<Myriad::Storage> - abstraction layer for storage, available as C<< $self->storage >> within services
 
 =item * L<Myriad::Subscription> - the subscription handling layer, in C<< $self->subscription >>
 
 =back
 
 Each of the three abstractions has various implementations, you'd set one on startup
-and that would provide functionality through the top-level abstraction layer.
+and that would provide functionality through the top-level abstraction layer. Service code
+generally shouldn't need to care which implementation is applied. There may however be cases
+where transactional behaviour differs between implementations, so there is some basic
+functionality for checking whether RPC/storage/subscription use the same underlying
+mechanism for transactional safety.
 
 =head2 Storage
 
 The L<Myriad::Storage> abstract API is a good starting point here.
 
-For storage, we have:
+For storage implementations, we have:
 
 =over 4
 
@@ -80,7 +93,11 @@ Details on the request are in L<Myriad::RPC::Request> and the response to be sen
 
 =back
 
-and subscriptions:
+=head2 Subscriptions
+
+The L<Myriad::Subscription> abstraction layer defines the available API here.
+
+Subscription implementations include:
 
 =over 4
 
@@ -113,7 +130,9 @@ Each of these implementations is supposed to separate out the logic from the act
 which deal with the lower-level interaction with the protocol, connection management and so on. More details on that
 can be found in L<Myriad::Transport> - but it's typically only useful for people working on the L<Myriad> implementation itself.
 
-Other classes of note:
+=head2 Other classes
+
+Documentation for these classes may also be of use:
 
 =over 4
 
@@ -137,6 +156,7 @@ Other classes of note:
 
 =cut
 
+no indirect qw(fatal);
 use Myriad::Exception;
 
 use Myriad::Transport::Redis;
@@ -145,6 +165,11 @@ use Myriad::Transport::HTTP;
 use Scalar::Util qw(blessed weaken);
 use Log::Any qw($log);
 use Log::Any::Adapter;
+
+# Note that we don't use Object::Pad as heavily within the core framework as we
+# would expect in microservices - this is mainly due to complications regarding
+# rôle/inheritance behaviour, and at some future point we expect to refactor code
+# to move more of these classes over to Object::Pad.
 
 =head2 loop
 
@@ -166,6 +191,8 @@ sub new {
     my $class = shift;
     bless { @_ }, $class
 }
+
+sub configure_from_argv { }
 
 =head2 redis
 
@@ -247,7 +274,7 @@ sub shutdown {
     my $f = $self->{shutdown}
         or die 'attempting to shut down before we have started, this will not end well';
     $f->done unless $f->is_ready;
-    $f
+    $f->without_cancel
 }
 
 =head2 shutdown_future
@@ -295,6 +322,10 @@ sub run {
         $log->infof('TERM received, exit');
         $self->shutdown
     });
+    $self->loop->attach_signal(INT => sub {
+        $log->infof('INT received, exit');
+        $self->shutdown
+    });
     $self->loop->attach_signal(QUIT => sub {
         $log->infof('QUIT received, exit');
         $self->shutdown
@@ -314,6 +345,8 @@ Key features that we attempt to provide:
 
 =over 4
 
+=item * B<reliable handling> - requests and actions should be reliable by default
+
 =item * B<atomic storage> - being able to record something in storage as part of the same transaction as acknowledging a message
 
 =item * B<flexible backends> - support for various storage, RPC and subscription implementations, allowing for mix+match
@@ -328,6 +361,8 @@ Key features that we attempt to provide:
 
 =back
 
+These points tend to be incompatible with typical HTTP-based microservices frameworks, although this is
+offered as one of the transport mechanisms (with some limitations).
 
 =head2 Perl
 
@@ -351,12 +386,15 @@ Although this is the textbook "enterprise-scale platform", Java naturally fits a
 with the traditional Java ecosystem, depends on HTTP as a transport. Although there is no unified storage layer,
 database access is available through connectors.
 
-=item * L<Micronaut|https://micronaut.io/> - This framework has many integrations with industry-standard solutions - SQL, MongoDB, Kafka, Redis, gRPC - and they have integration guides for cloud-native solutions such as AWS or GCP.
+=item * L<Micronaut|https://micronaut.io/> - This framework has many integrations with industry-standard
+solutions - SQL, MongoDB, Kafka, Redis, gRPC - and they have integration guides for cloud-native solutions
+such as AWS or GCP.
 
-=item * L<DropWizard|https://www.dropwizard.io/en/stable/> - A minimal framework that provides a RESTful interface and storage layer using Hibernate.
+=item * L<DropWizard|https://www.dropwizard.io/en/stable/> - A minimal framework that provides a RESTful
+interface and storage layer using Hibernate.
 
-=item * L<Helidon|https://helidon.io/> - Oracle's open source attempt, provides support for two types of transport and SQL access layer using standard Java's packages,
- built with cloud-native deployment in mind.
+=item * L<Helidon|https://helidon.io/> - Oracle's open source attempt, provides support for two types of
+transport and SQL access layer using standard Java's packages, built with cloud-native deployment in mind.
 
 =back
 
@@ -383,9 +421,17 @@ JS has many frameworks that help to implement the microservice architecture, som
 
 =over 4
 
-=item * L<Moleculer|https://moleculer.services/>
+=item * L<Moleculer|https://moleculer.services/> - generally a full-featured, well-designed microservices framework, highly recommended
 
 =item * L<Seneca|https://senecajs.org/>
+
+=back
+
+=head2 PHP
+
+=over 4
+
+=item * L<Swoft|http://en.swoft.org/> - async support via Swoole's coroutines, HTTP/websockets based with additional support for Redis/database connection pooling and ORM
 
 =back
 
@@ -407,7 +453,7 @@ like the example they mentioned in this L<blog|https://devcenter.heroku.com/arti
 
 =head1 AUTHOR
 
-Binary Group Services Ltd. C<< BINARY@cpan.org >>
+Deriv Group Services Ltd. C<< DERIV@cpan.org >>
 
 =head1 CONTRIBUTORS
 
@@ -423,5 +469,5 @@ Binary Group Services Ltd. C<< BINARY@cpan.org >>
 
 =head1 LICENSE
 
-Copyright Binary Group Services Ltd 2020. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020. Licensed under the same terms as Perl itself.
 

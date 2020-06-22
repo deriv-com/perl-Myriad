@@ -31,7 +31,6 @@ use Attribute::Handlers;
 use Myriad::Registry;
 
 use Log::Any qw($log);
-
 use Exporter qw(import export_to_level);
 
 our @IMPORT = our @IMPORT_OK = qw(RPC);
@@ -43,6 +42,8 @@ Mark this async method as a callable RPC method.
  async method example_rpc : RPC (%args) {
   return \%args;
  }
+
+This will cause the method to be registered in L<Myriad::Registry/add_rpc>.
 
 =cut
 
@@ -140,11 +141,11 @@ sub Batch : ATTR {
 
 =head1 AUTHOR
 
-Binary Group Services Ltd. C<< BINARY@cpan.org >>.
+Deriv Group Services Ltd. C<< DERIV@cpan.org >>.
 
 See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Binary Group Services Ltd 2020. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020. Licensed under the same terms as Perl itself.
 

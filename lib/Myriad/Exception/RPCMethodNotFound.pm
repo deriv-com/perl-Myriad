@@ -7,7 +7,7 @@ use warnings;
 
 use parent qw(Myriad::Exception);
 
-no indirect;
+no indirect qw(fatal);
 
 sub new {
     my ($class, $method) = @_;
