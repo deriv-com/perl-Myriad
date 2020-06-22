@@ -1,5 +1,2 @@
-FROM regentmarkets/async-perl
-ADD cpanfile /opt/cpanfile
-RUN cpanm --installdeps -n /opt
-ADD . /opt
+FROM deriv/dzil
 CMD [ "/bin/bash" ]
