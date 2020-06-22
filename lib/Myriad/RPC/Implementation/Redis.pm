@@ -33,7 +33,7 @@ sub configure ($self, %args) {
 }
 
 sub _add_to_loop ($self, $loop) {
-    $self->listen->retain;
+    $self->{listener} = $self->listen;
 }
 
 async sub listen ($self) {
@@ -52,16 +52,15 @@ async sub listen ($self) {
     try {
         await $incoming_request->merge($pending_requests)
             ->map(sub {
-                my ($data) = @_;
                 try {
-                    { message => Myriad::RPC::Message->new(@$data) };
+                    { message => Myriad::RPC::Message->new(@$_) };
                 } catch {
                     my $error = $@;
                     $error = Myriad::Exception::InternalError->new($@) unless blessed($error) and $error->isa('Myriad::Exception');
                     return { error => $error, id => $data->{message_id} }
                 }
             })->each(sub {
-                if (my $error = $_->{error}) {
+                if(my $error = $_->{error}) {
                     $log->warnf("error while parsing the incoming messages: %s", $error->message);
                     $self->rpc_map->{__DEAD_MSG}->[0]->emit($_->{id});
                 } else {
@@ -75,7 +74,7 @@ async sub listen ($self) {
                 }
             })->completed;
     } catch {
-        $log->fatalf("RPC listener stopped due: %s", $@);
+        $log->fatalf("RPC listener stopped due to: %s", $@);
     }
 }
 
