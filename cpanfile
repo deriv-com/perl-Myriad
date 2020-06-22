@@ -2,8 +2,8 @@
 requires 'Syntax::Keyword::Dynamically', '>= 0.04';
 requires 'Syntax::Keyword::Try', '>= 0.11';
 requires 'Future', '>= 0.45';
-requires 'Future::AsyncAwait', '>= 0.40';
-requires 'Object::Pad', '>= 0.28';
+requires 'Future::AsyncAwait', '>= 0.41';
+requires 'Object::Pad', '>= 0.30';
 requires 'Role::Tiny', '>= 2.000';
 # Streams
 requires 'Ryu', '>= 2.001';
