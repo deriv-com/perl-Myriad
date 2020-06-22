@@ -22,11 +22,9 @@ requires 'Metrics::Any', '>= 0.05';
 requires 'OpenTracing::Any', '>= 0.004';
 requires 'JSON::MaybeUTF8', '>= 1.002';
 # Integration
-requires 'Net::Async::HTTP';
-requires 'Net::Async::HTTP::Server';
-requires 'Net::Async::Redis', '>= 2.001';
 requires 'Net::Async::OpenTracing', '>= 0.001';
 # Transport
+requires 'Net::Async::Redis', '>= 2.001';
 requires 'Net::Async::HTTP', '>= 0.47';
 requires 'Net::Async::HTTP::Server', '>= 0.13';
 requires 'Net::Async::Redis', '>= 2.004';
