@@ -6,13 +6,11 @@ use warnings;
 # VERSION
 # AUTHORITY
 
+no indirect;
 use Future::AsyncAwait;
-use Object::Pad;
 
 use Myriad::RPC::Message;
 use Myriad::Exception::RPCMethodNotFound;
-
-class Myriad::RPC;
 
 =encoding utf8
 

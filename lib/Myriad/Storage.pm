@@ -6,10 +6,8 @@ use warnings;
 # VERSION
 # AUTHORITY
 
+no indirect;
 use Future::AsyncAwait;
-use Object::Pad;
-
-class Myriad::Storage;
 
 use experimental qw(signatures);
 

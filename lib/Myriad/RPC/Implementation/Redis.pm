@@ -7,9 +7,8 @@ use warnings;
 # AUTHORITY
 
 use utf8;
-use Object::Pad;
 
-class Myriad::RPC::Implementation::Redis extends Myriad::Notifier;
+use parent qw(IO::Async::Notifier);
 
 use experimental qw(signatures);
 
@@ -27,6 +26,7 @@ has $group_name;
 has $whoami;
 has $service;
 has $rpc_map;
+
 method rpc_map :lvalue { $rpc_map }
 
 method BUILD(%args) {
