@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: tm604/perl-docker
+      - image: deriv/dzil
         entrypoint: /bin/bash
     steps:
       - checkout
@@ -13,7 +13,11 @@ jobs:
       - run:
           name: Run test
           command: |
-            prove -vmlr t/
+            dzil test
+      - run:
+          name: Author tests
+          command: |
+            dzil xtest
 workflows:
   version: 2
   build-workflow:
