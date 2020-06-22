@@ -9,8 +9,7 @@ use warnings;
 no indirect;
 use Future::AsyncAwait;
 
-use Myriad::RPC::Message;
-use Myriad::Exception::RPCMethodNotFound;
+use utf8;
 
 =encoding utf8
 
@@ -41,15 +40,39 @@ a concrete implementation - instead, see classes such as:
 
 use Role::Tiny;
 
+use Myriad::RPC::Message;
+
+use Myriad::Exception::RPCMethodNotFound;
+
 requires 'rpc_map';
 
-=head2 listen
+=head1 METHODS
 
-The starting point of the RPC implementation where it should start receiving messages and process them.
+The following methods are required in any concrete classes which implement this rôle.
+
+=head2 start
+
+Activate RPC - begin listening for messages.
+
+Expected to return a L<Future> which resolves once we think this instance is ready
+and able to process requests.
 
 =cut
 
-requires 'listen';
+requires 'start';
+
+=head2 stop
+
+Deäctivate RPC - stop listening for messages.
+
+This is the counterpart to L</start>.
+
+Expected to return a L<Future> which resolves once we are guaranteed not to pick up
+any further new requests.
+
+=cut
+
+requires 'stop';
 
 =head2 reply_success
 

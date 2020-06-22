@@ -22,6 +22,10 @@ use Log::Any qw($log);
 
 with 'Myriad::RPC';
 
+sub service { shift->{service} }
+sub group_name { shift->{group_name} }
+sub whoami { shift->{whoami} }
+
 sub rpc_map { shift->rpc_map }
 
 sub configure ($self, %args) {
@@ -32,15 +36,20 @@ sub configure ($self, %args) {
     $self->{group_name} //= 'processors';
 }
 
-sub _add_to_loop ($self, $loop) {
-    $self->{listener} = $self->listen;
-}
-
-async sub listen ($self) {
+async sub start ($self) {
     await $self->redis->create_group(
         $self->service,
         $self->group_name
     );
+    $self->{listener} = $self->listener;
+}
+
+async sub stop ($self) {
+    $self->listener->cancel;
+    return;
+}
+
+async sub listener ($self) {
     my %stream_config = (
         stream => $self->service,
         group  => $self->group_name,
@@ -52,8 +61,9 @@ async sub listen ($self) {
     try {
         await $incoming_request->merge($pending_requests)
             ->map(sub {
+                my $data = $_;
                 try {
-                    { message => Myriad::RPC::Message->new(@$_) };
+                    { message => Myriad::RPC::Message->new(@$data) };
                 } catch {
                     my $error = $@;
                     $error = Myriad::Exception::InternalError->new($@) unless blessed($error) and $error->isa('Myriad::Exception');
