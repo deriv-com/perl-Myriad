@@ -6,10 +6,17 @@ jobs:
         entrypoint: /bin/bash
     steps:
       - checkout
+      - restore_cache:
+          keys:
+            - cpanfile-{{ arch }}-{{ checksum "cpanfile" }}
       - run:
           name: Install deps
           command: |
-            cpanm --installdeps -n .
+            cpanm -l deps --installdeps -n .
+      - save_cache:
+          key: cpanfile-{{ arch }}-{{ checksum "cpanfile" }}
+          paths:
+            - deps
       - run:
           name: Run test
           command: |
