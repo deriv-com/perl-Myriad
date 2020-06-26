@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: deriv/dzil:latest
+      - image: deriv/dzil:circle-ci-test
         entrypoint: /bin/bash
     steps:
       - checkout
