@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: deriv/dzil:circle-ci-test
+      - image: deriv/dzil:latest
         entrypoint: /bin/bash
     steps:
       - checkout
@@ -25,7 +25,6 @@ jobs:
           name: Author tests
           command: |
             dzil xtest
-
 workflows:
   version: 2
   build-workflow:
