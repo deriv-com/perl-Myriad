@@ -25,6 +25,7 @@ jobs:
           name: Author tests
           command: |
             dzil xtest
+
 workflows:
   version: 2
   build-workflow:
