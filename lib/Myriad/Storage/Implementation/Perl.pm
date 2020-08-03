@@ -1,4 +1,4 @@
-package Myriad::Storage::Perl;
+package Myriad::Storage::Implementation::Perl;
 
 use strict;
 use warnings;
@@ -9,7 +9,9 @@ use warnings;
 use Future::AsyncAwait;
 use Object::Pad;
 
-class Myriad::Storage::Perl extends Myriad::Notifier;
+class Myriad::Storage::Implementation::Perl extends Myriad::Notifier;
+
+use parent qw(Myriad::Util::Defer);
 
 use experimental qw(signatures);
 
@@ -17,7 +19,7 @@ use experimental qw(signatures);
 
 =head1 NAME
 
-Myriad::Storage::Perl - microservice storage abstraction
+Myriad::Storage::Implementation::Perl - microservice storage abstraction
 
 =head1 SYNOPSIS
 
@@ -32,38 +34,11 @@ correctly.
 
 use Role::Tiny::With;
 
-use Attribute::Handlers;
-use Class::Method::Modifiers;
+use Myriad::Util::Defer;
 
 use Log::Any qw($log);
 
-with 'Myriad::Storage';
-
-use constant RANDOM_DELAY => $ENV{MYRIAD_RANDOM_DELAY} || 0;
-
-# Helper method that allows us to return a not-quite-immediate
-# Future from some inherently non-async code.
-sub Defer : ATTR(CODE) {
-    my ($package, $symbol, $referent, $attr, $data, $phase, $filename, $linenum) = @_;
-    my $name = *{$symbol}{NAME} or die 'need a symbol name';
-    $log->tracef('will defer handler for %s::%s', $package, $name);
-    around join('::', $package, $name) => async sub {
-        my ($code, $self, @args) = @_;
-
-        # effectively $loop->later, but in an await-compatible way:
-        # either zero (default behaviour) or if we have a random
-        # delay assigned, use that to drive a uniform rand() call
-        await $self->loop->delay_future(
-            after => RANDOM_DELAY && rand(RANDOM_DELAY)
-        );
-
-        $log->tracef('deferred call to %s::%s', $package, $name);
-
-        return await $self->$code(
-            @args
-        );
-    }
-}
+with 'Myriad::Role::Storage';
 
 # Common datastore
 my %data;
@@ -356,11 +331,11 @@ async method hash_as_list : Defer ($k) {
 
 =head1 AUTHOR
 
-Binary Group Services Ltd. C<< BINARY@cpan.org >>.
+Deriv Group Services Ltd. C<< DERIV@cpan.org >>.
 
 See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Binary Group Services Ltd 2020. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020. Licensed under the same terms as Perl itself.
 

@@ -74,7 +74,7 @@ Returns a L<Myriad::RPC::Message> or throw and exception.
 
 =cut
 
-method BUILD(%raw_message) {
+BUILD(%raw_message) {
     $rpc = $raw_message{rpc} // Myriad::Exception::BadMessage->throw('rpc');
     $id = $raw_message{message_id} // Myriad::Exception::BadMessage->throw('id');
     $who = $raw_message{who} // Myriad::Exception::BadMessage->throw('who');

@@ -6,242 +6,221 @@ use warnings;
 # VERSION
 # AUTHORITY
 
-use Object::Pad;
-use Future::AsyncAwait;
-use Syntax::Keyword::Try;
-
-use Myriad::RPC::Implementation::Redis;
-use Myriad::Exception;
-
-class Myriad::Service extends Myriad::Notifier;
-
-use parent qw(
-    Myriad::Service::Attributes
-);
-
-use utf8;
-
-=encoding utf8
-
 =head1 NAME
 
-Myriad::Service - microservice coördination
+Myriad::Service - starting point for building microservices
 
 =head1 SYNOPSIS
 
+ package Example::Service;
+ use Myriad::Service;
+
+ async method startup {
+  $log->infof('Starting %s', __PACKAGE__);
+ }
+
+ # Trivial RPC call, provides the `example` method
+ async method example : RPC {
+  return { ok => 1 };
+ }
+
+ # Slightly more useful - return all the original parameters.
+ # Due to an unfortunate syntactical choice in core Perl, the
+ # whitespace before the (%args) is *mandatory*, without that
+ # you're actually passing (%args) to the RPC attribute...
+ async method echo : RPC (%args) {
+  return \%args;
+ }
+
+ # Default internal diagnostics checks are performed automatically,
+ # this method is called after the microservice status such as Redis
+ # connections, exception status etc. are verified
+ async method diagnostics ($level) {
+  my ($self, $level) = @_;
+  return 'ok';
+ }
+
+ 1;
+
 =head1 DESCRIPTION
 
-=cut
-
-use Log::Any qw($log);
-use List::Util qw(min);
-
-# Only defer up to this many seconds between batch iterations
-use constant MAX_EXPONENTIAL_BACKOFF => 2;
-
-=head1 ATTRIBUTES
-
-These methods return instance variables.
-
-=head2 ryu
-
-Provides a common L<Ryu::Async> instance.
-
-=cut
-
-has $ryu;
-
-method ryu () { $ryu }
-
-=head2 redis
-
-The L<Myriad::Storage> instance.
-
-=cut
-
-has $redis;
-method redis () { $redis }
-
-=head2 myriad
-
-The L<Myriad> instance which owns this service. Stored internally as a weak reference.
-
-=cut
-
-has $myriad;
-method myriad () { $myriad }
-
-=head2 service_name
-
-The name of the service, defaults to the package name.
-
-=cut
-
-has $service_name;
-method service_name () { $service_name //= lc(ref($self) =~ s{::}{_}gr) }
-
-has $rpc;
-
-=head1 METHODS
-
-=head2 configure
-
-Populate internal configuration.
-
-=cut
-
-method configure(%args) {
-    $redis = delete $args{redis} if exists $args{redis};
-    $service_name = delete $args{name} if exists $args{name};
-    Scalar::Util::weaken($myriad = delete $args{myriad}) if exists $args{myriad};
-    $self->next::method(%args);
-}
-
-=head2 _add_to_loop
-
-Apply this service to the current event loop.
-
-This will trigger a number of actions:
+Since this is a framework, by default it attempts to enforce a common standard on all microservice
+modules. The following Perl language features and modules are applied:
 
 =over 4
 
-=item * initial startup
+=item * L<strict>
 
-=item * first diagnostics check
+=item * L<warnings>
 
-=item * if successful, batch and subscription registration will occur
+=item * L<utf8>
+
+=item * L<perlsub/signatures>
+
+=item * no L<indirect>
+
+=item * no L<multidimensional>
+
+=item * no L<bareword::filehandles>
+
+=item * L<Syntax::Keyword::Try>
+
+=item * L<Syntax::Keyword::Dynamically>
+
+=item * L<Future::AsyncAwait>
+
+=item * provides L<Scalar::Util/blessed>, L<Scalar::Util/weaken>, L<Scalar::Util/refaddr>
 
 =back
 
+In addition, the following core L<feature>s are enabled:
+
+=over 4
+
+=item * L<bitwise|feature>
+
+=item * L<current_sub|feature>
+
+=item * L<evalbytes|feature>
+
+=item * L<fc|feature>
+
+=item * L<postderef_qq|feature>
+
+=item * L<state|feature>
+
+=item * L<unicode_eval|feature>
+
+=item * L<unicode_strings|feature>
+
+=back
+
+The calling package will be marked as an L<Object::Pad> class, providing the
+L<Object::Pad/method>, L<Object::Pad/has> and C<async method> keywords.
+
+This also makes available a L<Log::Any> instance in the C<$log> package variable,
+and for L<OpenTracing::Any> support you get C<$tracer> as an L<OpenTracing::Tracer>
+instance.
+
+=head2 Custom language features
+
+B<You can disable the language behaviour defaults> by specifying C<< :custom >> as an L</import> parameter:
+
+    package Example::Service;
+    use strict;
+    use warnings;
+    use Myriad::Service qw(:custom);
+    use Log::Any qw($log);
+
+This will only apply the L<Myriad::Service::Implementation> parent class, and avoid
+any changes to syntax or other features.
+
 =cut
 
-has %active_batch;
-has %rpc_map;
+no indirect qw(fatal);
+no multidimensional;
+no bareword::filehandles;
+use mro;
+use Future::AsyncAwait;
+use Syntax::Keyword::Try;
+use Syntax::Keyword::Dynamically;
+use Object::Pad;
+use Scalar::Util;
 
-method _add_to_loop($loop) {
-    $self->add_child(
-        $ryu = Ryu::Async->new
-    );
+use Heap;
+use IO::Async::Notifier;
+use IO::Async::SSL;
+use Net::Async::HTTP;
 
-    $self->add_child(
-        $rpc = Myriad::RPC::Implementation::Redis->new(redis => $redis, service => ref($self), ryu => $ryu)
-    );
+use Myriad::Service::Implementation;
 
-    if (my $rpc_calls = Myriad::Registry->rpc_for(ref($self))) {
-        foreach my $method (keys $rpc_calls->%*) {
-            my $code = $rpc_calls->{$method};
-            my $src = $ryu->source(lable => "rpc:$method");
-            $rpc_map{$method} = [
-                $src,
-                $self->setup_rpc($code, $src)
-            ];
-        }
+use Log::Any qw($log);
+use OpenTracing::Any qw($log);
 
-        $self->setup_default_routes();
-        $rpc->rpc_map = \%rpc_map;
-    }
+sub import {
+    my ($called_on, @args) = @_;
+    my $class = __PACKAGE__;
+    my $pkg = caller(0);
 
-    if (my $batches = Myriad::Registry->batches_for(ref($self))) {
-        for my $k (keys $batches->%*) {
-            $log->tracef('Starting batch process %s for %s', $k, ref($self));
-            my $code = $batches->{$k};
-            my $src = $self->ryu->source(label => 'batch:' . $k);
-            $active_batch{$k} = [
-                $src,
-                $self->process_batch($k, $code, $src)
-            ];
-        }
-    }
+    if(grep { $_ eq ':custom' } @args) {
+        push @{$pkg . '::ISA' }, 'Myriad::Service::Implementation';
+    } else {
+        # Apply core syntax and rules
+        strict->import;
+        warnings->import;
+        utf8->import;
 
-    $self->next::method($loop);
-}
+        # We want mostly the 5.26 featureset, but since that includes `say` and `switch`
+        # we need to customise the list somewhat
+        feature->import(qw(
+            bitwise
+            current_sub
+            evalbytes
+            fc
+            postderef_qq
+            state
+            unicode_eval
+            unicode_strings
+        ));
 
-async method process_batch($k, $code, $src) {
-    my $backoff;
-    $log->tracef('Start batch processing for %s', $k);
-    while (1) {
-        await $src->unblocked;
-        my $data = await $self->$code;
-        if ($data->@*) {
-            $backoff = 0;
-            $src->emit($_) for $data->@*;
-            # Defer next processing, give other events a chance
-            await $self->loop->delay_future(after => 0);
-        }
-        else {
-            $backoff = min(MAX_EXPONENTIAL_BACKOFF, ($backoff || 0.02) * 2);
-            $log->tracef('Batch for %s returned no results, delaying for %dms before retry', $k, $backoff * 1000.0);
-            await $self->loop->delay_future(
-                after => $backoff
+        # Indirect syntax is problematic due to `unknown_sub { ... }` compiling and running
+        # the block without complaint, and only failing at runtime *after* the code has
+        # executed once - particularly unfortunate with try/catch
+        indirect->unimport(qw(fatal));
+        # Multidimensional array access - $x{3,4} - is usually a sign that someone wanted
+        # `@x{3,4}` or similar instead, so we disable this entirely
+        multidimensional->unimport;
+        # Plain STDIN/STDOUT/STDERR are still allowed, although hopefully never used by
+        # service code - new filehandles need to be lexical.
+        bareword::filehandles->unimport;
+
+        # This one's needed for nested scope, e.g. { package XX; use Myriad::Service; method xxx (%args) ... }
+        experimental->import('signatures');
+
+        # We don't really care about diamond inheritance, since microservices are expected
+        # to have minimal inheritance in the first place, but might as well have a standard
+        # decision to avoid surprises in future
+        mro::set_mro($pkg => 'c3');
+
+        # Helper functions which are used often enough to be valuable as a default
+        Scalar::Util->export_to_level(1, $pkg, qw(refaddr blessed weaken));
+
+        # Some well-designed modules provide direct support for import target
+        Syntax::Keyword::Try->import_into($pkg);
+        Syntax::Keyword::Dynamically->import_into($pkg);
+        Future::AsyncAwait->import_into($pkg);
+
+        # For history here, see this:
+        # https://rt.cpan.org/Ticket/Display.html?id=132337
+        # At the time of writing, ->begin_class is undocumented
+        # but can be seen in action in this test:
+        # https://metacpan.org/source/PEVANS/Object-Pad-0.21/t/70mop-create-class.t#L30
+        Object::Pad->import_into($pkg);
+        Object::Pad->begin_class($pkg, extends => 'Myriad::Service::Implementation');
+
+        {
+            no strict 'refs';
+            # Essentially the same as importing Log::Any qw($log) for now,
+            # but we may want to customise this with some additional attributes.
+            # Note that we have to store a ref to the returned value, don't
+            # drop that backslash...
+            *{$pkg . '::log'} = \Log::Any->get_logger(
+                category => $pkg
             );
+            *{$pkg . '::tracer'} = \(OpenTracing->global_tracer);
         }
     }
-}
-
-method setup_rpc($code, $src) {
-    $src->map(async sub {
-        my $message = shift;
-        try {
-            my $data = await $self->$code($message->args->%*);
-            await $rpc->reply_success($message, $data);
-        } catch {
-            my $error = $@;
-            await $rpc->reply_error($message, $error)
-        }
-    })->resolve->retain();
-}
-
-
-method setup_default_routes() {
-    my $error_src = $ryu->source(label => "rpc:__ERROR");
-    $rpc_map{__ERROR} = [
-        $error_src,
-        async sub {
-            await $rpc->reply_error($_->{message}, $_->{error});
-        }];
-
-
-    my $dead_src = $ryu->source(lable => "rpc:__DEAD_MSG");
-
-    $rpc_map{__DEAD_MSG} = [
-        $dead_src,
-        async sub {
-            await $rpc->drop(@_);
-        }];
-
-    for my $key (qw /__ERROR __DEAD_MSG/) {
-        $rpc_map{$key}->[0]->map(async sub {
-           try {
-               await $rpc_map{$key}->[1]($_);
-           } catch {
-               $log->warnf("Failed to handle RPC error $key due: %s", $@);
-           }
-        })->resolve->retain();
-    }
-}
-
-=head1 ASYNC METHODS
-
-=head2 diagnostics
-
-Runs any internal diagnostics.
-
-=cut
-
-# TODO: What should this have as a signature?
-async method diagnostics {
-    return;
 }
 
 1;
 
 =head1 AUTHOR
 
-Binary Group Services Ltd. C<< BINARY@cpan.org >>.
+Deriv Group Services Ltd. C<< DERIV@cpan.org >>.
 
 See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Binary Group Services Ltd 2020. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020. Licensed under the same terms as Perl itself.
 

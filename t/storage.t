@@ -9,7 +9,7 @@ use Future;
 use Future::AsyncAwait;
 use Test::More;
 use Test::MemoryGrowth;
-use Myriad::Storage::Perl;
+use Myriad::Storage::Implementation::Perl;
 
 use IO::Async::Test;
 use IO::Async::Loop;
@@ -17,7 +17,7 @@ use IO::Async::Loop;
 my $loop = IO::Async::Loop->new;
 testing_loop( $loop );
 
-for my $class (qw(Myriad::Storage::Perl)) {
+for my $class (qw(Myriad::Storage::Implementation::Perl)) {
     subtest $class => sub {
         $loop->add(
             my $storage = new_ok($class)
@@ -31,23 +31,6 @@ for my $class (qw(Myriad::Storage::Perl)) {
             is(await $storage->hash_add('some_hash', 'numeric', 2), 5, 'can increment a hash value again');
             is(await $storage->hash_get('some_hash', 'key'), 'hash value', 'can read our original hash value back');
         })->()->get;
-
-        # Cut-down version of the tests for a few
-        # methods, just make sure that we don't go
-        # crazy with our memory usage
-        note 'Memory test, this may take a while';
-        no_growth {
-            Future->wait_all(
-                $storage->set('some_key', 'some_value'),
-                $storage->hash_set('some_hash_key', 'key', 'a hash value'),
-            )->get;
-            Future->wait_all(
-                $storage->get('some_key'),
-                $storage->hash_get('some_hash_key', 'key'),
-            )->get;
-            ()
-        } calls => 2_000,
-          'ensure basic storage operations do not leak memory';
 
         done_testing;
     };

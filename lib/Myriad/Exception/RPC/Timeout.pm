@@ -1,4 +1,4 @@
-package Myriad::Exception;
+package Myriad::Exception::RPC::Timeout;
 
 use strict;
 use warnings;
@@ -6,29 +6,19 @@ use warnings;
 # VERSION
 # AUTHORITY
 
-use utf8;
-
-=encoding utf8
-
-=head1 NAME
-
-Myriad::Exception
-
-=head1 DESCRIPTION
-
-This is a rôle used for all exceptions throughout the framework.
-
-=cut
+use parent qw(Ryu::Exception);
 
 no indirect qw(fatal);
 
-use Role::Tiny;
+use Role::Tiny::With;
 
-requires 'category';
+with 'Myriad::Exception';
 
-sub throw { die @_ }
+sub category { 'rpc' }
 
 1;
+
+__END__
 
 =head1 AUTHOR
 

@@ -2,18 +2,29 @@ version: 2
 jobs:
   build:
     docker:
-      - image: tm604/perl-docker
+      - image: deriv/dzil:latest
         entrypoint: /bin/bash
     steps:
       - checkout
+      - restore_cache:
+          keys:
+            - cpanfile-{{ arch }}-{{ checksum "cpanfile" }}
       - run:
           name: Install deps
           command: |
-            cpanm --installdeps -n .
+            cpanm -l deps --installdeps -n .
+      - save_cache:
+          key: cpanfile-{{ arch }}-{{ checksum "cpanfile" }}
+          paths:
+            - deps
       - run:
           name: Run test
           command: |
-            prove -vmlr t/
+            dzil test
+      - run:
+          name: Author tests
+          command: |
+            dzil xtest
 workflows:
   version: 2
   build-workflow:

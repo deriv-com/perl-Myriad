@@ -1,12 +1,15 @@
 # Syntax
-requires 'Syntax::Keyword::Dynamically', '>= 0.04';
-requires 'Syntax::Keyword::Try', '>= 0.11';
+requires 'indirect';
+requires 'multidimensional';
+requires 'bareword::filehandles';
+requires 'Syntax::Keyword::Dynamically', '>= 0.05';
+requires 'Syntax::Keyword::Try', '>= 0.18';
 requires 'Future', '>= 0.45';
-requires 'Future::AsyncAwait', '>= 0.40';
-requires 'Object::Pad', '>= 0.28';
+requires 'Future::AsyncAwait', '>= 0.43';
+requires 'Object::Pad', '>= 0.31';
 requires 'Role::Tiny', '>= 2.000';
 # Streams
-requires 'Ryu', '>= 2.001';
+requires 'Ryu', '>= 2.002';
 requires 'Ryu::Async', '>= 0.016';
 # IO::Async
 requires 'Heap', '>= 0.80';
@@ -19,23 +22,28 @@ requires 'Log::Any::Adapter', '>= 1.708';
 requires 'Config::Any', '>= 0.32';
 requires 'YAML::XS', '>= 0.81';
 requires 'Metrics::Any', '>= 0.05';
-requires 'OpenTracing::Any', '>= 0.004';
+requires 'OpenTracing::Any', '>= 1.000';
 requires 'JSON::MaybeUTF8', '>= 1.002';
+requires 'Time::Moment', '>= 0.44';
+requires 'Sys::Hostname';
 # Integration
-requires 'Net::Async::HTTP';
-requires 'Net::Async::HTTP::Server';
-requires 'Net::Async::Redis', '>= 2.001';
-requires 'Net::Async::OpenTracing', '>= 0.001';
+requires 'Net::Async::OpenTracing'; # , '>= 1.000';
+requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
+requires 'Log::Any::Adapter::Multiplexor', '>= 0.03';
 # Transport
+requires 'Net::Async::Redis', '>= 2.005';
 requires 'Net::Async::HTTP', '>= 0.47';
 requires 'Net::Async::HTTP::Server', '>= 0.13';
 requires 'Net::Async::Redis', '>= 2.004';
 requires 'Net::Async::AMQP', '>= 2.000';
 requires 'Net::Async::SMTP', '>= 0.002';
-requires 'Database::Async', 0;
-requires 'Database::Async::Engine::PostgreSQL', 0;
+requires 'Database::Async', '>= 0.010';
+requires 'Database::Async::Engine::PostgreSQL', '>= 0.008';
 # Introspection
 requires 'Devel::MAT::Dumper';
+
+# Things that may move out
+requires 'Term::ReadLine';
 
 on 'test' => sub {
     requires 'Test::More', '>= 0.98';
