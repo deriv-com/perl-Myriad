@@ -49,8 +49,8 @@ sub compare_id {
             my ($id) = await $redis->xgroup(
                 CREATE => $stream, 'first_group', '$'
             );
-        } catch {
-            $log->warnf('Group creation flagged failure: %s', $@);
+        } catch ($e) {
+            $log->warnf('Group creation flagged failure: %s', $e);
         }
 
         # Check any pending items from last execution
@@ -169,8 +169,8 @@ sub compare_id {
         } else {
             $log->infof('No point in trimming: oldest is %s and this compares to %s', $oldest, $info{first_entry}[0]);
         }
-    } catch {
-        $log->errorf('Unable to get info about stream %s - %s', $stream, $@);
+    } catch ($e) {
+        $log->errorf('Unable to get info about stream %s - %s', $stream, $e);
     }
 
 })->()->get;

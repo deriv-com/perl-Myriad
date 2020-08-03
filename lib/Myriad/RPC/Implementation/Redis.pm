@@ -76,9 +76,8 @@ async sub listener ($self) {
                 my $data = $_;
                 try {
                     { message => Myriad::RPC::Message->new(@$data) };
-                } catch {
-                    my $error = $@;
-                    $error = Myriad::Exception::InternalError->new($@) unless blessed($error) and $error->isa('Myriad::Exception');
+                } catch ($error) {
+                    $error = Myriad::Exception::InternalError->new($error) unless blessed($error) and $error->isa('Myriad::Exception');
                     return { error => $error, id => $data->{message_id} }
                 }
             })->each(sub {
@@ -95,8 +94,8 @@ async sub listener ($self) {
                     }
                 }
             })->completed;
-    } catch {
-        $log->fatalf("RPC listener stopped due to: %s", $@);
+    } catch ($e) {
+        $log->fatalf("RPC listener stopped due to: %s", $e);
     }
 }
 
@@ -104,8 +103,8 @@ async sub _reply ($self, $message) {
     try {
         await $self->redis->publish($message->who, $message->encode);
         await $self->redis->ack($self->service, $self->group_name, $message->id);
-    } catch {
-        $log->warnf("Failed to reply to client due: %s", $@);
+    } catch ($e) {
+        $log->warnf("Failed to reply to client due: %s", $e);
         return;
     }
 }

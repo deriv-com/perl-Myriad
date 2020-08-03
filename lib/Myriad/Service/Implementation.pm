@@ -188,9 +188,8 @@ method setup_rpc($code, $src) {
         try {
             my $data = await $self->$code($message->args->%*);
             await $rpc->reply_success($message, $data);
-        } catch {
-            my $error = $@;
-            await $rpc->reply_error($message, $error)
+        } catch ($e) {
+            await $rpc->reply_error($message, $e)
         }
     })->resolve->retain();
 }
@@ -217,8 +216,8 @@ method setup_default_routes() {
         $rpc_map{$key}->[0]->map(async sub {
            try {
                await $rpc_map{$key}->[1]($_);
-           } catch {
-               $log->warnf("Failed to handle RPC error $key due: %s", $@);
+           } catch ($e) {
+               $log->warnf("Failed to handle RPC error $key due: %s", $e);
            }
         })->resolve->retain();
     }

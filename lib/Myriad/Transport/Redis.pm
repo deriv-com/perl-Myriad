@@ -390,11 +390,11 @@ async method create_group($stream, $group, $start_from = '$') {
     try {
         await $redis->xgroup('CREATE', $stream, $group, $start_from, 'MKSTREAM');
     }
-    catch {
-        if($@ =~ /BUSYGROUP/){
+    catch ($e) {
+        if($e =~ /BUSYGROUP/){
             return;
         } else {
-            die $@;
+            die $e;
         }
     }
 }

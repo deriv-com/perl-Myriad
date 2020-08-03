@@ -170,13 +170,13 @@ async sub run {
                 } else {
                     $log->errorf("Unknown command: %s", $cmd);
                 }
-            } catch {
-                $log->errorf('Failed to execute %s - %s', $line, $@);
+            } catch ($e) {
+                $log->errorf('Failed to execute %s - %s', $line, $e);
             }
             $rl->addhistory($line) if $line =~ /\S/;
         }
-    } catch {
-        $log->errorf('Failure during readline loop - %s', $@);
+    } catch ($e) {
+        $log->errorf('Failure during readline loop - %s', $e);
     }
     await $self->cleanup;
 }
