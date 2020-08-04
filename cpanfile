@@ -9,7 +9,7 @@ requires 'Future::AsyncAwait', '>= 0.43';
 requires 'Object::Pad', '>= 0.31';
 requires 'Role::Tiny', '>= 2.000';
 # Streams
-requires 'Ryu', '>= 2.002';
+requires 'Ryu', '>= 2.003';
 requires 'Ryu::Async', '>= 0.016';
 # IO::Async
 requires 'Heap', '>= 0.80';
@@ -26,6 +26,8 @@ requires 'OpenTracing::Any', '>= 1.000';
 requires 'JSON::MaybeUTF8', '>= 1.002';
 requires 'Time::Moment', '>= 0.44';
 requires 'Sys::Hostname';
+requires 'Pod::Simple::Text';
+requires 'Scope::Guard';
 # Integration
 requires 'Net::Async::OpenTracing'; # , '>= 1.000';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
@@ -52,4 +54,6 @@ on 'test' => sub {
     requires 'Test::MemoryGrowth', '>= 0.03';
     requires 'Log::Any::Adapter::TAP';
     requires 'Log::Any::Test';
+    requires 'Test::CheckDeps';
+    requires 'Test::NoTabs';
 };
