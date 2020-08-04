@@ -54,4 +54,6 @@ on 'test' => sub {
     requires 'Test::MemoryGrowth', '>= 0.03';
     requires 'Log::Any::Adapter::TAP';
     requires 'Log::Any::Test';
+    requires 'Test::CheckDeps';
+    requires 'Test::NoTabs';
 };
