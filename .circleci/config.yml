@@ -6,6 +6,10 @@ jobs:
         entrypoint: /bin/bash
     steps:
       - checkout
+      - run:
+          name: Prepare environment
+          command: |
+            apt-get -y -q --no-install-recommends install $(cat aptfile)
       - restore_cache:
           keys:
             - cpanfile-{{ arch }}-{{ checksum "cpanfile" }}
