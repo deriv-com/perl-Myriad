@@ -27,13 +27,13 @@ jobs:
           command: |
             # Upstream Pod::Inherit is no longer maintained, we may end up needing
             # to fork this but for now we can patch it out...
-            export PERL5LIB=$(pwd)/deps:$PERL5LIB
+            export PERL5LIB=$(pwd)/deps/lib/perl5:$(pwd)/deps/lib/perl5/$(perl -MConfig -le'print $Config{archname}'):$PERL5LIB
             perl -i -lpe's{did_it = \$src \? do \K\$src}{"./\$src"}' $(perldoc -lm Pod::Inherit)
             dzil test
       - run:
           name: Author tests
           command: |
-            export PERL5LIB=$(pwd)/deps:$PERL5LIB
+            export PERL5LIB=$(pwd)/deps/lib/perl5:$(pwd)/deps/lib/perl5/$(perl -MConfig -le'print $Config{archname}'):$PERL5LIB
             dzil xtest
 workflows:
   version: 2
