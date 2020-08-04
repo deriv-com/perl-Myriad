@@ -20,6 +20,9 @@ jobs:
       - run:
           name: Run test
           command: |
+            # Upstream Pod::Inherit is no longer maintained, we may end up needing
+            # to fork this but for now we can patch it out...
+            perl -i -lpe's{did_it = \$src \? do \K\$src}{"./\$src"}' $(perldoc -lm Pod::Inherit)
             dzil test
       - run:
           name: Author tests
