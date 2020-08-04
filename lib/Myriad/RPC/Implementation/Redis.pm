@@ -32,13 +32,19 @@ use Scalar::Util qw(blessed);
 
 use Log::Any qw($log);
 
+use Myriad::Exception::RPCMethodNotFound;
+use Myriad::Exception::InternalError;
+use Myriad::RPC::Message;
+
 with 'Myriad::RPC';
+
+sub redis { shift->{redis} }
 
 sub service { shift->{service} }
 sub group_name { shift->{group_name} }
 sub whoami { shift->{whoami} }
 
-sub rpc_map { shift->rpc_map }
+sub rpc_map { shift->{rpc_map} }
 
 sub configure ($self, %args) {
     for my $k (qw(whoami group_name redis service)) {
@@ -53,7 +59,7 @@ async sub start ($self) {
         $self->service,
         $self->group_name
     );
-    $self->{listener} = $self->listener;
+    await $self->listener;
 }
 
 async sub stop ($self) {

@@ -138,7 +138,8 @@ method _add_to_loop($loop) {
         }
 
         $self->setup_default_routes();
-        $rpc->rpc_map = \%rpc_map;
+        $rpc->{rpc_map} = \%rpc_map;
+        $rpc->start->retain();
     }
 
     if (my $batches = Myriad::Registry->batches_for(ref($self))) {
