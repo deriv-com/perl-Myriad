@@ -398,6 +398,10 @@ async method create_group($stream, $group, $start_from = '$') {
     }
 }
 
+async method pending_messages_info($stream, $group) {
+    await $redis->xpending($stream, $group);
+}
+
 1;
 
 =head1 AUTHOR

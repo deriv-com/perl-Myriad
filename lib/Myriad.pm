@@ -248,6 +248,11 @@ sub add_service {
     my $k = Scalar::Util::refaddr($srv);
     Scalar::Util::weaken($self->{services_by_name}{$name} = $srv);
     $self->{services}{$k} = $srv;
+
+    $srv->startup->retain->on_fail(sub {
+        my $error = shift;
+        Myriad::Exception->throw('service ' .  $name . ' failed to start due: ' . $error)
+    });
 }
 
 =head2 service_by_name
@@ -273,6 +278,11 @@ sub shutdown {
     my ($self) = @_;
     my $f = $self->{shutdown}
         or die 'attempting to shut down before we have started, this will not end well';
+
+    for my $service (keys $self->{services}->%*) {
+        $self->{services}{$service}->shutdown->await;
+    }
+
     $f->done unless $f->is_ready;
     $f->without_cancel
 }

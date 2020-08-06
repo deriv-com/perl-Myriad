@@ -7,6 +7,7 @@ use warnings;
 # AUTHORITY
 
 use Object::Pad;
+use Future;
 use Future::AsyncAwait;
 use Syntax::Keyword::Try;
 
@@ -139,7 +140,6 @@ method _add_to_loop($loop) {
 
         $self->setup_default_routes();
         $rpc->{rpc_map} = \%rpc_map;
-        $rpc->start->retain();
     }
 
     if (my $batches = Myriad::Registry->batches_for(ref($self))) {
@@ -156,6 +156,19 @@ method _add_to_loop($loop) {
 
     $self->next::method($loop);
 }
+
+method setup_rpc($code, $src) {
+    $src->map(async sub {
+        my $message = shift;
+        try {
+            my $data = await $self->$code($message->args->%*);
+            await $rpc->reply_success($message, $data);
+        } catch ($e) {
+            await $rpc->reply_error($message, $e)
+        }
+    })->resolve->retain();
+}
+
 
 =head1 ASYNC METHODS
 
@@ -181,18 +194,6 @@ async method process_batch($k, $code, $src) {
             );
         }
     }
-}
-
-method setup_rpc($code, $src) {
-    $src->map(async sub {
-        my $message = shift;
-        try {
-            my $data = await $self->$code($message->args->%*);
-            await $rpc->reply_success($message, $data);
-        } catch ($e) {
-            await $rpc->reply_error($message, $e)
-        }
-    })->resolve->retain();
 }
 
 
@@ -224,6 +225,16 @@ method setup_default_routes() {
     }
 }
 
+=head2 startup 
+    
+Start the service and perform any operation needed before announcing the service as ready to start
+
+=cut
+
+async method startup {
+    await $rpc->start();
+};
+
 =head2 diagnostics
 
 Runs any internal diagnostics.
@@ -232,6 +243,34 @@ Runs any internal diagnostics.
 
 async method diagnostics {
     return;
+}
+
+=head2 shutdown
+
+Gracefully shut down the service by
+
+- stop accepting more requests
+
+- finish the pending requests
+
+=cut
+
+async method shutdown {
+    try {
+        await Future->wait_any($self->loop->timeout_future(after => 30), $rpc->stop);
+    } catch ($error) {
+        $log->warnf("Failed to stop accepting requests we might end up with unfinished requests due: %s", $error);
+    }
+
+    try {
+        await Future->wait_any($self->loop->timeout_future(after => 60 * 3), (async sub {
+            while ( await $rpc->has_pending_requests ) {
+                await $self->loop->delay_future(after => 30);
+            }
+        })->());
+    } catch ($error) {
+        $log->warnf("Failed to wait for all requests to finish due: %s, unclean shutdown", $error);
+    }
 }
 
 1;
