@@ -130,6 +130,17 @@ async sub drop ($self, $id) {
     await $self->redis->ack($self->service, $self->group_name, $id);
 }
 
+async sub has_pending_requests ($self) {
+    my $stream_info = await $self->redis->pending_messages_info($self->service, $self->group_name);
+    if($stream_info->[0]) {
+        for my $consumer ($stream_info->[3]->@*) {
+            return $consumer->[1] if $consumer->[0] eq $self->whoami;
+        }
+    }
+
+    return 0;
+}
+
 1;
 
 =head1 AUTHOR
