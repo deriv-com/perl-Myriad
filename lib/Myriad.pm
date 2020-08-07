@@ -159,6 +159,9 @@ Documentation for these classes may also be of use:
 no indirect qw(fatal);
 use Myriad::Exception;
 
+use Future;
+use Future::AsyncAwait;
+
 use Myriad::Transport::Redis;
 use Myriad::Transport::HTTP;
 
@@ -274,15 +277,15 @@ Requests shutdown.
 
 =cut
 
-sub shutdown {
+async sub shutdown {
     my ($self) = @_;
     my $f = $self->{shutdown}
         or die 'attempting to shut down before we have started, this will not end well';
 
-    for my $service (keys $self->{services}->%*) {
-        $self->{services}{$service}->shutdown->await;
-    }
-
+    my @shutdown_operations = map { $self->{services}{$_}->shutdown } keys $self->{services}->%*;
+    
+    await Future->wait_all(@shutdown_operations);
+    
     $f->done unless $f->is_ready;
     $f->without_cancel
 }
@@ -330,15 +333,15 @@ sub run {
     my ($self) = @_;
     $self->loop->attach_signal(TERM => sub {
         $log->infof('TERM received, exit');
-        $self->shutdown
+        $self->shutdown->await
     });
     $self->loop->attach_signal(INT => sub {
         $log->infof('INT received, exit');
-        $self->shutdown
+        $self->shutdown->await
     });
-    $self->loop->attach_signal(QUIT => sub {
+    $self->loop->attach_signal(QUIT => async sub {
         $log->infof('QUIT received, exit');
-        $self->shutdown
+        $self->shutdown->await
     });
     $self->shutdown_future->await;
 }
