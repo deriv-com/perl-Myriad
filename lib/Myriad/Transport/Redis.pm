@@ -398,6 +398,22 @@ async method create_group($stream, $group, $start_from = '$') {
     }
 }
 
+=head2 pending_messages_info
+
+Return information about the pending messages for a stream and a consumer group.
+
+This currently just execute C<XPENDING> without any filtering.
+
+=over 4
+
+=item * C<stream> - The name of the stream we want to check.
+
+=item * C<group> - The consumers group name that we want to check.
+
+=back
+
+=cut
+
 async method pending_messages_info($stream, $group) {
     await $redis->xpending($stream, $group);
 }
