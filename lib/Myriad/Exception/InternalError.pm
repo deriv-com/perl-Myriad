@@ -5,15 +5,15 @@ use warnings;
 
 # VERSION
 
-use parent qw(Myriad::Exception);
-
 no indirect qw(fatal);
 
-use mro;
+use Role::Tiny::With;
 
-sub throw {
-    my ($self, $details) = @_;
-    $self->next::method("Internal error!", "INTERNAL", $details);
-}
+with 'Myriad::Exception';
+
+sub category { 'MYRIAD_INTERNAL_ERROR' }
+
+sub message { 'Internal error' }
 
 1;
+

@@ -8,11 +8,23 @@ use warnings;
 no indirect qw(fatal);
 use utf8;
 
-use parent qw(Myriad::Exception);
+use Role::Tiny::With;
 
-sub throw {
-    my ($self, $field) = @_;
-    $self->next::method("Bad RPC Message field: $field is required!", "BAD_MESSAGE");
+with 'Myriad::Exception';
+
+sub new { 
+    my ($class, $field_name) = @_;
+    return bless { field => $field_name}, $class;
+}
+
+sub category { 'BAD_MESSAGE' }
+
+sub field { shift->{field} }
+
+sub message { 
+    my $self = shift;
+    return "Bad RPC Message field: " . $self->field . " is required!" 
 }
 
 1;
+

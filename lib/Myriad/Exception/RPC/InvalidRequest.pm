@@ -16,6 +16,8 @@ with 'Myriad::Exception';
 
 sub category { 'rpc' }
 
+sub message { 'invalid request' }
+
 1;
 
 __END__

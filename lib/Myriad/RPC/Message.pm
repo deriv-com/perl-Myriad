@@ -75,17 +75,17 @@ Returns a L<Myriad::RPC::Message> or throw and exception.
 =cut
 
 BUILD(%raw_message) {
-    $rpc = $raw_message{rpc} // Myriad::Exception::BadMessage->throw('rpc');
-    $id = $raw_message{message_id} // Myriad::Exception::BadMessage->throw('id');
-    $who = $raw_message{who} // Myriad::Exception::BadMessage->throw('who');
-    $deadline = $raw_message{deadline} // Myriad::Exception::BadMessage->throw('deadline');
+    $rpc = $raw_message{rpc} // Myriad::Exception::BadMessage->new('rpc')->throw;
+    $id = $raw_message{message_id} // Myriad::Exception::BadMessage->new('id')->throw;
+    $who = $raw_message{who} // Myriad::Exception::BadMessage->new('who')->throw;
+    $deadline = $raw_message{deadline} // Myriad::Exception::BadMessage->new('deadline');
     try {
-        $args = $raw_message{args} ? decode_json_utf8($raw_message{args}) : Myriad::Exception::BadMessage->throw('args');
+        $args = $raw_message{args} ? decode_json_utf8($raw_message{args}) : Myriad::Exception::BadMessage->new('args')->throw;
         $stash = $raw_message{stash} ? decode_json_utf8($raw_message{stash}) : {};
         $trace = $raw_message{trace} ? decode_json_utf8($raw_message{trace}) : {};
         $response = {};
     } catch {
-        Myriad::Exception::BadMessageEncoding->throw();
+        Myriad::Exception::BadMessageEncoding->throw;
     }
 }
 
@@ -110,8 +110,9 @@ method encode {
             trace      => encode_json_text($trace),
         });
     } catch {
-        Myriad::Exception::BadMessageEncoding->throw();
+        Myriad::Exception::BadMessageEncoding->throw;
     }
 }
 
 1;
+

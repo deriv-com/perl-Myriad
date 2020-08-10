@@ -164,7 +164,7 @@ method setup_rpc($code, $src) {
             my $data = await $self->$code($message->args->%*);
             await $rpc->reply_success($message, $data);
         } catch ($e) {
-            await $rpc->reply_error($message, $e)
+            await $rpc->reply_error($message, $e);
         }
     })->resolve->retain();
 }
@@ -263,7 +263,7 @@ async method shutdown {
     }
 
     try {
-        await Future->wait_any($self->loop->timeout_future(after => 60 * 3), (async sub {
+        await Future->wait_any($self->loop->timeout_future(after => 1), (async sub {
             while ( await $rpc->has_pending_requests ) {
                 await $self->loop->delay_future(after => 30);
             }

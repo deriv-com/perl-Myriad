@@ -5,8 +5,6 @@ use warnings;
 
 # VERSION
 
-use parent qw(Ryu::Exception);
-
 no indirect qw(fatal);
 
 use Role::Tiny::With;
@@ -14,6 +12,15 @@ use Role::Tiny::With;
 with 'Myriad::Exception';
 
 sub category { 'rpc' }
+
+sub message { 'No such method: ' . shift->method }
+
+sub method { shift->{method} }
+
+sub new {
+    my ($class, $method) = @_;
+    bless { method => $method }, $class
+}
 
 1;
 
