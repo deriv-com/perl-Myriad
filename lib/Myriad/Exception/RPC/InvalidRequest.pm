@@ -14,9 +14,17 @@ use Role::Tiny::With;
 
 with 'Myriad::Exception';
 
+sub new {
+    my ($class, $reason) = @_;
+
+    return bless { reason => $reason }, $class;
+}
+
+sub reason { shift->{reason} }
+
 sub category { 'rpc' }
 
-sub message { 'invalid request' }
+sub message { 'invalid request due to: ' . shift->reason }
 
 1;
 

@@ -263,7 +263,7 @@ async method shutdown {
     }
 
     try {
-        await Future->wait_any($self->loop->timeout_future(after => 1), (async sub {
+        await Future->wait_any($self->loop->timeout_future(after => 60 * 3), (async sub {
             while ( await $rpc->has_pending_requests ) {
                 await $self->loop->delay_future(after => 30);
             }

@@ -10,8 +10,7 @@ use Object::Pad;
 use Syntax::Keyword::Try;
 use JSON::MaybeUTF8 qw(decode_json_utf8 encode_json_utf8 encode_json_text);
 
-use Myriad::Exception::BadMessageEncoding;
-use Myriad::Exception::BadMessage;
+use Myriad::Exception::RPC::InvalidRequest;
 
 =encoding utf8
 
@@ -75,17 +74,17 @@ Returns a L<Myriad::RPC::Message> or throw and exception.
 =cut
 
 BUILD(%raw_message) {
-    $rpc = $raw_message{rpc} // Myriad::Exception::BadMessage->new('rpc')->throw;
-    $id = $raw_message{message_id} // Myriad::Exception::BadMessage->new('id')->throw;
-    $who = $raw_message{who} // Myriad::Exception::BadMessage->new('who')->throw;
-    $deadline = $raw_message{deadline} // Myriad::Exception::BadMessage->new('deadline');
+    $rpc = $raw_message{rpc} // Myriad::Exception::RPC::InvalidRequest->new('rpc is required')->throw;
+    $id = $raw_message{message_id} // Myriad::Exception::RPC::InvalidRequest->new('message_id is required')->throw;
+    $who = $raw_message{who} // Myriad::Exception::RPC::InvalidRequest->new('who is required')->throw;
+    $deadline = $raw_message{deadline} // Myriad::Exception::RPC::InvalidRequest->new('deadline is required')->throw;
     try {
-        $args = $raw_message{args} ? decode_json_utf8($raw_message{args}) : Myriad::Exception::BadMessage->new('args')->throw;
+        $args = $raw_message{args} ? decode_json_utf8($raw_message{args}) : Myriad::Exception::RPC::InvalidRequest->new('args is required')->throw;
         $stash = $raw_message{stash} ? decode_json_utf8($raw_message{stash}) : {};
         $trace = $raw_message{trace} ? decode_json_utf8($raw_message{trace}) : {};
         $response = {};
     } catch {
-        Myriad::Exception::BadMessageEncoding->throw;
+        Myriad::Exception::InvalidRequest->new("Bad message encoding")->throw();
     }
 }
 
@@ -110,7 +109,7 @@ method encode {
             trace      => encode_json_text($trace),
         });
     } catch {
-        Myriad::Exception::BadMessageEncoding->throw;
+        Myriad::Exception::RPC::InvalidRequest->new("Bad message encoding")->throw;
     }
 }
 
