@@ -24,9 +24,11 @@ no indirect qw(fatal);
 
 use Role::Tiny;
 
-requires 'category';
+requires qw(category message);
 
-sub throw { die @_ }
+sub throw { 
+    die shift;
+}
 
 1;
 

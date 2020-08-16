@@ -164,7 +164,7 @@ method setup_rpc($code, $src) {
             my $data = await $self->$code($message->args->%*);
             await $rpc->reply_success($message, $data);
         } catch ($e) {
-            await $rpc->reply_error($message, $e)
+            await $rpc->reply_error($message, $e);
         }
     })->resolve->retain();
 }
