@@ -27,9 +27,3 @@ my $myriad = Myriad->new(
 );
 $myriad->configure_from_argv(@ARGV);
 $myriad->run;
-#
-#$loop->add(
-#    my $rl = Myriad::UI::Readline->new
-#);
-#$myriad->run(@ARGV);
-#$rl->run;
