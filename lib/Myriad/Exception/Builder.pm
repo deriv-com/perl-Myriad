@@ -17,7 +17,6 @@ sub import {
         )
     };
     # Allow Myriad::Exception::Base->import from unit tests
-    warn ${^GLOBAL_PHASE};
     return $code->() if ${^GLOBAL_PHASE} eq 'RUN';
     # ... but most of the time, we're a standalone .pm with
     # a `use Myriad::Exception::Base;` line
