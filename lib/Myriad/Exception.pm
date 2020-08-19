@@ -6,6 +6,8 @@ use warnings;
 # VERSION
 # AUTHORITY
 
+no indirect qw(fatal);
+
 use utf8;
 
 =encoding utf8
@@ -20,14 +22,15 @@ This is a rôle used for all exceptions throughout the framework.
 
 =cut
 
-no indirect qw(fatal);
-
+use Scalar::Util;
 use Role::Tiny;
 
 requires qw(category message);
 
 sub throw { 
-    die shift;
+    my $self = shift;
+    $self = $self->new(@_) unless Scalar::Util::blessed($self);
+    die $self;
 }
 
 1;

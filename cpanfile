@@ -28,6 +28,7 @@ requires 'Time::Moment', '>= 0.44';
 requires 'Sys::Hostname';
 requires 'Pod::Simple::Text';
 requires 'Scope::Guard';
+requires 'Check::UnitCheck';
 # Integration
 requires 'Net::Async::OpenTracing'; # , '>= 1.000';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
