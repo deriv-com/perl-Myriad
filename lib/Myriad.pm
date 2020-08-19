@@ -164,6 +164,10 @@ use Future::AsyncAwait;
 use Myriad::Config;
 use Myriad::Commands;
 use Myriad::Exception;
+use Myriad::Exception::InternalError;
+
+use Myriad::RPC;
+use Myriad::Role::RPC;
 
 use Myriad::Transport::Redis;
 use Myriad::Transport::HTTP;
