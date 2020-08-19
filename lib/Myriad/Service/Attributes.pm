@@ -33,7 +33,7 @@ use Myriad::Registry;
 use Log::Any qw($log);
 use Exporter qw(import export_to_level);
 
-our @IMPORT = our @IMPORT_OK = qw(RPC);
+our @IMPORT = our @IMPORT_OK = qw(RPC Stream Batch);
 
 =head2 RPC
 
@@ -47,8 +47,9 @@ This will cause the method to be registered in L<Myriad::Registry/add_rpc>.
 
 =cut
 
-sub RPC : ATTR {
+sub UNIVERSAL::RPC : ATTR {
     my ($package, $symbol, $referent, $attr, $data, $phase, $filename, $linenum) = @_;
+    warn "add rpc for $package";
     die 'Invalid attribute - should be applied to a coderef' unless ref($referent) eq 'CODE';
     my $method = *{$symbol}{NAME};
     $log->tracef(

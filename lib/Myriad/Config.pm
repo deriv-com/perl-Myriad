@@ -72,9 +72,9 @@ BUILD (%args) {
     # - environment
     # - config file
     # - defaults
-    $log->tracef('Defaults %s, shortcuts %s, args %s', \%DEFAULTS, \%SHORTCUTS_FOR, \@args);
+    $log->tracef('Defaults %s, shortcuts %s, args %s', \%DEFAULTS, \%SHORTCUTS_FOR, \%args);
     GetOptionsFromArray(
-        $args{commandline},
+        $args{commandline} || [],
         $config,
         map {
             join('|', $_, ($SHORTCUTS_FOR{$_} || [])->@*) . '=s',

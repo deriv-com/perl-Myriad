@@ -40,6 +40,26 @@ use List::Util qw(min);
 # Only defer up to this many seconds between batch iterations
 use constant MAX_EXPONENTIAL_BACKOFF => 2;
 
+use Sub::Util ();
+
+=head2 MODIFY_CODE_ATTRIBUTES
+
+Due to L<Attribute::Handlers> limitations at runtime, we need to pick
+up attributes ourselves.
+
+=cut
+
+sub MODIFY_CODE_ATTRIBUTES {
+    my ($class,$code,@attrs) = @_;
+    my ($method) = Sub::Util::subname($code) =~ /::([^:]+)$/;
+    Myriad::Registry->add_rpc(
+        $class,
+        $method,
+        $code
+    );
+    return;
+}
+
 =head1 ATTRIBUTES
 
 These methods return instance variables.
