@@ -25,11 +25,5 @@ my $myriad = Myriad->new(
     hostname => hostname(),
     pid      => $$,
 );
-$myriad->configure_from_argv(@ARGV);
+$myriad->configure_from_argv(@ARGV)->get;
 $myriad->run;
-#
-#$loop->add(
-#    my $rl = Myriad::UI::Readline->new
-#);
-#$myriad->run(@ARGV);
-#$rl->run;

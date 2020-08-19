@@ -132,7 +132,7 @@ method next_id($id) {
 
 method _add_to_loop($) {
     $self->add_child(
-        $redis = Net::Async::Redis->new(uri => $ENV{MYRIAD_REDIS_URI}),
+        $redis = Net::Async::Redis->new(uri => $ENV{MYRIAD_REDIS_URI} // 'redis://localhost'),
     );
 
     $self->add_child(
