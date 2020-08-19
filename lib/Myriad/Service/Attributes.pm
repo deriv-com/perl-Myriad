@@ -49,7 +49,6 @@ This will cause the method to be registered in L<Myriad::Registry/add_rpc>.
 
 sub UNIVERSAL::RPC : ATTR {
     my ($package, $symbol, $referent, $attr, $data, $phase, $filename, $linenum) = @_;
-    warn "add rpc for $package";
     die 'Invalid attribute - should be applied to a coderef' unless ref($referent) eq 'CODE';
     my $method = *{$symbol}{NAME};
     $log->tracef(
