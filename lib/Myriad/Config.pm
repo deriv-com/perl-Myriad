@@ -64,7 +64,7 @@ our %SHORTCUTS_FOR = (
 # can be updated by other mechanisms later.
 has $config;
 
-BUILD (@args) {
+BUILD (%args) {
     $config //= {};
 
     # Parameter order in decreasing order of preference:
@@ -74,7 +74,7 @@ BUILD (@args) {
     # - defaults
     $log->tracef('Defaults %s, shortcuts %s, args %s', \%DEFAULTS, \%SHORTCUTS_FOR, \@args);
     GetOptionsFromArray(
-        \@args,
+        $args{commandline},
         $config,
         map {
             join('|', $_, ($SHORTCUTS_FOR{$_} || [])->@*) . '=s',
@@ -109,7 +109,6 @@ BUILD (@args) {
     $config->{$_} //= $DEFAULTS{$_} for keys %DEFAULTS;
 
     $log->debugf("Config is %s", $config);
-    return @args;
 }
 
 1;
