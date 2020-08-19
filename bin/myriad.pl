@@ -25,5 +25,5 @@ my $myriad = Myriad->new(
     hostname => hostname(),
     pid      => $$,
 );
-$myriad->configure_from_argv(@ARGV);
+$myriad->configure_from_argv(@ARGV)->get;
 $myriad->run;

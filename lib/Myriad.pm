@@ -157,10 +157,13 @@ Documentation for these classes may also be of use:
 =cut
 
 no indirect qw(fatal);
-use Myriad::Exception;
 
 use Future;
 use Future::AsyncAwait;
+
+use Myriad::Config;
+use Myriad::Commands;
+use Myriad::Exception;
 
 use Myriad::Transport::Redis;
 use Myriad::Transport::HTTP;
@@ -195,7 +198,51 @@ sub new {
     bless { @_ }, $class
 }
 
-sub configure_from_argv { }
+=head2 configure_from_argv
+
+Applies configuration from commandline parameters.
+
+Expects a list of parameters and applies the following logic for each one:
+
+=over 4
+
+=item * if it contains :: and a wildcard C<*>, it's treated as a service module base name, and all modules under that namespace will be loaded
+
+=item * if it contains ::, it's treated as a comma-separated list of service module names to load
+
+=item * a C<-> prefix is a standard getopt parameter
+
+=back
+
+=cut
+
+async sub configure_from_argv {
+    my ($self, @args) = @_;
+
+    $self->setup_logging;
+
+    # Allow config parsing to extract the information
+    $self->{config} = Myriad::Config->new(
+        commandline => \@args
+    );
+
+    $self->{commands} = my $commands = Myriad::Commands->new(
+        myriad => $self
+    );
+    # At this point, we expect `@args` to contain only the plain
+    # parameters such as the service name or a request to run an RPC
+    # method.
+    my $method = 'service';
+    while(@args) {
+        my $arg = shift @args;
+        if($commands->can($arg)) {
+            $method = $arg;
+        } else {
+            await $commands->$method($arg, @args);
+            last;
+        }
+    }
+}
 
 =head2 redis
 
