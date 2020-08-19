@@ -7,13 +7,10 @@ use warnings;
 
 no indirect qw(fatal);
 
-use Role::Tiny::With;
+use Myriad::Exception::Builder;
 
-with 'Myriad::Exception';
-
-sub category { 'MYRIAD_INTERNAL_ERROR' }
-
-sub message { 'Internal error' }
+sub category { 'internal' }
+sub message { shift->{message} //= 'Internal error' }
 
 1;
 

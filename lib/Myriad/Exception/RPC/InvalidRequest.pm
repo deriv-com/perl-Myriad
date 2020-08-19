@@ -6,25 +6,14 @@ use warnings;
 # VERSION
 # AUTHORITY
 
-use parent qw(Ryu::Exception);
-
 no indirect qw(fatal);
 
-use Role::Tiny::With;
-
-with 'Myriad::Exception';
-
-sub new {
-    my ($class, $reason) = @_;
-
-    return bless { reason => $reason }, $class;
-}
+use Myriad::Exception::Builder;
 
 sub reason { shift->{reason} }
 
 sub category { 'rpc' }
-
-sub message { 'invalid request due to: ' . shift->reason }
+sub message { shift->{message} //= 'invalid request due to: ' . shift->reason }
 
 1;
 

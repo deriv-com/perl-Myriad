@@ -8,14 +8,10 @@ use warnings;
 
 no indirect qw(fatal);
 
-use Role::Tiny::With;
+use Myriad::Exception::Builder;
 
-with 'Myriad::Exception';
-
-sub new {
-    my ($class, $method) = @_;
-    bless { method => $method }, $class
-}
+sub category { 'myriad' }
+sub message { shift->{message} //= 'unknown exception' }
 
 1;
 
