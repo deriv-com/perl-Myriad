@@ -12,6 +12,10 @@ class Myriad::Config;
 
 no indirect qw(fatal);
 
+use utf8;
+
+=encoding utf8
+
 =head1 NAME
 
 Myriad::Config
