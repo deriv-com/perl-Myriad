@@ -13,7 +13,7 @@ use Myriad::Exception::Builder;
 sub reason { shift->{reason} }
 
 sub category { 'rpc' }
-sub message { shift->{message} //= 'invalid request due to: ' . shift->reason }
+sub message { $_[0]->{message} //= 'invalid request due to: ' . $_[0]->reason }
 
 1;
 

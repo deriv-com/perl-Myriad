@@ -18,18 +18,22 @@ my $message_args = {
     trace      => '{}'
 };
 
-is(exception { Myriad::RPC::Message->new(%$message_args) }, undef, "->new with correct params should succeed");
+is(exception {
+    Myriad::RPC::Message->new(%$message_args)
+}, undef, "->new with correct params should succeed");
 
-like(exception {
-    for my $key (qw/rpc message_id who deadline args/) {
+for my $key (qw/rpc message_id who deadline args/) {
+    like(exception {
         my $args = dclone $message_args;
         delete $args->{$key};
         Myriad::RPC::Message->new(%$args);
-    }
-}, qr/Bad RPC Message/, "->new without a required key should not succeed");
+    }, qr/^invalid request/, "->new without $key should not succeed");
+}
 
 my $message = Myriad::RPC::Message->new(%$message_args);
-is(exception { $message->encode() }, undef, '->encode should succeed');
+is(exception {
+    $message->encode
+}, undef, '->encode should succeed');
 
 no_growth {
     my $message = Myriad::RPC::Message->new(%$message_args);

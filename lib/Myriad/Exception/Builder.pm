@@ -17,7 +17,8 @@ sub import {
         )
     };
     # Allow Myriad::Exception::Base->import from unit tests
-    return $code->() if ${^GLOBAL_PHASE} eq 'RUN';
+    return $code->() if grep { /:immediate/ } @args;
+
     # ... but most of the time, we're a standalone .pm with
     # a `use Myriad::Exception::Base;` line
     Check::UnitCheck::unitcheckify($code);
