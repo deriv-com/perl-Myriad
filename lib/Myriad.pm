@@ -136,7 +136,7 @@ Documentation for these classes may also be of use:
 
 =over 4
 
-=item * L<Myriad::Exception> - generic errors, provides L<Myriad::Exception/throw> and we recommend that all errors inherit from this
+=item * L<Myriad::Exception> - generic errors, provides L<Myriad::Exception/throw> and we recommend that all service errors inherit from this
 
 =item * L<Myriad::Plugin> - adds specific functionality to services
 
