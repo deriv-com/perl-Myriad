@@ -46,10 +46,18 @@ alternative.
 
 # Default values
 
-our %DEFAULTS = (
-    config_path => 'config.yml',
-    redis_uri   => 'redis://localhost:6379',
-);
+our %DEFAULTS;
+
+UNITCHECK {
+    %DEFAULTS = (
+        config_path => 'config.yml',
+        redis_uri   => 'redis://localhost:6379',
+    );
+    no strict 'refs';
+    for my $k (keys %DEFAULTS) {
+        *$k = sub { shift->key($k) };
+    }
+}
 
 =head2 SHORTCUTS_FOR
 

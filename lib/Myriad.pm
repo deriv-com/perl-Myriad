@@ -261,7 +261,7 @@ sub redis {
     $self->{redis} //= do {
         $self->loop->add(
             my $redis = Myriad::Transport::Redis->new(
-                redis_uri => $self->config->key('redis_uri')
+                redis_uri => $self->config->redis_uri
             )
         );
         $redis
