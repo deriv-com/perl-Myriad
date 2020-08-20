@@ -6,6 +6,10 @@ use warnings;
 # VERSION
 # AUTHORITY
 
+use utf8;
+
+=encoding utf8
+
 =head1 NAME
 
 Myriad::Service - starting point for building microservices

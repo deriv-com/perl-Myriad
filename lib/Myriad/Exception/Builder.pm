@@ -3,6 +3,23 @@ package Myriad::Exception::Builder;
 use strict;
 use warnings;
 
+# VERSION
+# AUTHORITY
+
+use utf8;
+
+=encoding utf8
+
+=head1 NAME
+
+Myriad::Exception::Builder - applies L<Myriad::Exception::Base> to an exception class
+
+=head1 DESCRIPTION
+
+See L<Myriad::Exception> for the rôle that defines the exception API.
+
+=cut
+
 use Check::UnitCheck;
 use Myriad::Exception;
 use Myriad::Exception::Base;
@@ -25,4 +42,14 @@ sub import {
 }
 
 1;
+
+=head1 AUTHOR
+
+Deriv Group Services Ltd. C<< DERIV@cpan.org >>.
+
+See L<Myriad/CONTRIBUTORS> for full details.
+
+=head1 LICENSE
+
+Copyright Deriv Group Services Ltd 2020. Licensed under the same terms as Perl itself.
 

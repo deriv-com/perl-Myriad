@@ -27,7 +27,7 @@ use Role::Tiny;
 
 requires qw(category message);
 
-sub throw { 
+sub throw {
     my $self = shift;
     $self = $self->new(@_) unless Scalar::Util::blessed($self);
     die $self;

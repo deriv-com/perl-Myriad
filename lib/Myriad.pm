@@ -332,9 +332,9 @@ async sub shutdown {
         or die 'attempting to shut down before we have started, this will not end well';
 
     my @shutdown_operations = map { $self->{services}{$_}->shutdown } keys $self->{services}->%*;
-    
+
     await Future->wait_all(@shutdown_operations);
-    
+
     $f->done unless $f->is_ready;
     $f->without_cancel
 }

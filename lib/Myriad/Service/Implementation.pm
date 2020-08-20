@@ -231,8 +231,8 @@ method setup_default_routes() {
     }
 }
 
-=head2 startup 
-    
+=head2 startup
+
 Start the service and perform any operation needed before announcing the service as ready to start
 
 =cut
