@@ -51,6 +51,7 @@ async method service (@args) {
         $loop->add(
             my $srv = $module->new(
                 redis => $myriad->redis,
+                myriad => $myriad,
             )
         );
         await $srv->startup;

@@ -111,6 +111,16 @@ BUILD (%args) {
     $log->debugf("Config is %s", $config);
 }
 
+=head2 get
+
+Returns the value of a given config key or return an empty string if it doesn't exist.
+
+=cut
+
+method get($key) {
+    return $config->{$key} // '';
+}
+
 1;
 
 =head1 AUTHOR

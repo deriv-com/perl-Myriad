@@ -92,6 +92,15 @@ The L<Myriad> instance which owns this service. Stored internally as a weak refe
 has $myriad;
 method myriad () { $myriad }
 
+=head2 config
+
+The L<Myriad::Config> instance that has been populated with the configs.
+
+=cut
+
+has $config;
+method config () { $myriad->{config} }
+
 =head2 service_name
 
 The name of the service, defaults to the package name.
