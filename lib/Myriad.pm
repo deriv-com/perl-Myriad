@@ -289,7 +289,7 @@ Returns the service instance.
 
 =cut
 
-sub add_service {
+async sub add_service {
     my ($self, $srv, %args) = @_;
     $srv = $srv->new(
         redis => $self->redis
@@ -303,10 +303,8 @@ sub add_service {
     Scalar::Util::weaken($self->{services_by_name}{$name} = $srv);
     $self->{services}{$k} = $srv;
 
-    $srv->startup->retain->on_fail(sub {
-        my $error = shift;
-        Myriad::Exception->throw('service ' .  $name . ' failed to start due: ' . $error)
-    });
+    await $srv->startup;
+    return;
 }
 
 =head2 service_by_name
