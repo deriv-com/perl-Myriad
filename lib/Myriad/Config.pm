@@ -48,8 +48,7 @@ alternative.
 
 our %DEFAULTS = (
     config_path => 'config.yml',
-    redis_host  => 'localhost',
-    redis_port  => '6379',
+    redis_uri   => 'redis://localhost:6379',
 );
 
 =head2 SHORTCUTS_FOR
@@ -60,8 +59,6 @@ The C<< %SHORTCUTS_FOR >> hash allows commandline shortcuts for common parameter
 
 our %SHORTCUTS_FOR = (
     config_path => [qw(c)],
-    redis_host  => [qw(h)],
-    redis_port  => [qw(p)],
 );
 
 # Our configuration so far. Populated via L</BUILD>,
@@ -116,6 +113,8 @@ BUILD (%args) {
 
     $log->debugf("Config is %s", $config);
 }
+
+method key($key) { return $config->{$key} // die 'unknown config key ' . $key }
 
 1;
 

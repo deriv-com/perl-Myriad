@@ -248,6 +248,8 @@ async sub configure_from_argv {
     }
 }
 
+sub config { shift->{config} }
+
 =head2 redis
 
 The L<Net::Async::Redis> (or compatible) instance used for service coördination.
@@ -258,7 +260,9 @@ sub redis {
     my ($self, %args) = @_;
     $self->{redis} //= do {
         $self->loop->add(
-            my $redis = Myriad::Transport::Redis->new
+            my $redis = Myriad::Transport::Redis->new(
+                redis_uri => $self->config->key('redis_uri')
+            )
         );
         $redis
     };
