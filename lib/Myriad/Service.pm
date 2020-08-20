@@ -197,9 +197,6 @@ sub import {
         # https://metacpan.org/source/PEVANS/Object-Pad-0.21/t/70mop-create-class.t#L30
         Object::Pad->import_into($pkg);
         Object::Pad->begin_class($pkg, extends => 'Myriad::Service::Implementation');
-        { no strict 'refs';
-        push @{$pkg . '::ISA'}, qw(Myriad::Service::Attributes);
-    }
 
         {
             no strict 'refs';

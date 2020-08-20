@@ -16,10 +16,6 @@ use Myriad::Exception;
 
 class Myriad::Service::Implementation extends IO::Async::Notifier;
 
-use parent qw(
-    Myriad::Service::Attributes
-);
-
 use utf8;
 
 =encoding utf8
@@ -36,28 +32,18 @@ Myriad::Service - microservice coördination
 
 use Log::Any qw($log);
 use List::Util qw(min);
+use Myriad::Service::Attributes;
 
 # Only defer up to this many seconds between batch iterations
 use constant MAX_EXPONENTIAL_BACKOFF => 2;
 
-use Sub::Util ();
-
-=head2 MODIFY_CODE_ATTRIBUTES
-
-Due to L<Attribute::Handlers> limitations at runtime, we need to pick
-up attributes ourselves.
-
-=cut
-
 sub MODIFY_CODE_ATTRIBUTES {
-    my ($class,$code,@attrs) = @_;
-    my ($method) = Sub::Util::subname($code) =~ /::([^:]+)$/;
-    Myriad::Registry->add_rpc(
-        $class,
-        $method,
-        $code
+    my ($class, $code, @attrs) = @_;
+    Myriad::Service::Attributes->apply_attributes(
+        class => $class,
+        code => $code,
+        attributes => \@attrs
     );
-    return;
 }
 
 =head1 ATTRIBUTES
