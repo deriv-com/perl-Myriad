@@ -77,13 +77,15 @@ BUILD (%args) {
     # - config file
     # - defaults
     $log->tracef('Defaults %s, shortcuts %s, args %s', \%DEFAULTS, \%SHORTCUTS_FOR, \%args);
-    GetOptionsFromArray(
-        $args{commandline} || [],
-        $config,
-        map {
-            join('|', $_, ($SHORTCUTS_FOR{$_} || [])->@*) . '=s',
-        } sort keys %DEFAULTS,
-    ) or die pod2usage(1);
+    if($args{commandline}) {
+        GetOptionsFromArray(
+            $args{commandline},
+            $config,
+            map {
+                join('|', $_, ($SHORTCUTS_FOR{$_} || [])->@*) . '=s',
+            } sort keys %DEFAULTS,
+        ) or die pod2usage(1);
+    }
 
     $config->{$_} //= $ENV{'MYRIAD_' . uc($_)} for grep { exists $ENV{'MYRIAD_' . uc($_)} } keys %DEFAULTS;
 
