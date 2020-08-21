@@ -223,12 +223,11 @@ Expects a list of parameters and applies the following logic for each one:
 async sub configure_from_argv {
     my ($self, @args) = @_;
 
-    $self->setup_logging;
-
     # Allow config parsing to extract the information
     $self->{config} = Myriad::Config->new(
         commandline => \@args
     );
+    $self->setup_logging;
 
     $self->{commands} = my $commands = Myriad::Commands->new(
         myriad => $self
@@ -368,10 +367,15 @@ Prepare for logging.
 
 sub setup_logging {
     my ($self) = @_;
-    Log::Any::Adapter->import(
-        qw(Stderr),
-        log_level => 'info'
-    );
+    my $level = $self->config->log_level;
+    $level->subscribe(my $code = sub {
+        Log::Any::Adapter->import(
+            qw(Stderr),
+            log_level => $level->as_string,
+        );
+    });
+    $code->();
+    return;
 }
 
 =head2 run

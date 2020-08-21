@@ -53,6 +53,7 @@ UNITCHECK {
     %DEFAULTS = (
         config_path => 'config.yml',
         redis_uri   => 'redis://localhost:6379',
+        log_level   => 'info',
     );
     no strict 'refs';
     for my $k (keys %DEFAULTS) {
