@@ -24,6 +24,7 @@ Provides top-level commands, such as loading a service or making an RPC call.
 
 use Future::AsyncAwait;
 use Syntax::Keyword::Try;
+use Future::Utils qw(fmap0);
 
 use Module::Runtime qw(require_module);
 
@@ -35,27 +36,36 @@ BUILD (%args) {
     Scalar::Util::weaken($myriad = $args{myriad} // die 'needs a Myriad parent object');
 }
 
+=head2 service
+
+Attempts to load and start one or more services.
+
+=cut
+
 async method service (@args) {
     my @modules;
     while(my $entry = shift @args) {
-        if($entry =~ /^[a-z0-9_:]+$/i) {
+        if($entry =~ /,/) {
+            unshift @args, split /,/, $entry;
+        } elsif(my ($base) = $entry =~ m{^([a-z0-9_:]+)::$}i) {
+            require Module::Pluggable::Object;
+            my $search = Module::Pluggable::Object->new(
+                search_path => [ $base ]
+            );
+            push @modules, $search->plugins;
+        } elsif($entry =~ /^[a-z0-9_:]+[a-z0-9_]$/i) {
             push @modules, $entry;
         } else {
-            die 'unsupported module format ' . $entry;
+            die 'unsupported ' . $entry;
         }
     }
-    my $loop = IO::Async::Loop->new;
-    for my $module (@modules) {
-        $log->infof('Loading %s', $module);
+
+    await fmap0(async sub {
+        my ($module) = @_;
+        $log->debugf('Loading %s', $module);
         require_module($module);
-        $loop->add(
-            my $srv = $module->new(
-                redis => $myriad->redis,
-            )
-        );
-        await $srv->startup;
-        await $srv->diagnostics(1);
-    }
+        await $myriad->add_service($module);
+    }, foreach => \@modules, concurrent => 4);
 }
 
 1;

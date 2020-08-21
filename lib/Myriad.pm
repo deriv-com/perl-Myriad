@@ -136,7 +136,7 @@ Documentation for these classes may also be of use:
 
 =over 4
 
-=item * L<Myriad::Exception> - generic errors, provides L<Myriad::Exception/throw> and we recommend that all errors inherit from this
+=item * L<Myriad::Exception> - generic errors, provides L<Myriad::Exception/throw> and we recommend that all service errors inherit from this
 
 =item * L<Myriad::Plugin> - adds specific functionality to services
 
@@ -164,6 +164,10 @@ use Future::AsyncAwait;
 use Myriad::Config;
 use Myriad::Commands;
 use Myriad::Exception;
+use Myriad::Exception::InternalError;
+
+use Myriad::RPC;
+use Myriad::Role::RPC;
 
 use Myriad::Transport::Redis;
 use Myriad::Transport::HTTP;
@@ -219,12 +223,11 @@ Expects a list of parameters and applies the following logic for each one:
 async sub configure_from_argv {
     my ($self, @args) = @_;
 
-    $self->setup_logging;
-
     # Allow config parsing to extract the information
     $self->{config} = Myriad::Config->new(
         commandline => \@args
     );
+    $self->setup_logging;
 
     $self->{commands} = my $commands = Myriad::Commands->new(
         myriad => $self
@@ -244,6 +247,8 @@ async sub configure_from_argv {
     }
 }
 
+sub config { shift->{config} }
+
 =head2 redis
 
 The L<Net::Async::Redis> (or compatible) instance used for service coördination.
@@ -254,7 +259,9 @@ sub redis {
     my ($self, %args) = @_;
     $self->{redis} //= do {
         $self->loop->add(
-            my $redis = Myriad::Transport::Redis->new
+            my $redis = Myriad::Transport::Redis->new(
+                redis_uri => $self->config->redis_uri->as_string
+            )
         );
         $redis
     };
@@ -285,7 +292,7 @@ Returns the service instance.
 
 =cut
 
-sub add_service {
+async sub add_service {
     my ($self, $srv, %args) = @_;
     $srv = $srv->new(
         redis => $self->redis
@@ -299,10 +306,8 @@ sub add_service {
     Scalar::Util::weaken($self->{services_by_name}{$name} = $srv);
     $self->{services}{$k} = $srv;
 
-    $srv->startup->retain->on_fail(sub {
-        my $error = shift;
-        Myriad::Exception->throw('service ' .  $name . ' failed to start due: ' . $error)
-    });
+    await $srv->startup;
+    return;
 }
 
 =head2 service_by_name
@@ -315,7 +320,7 @@ Will throw an exception if the service cannot be found.
 
 sub service_by_name {
     my ($self, $k) = @_;
-    return $self->{services_by_name}{$k} // Myriad::Exception->throw('service ' . $k . ' not found');
+    return $self->{services_by_name}{$k} // Myriad::Exception->throw(reason => 'service ' . $k . ' not found');
 }
 
 =head2 shutdown
@@ -330,9 +335,9 @@ async sub shutdown {
         or die 'attempting to shut down before we have started, this will not end well';
 
     my @shutdown_operations = map { $self->{services}{$_}->shutdown } keys $self->{services}->%*;
-    
+
     await Future->wait_all(@shutdown_operations);
-    
+
     $f->done unless $f->is_ready;
     $f->without_cancel
 }
@@ -362,10 +367,15 @@ Prepare for logging.
 
 sub setup_logging {
     my ($self) = @_;
-    Log::Any::Adapter->import(
-        qw(Stderr),
-        log_level => 'info'
-    );
+    my $level = $self->config->log_level;
+    $level->subscribe(my $code = sub {
+        Log::Any::Adapter->import(
+            qw(Stderr),
+            log_level => $level->as_string,
+        );
+    });
+    $code->();
+    return;
 }
 
 =head2 run

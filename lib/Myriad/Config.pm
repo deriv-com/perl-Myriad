@@ -12,6 +12,10 @@ class Myriad::Config;
 
 no indirect qw(fatal);
 
+use utf8;
+
+=encoding utf8
+
 =head1 NAME
 
 Myriad::Config
@@ -28,6 +32,7 @@ use Getopt::Long qw(GetOptionsFromArray);
 use Config::Any;
 use YAML::XS;
 use List::Util qw(pairmap);
+use Ryu::Observable;
 use Log::Any qw($log);
 
 =head1 PACKAGE VARIABLES
@@ -42,11 +47,19 @@ alternative.
 
 # Default values
 
-our %DEFAULTS = (
-    config_path => 'config.yml',
-    redis_host  => 'localhost',
-    redis_port  => '6379',
-);
+our %DEFAULTS;
+
+UNITCHECK {
+    %DEFAULTS = (
+        config_path => 'config.yml',
+        redis_uri   => 'redis://localhost:6379',
+        log_level   => 'info',
+    );
+    no strict 'refs';
+    for my $k (keys %DEFAULTS) {
+        *$k = sub { shift->key($k) };
+    }
+}
 
 =head2 SHORTCUTS_FOR
 
@@ -56,8 +69,6 @@ The C<< %SHORTCUTS_FOR >> hash allows commandline shortcuts for common parameter
 
 our %SHORTCUTS_FOR = (
     config_path => [qw(c)],
-    redis_host  => [qw(h)],
-    redis_port  => [qw(p)],
 );
 
 # Our configuration so far. Populated via L</BUILD>,
@@ -73,13 +84,15 @@ BUILD (%args) {
     # - config file
     # - defaults
     $log->tracef('Defaults %s, shortcuts %s, args %s', \%DEFAULTS, \%SHORTCUTS_FOR, \%args);
-    GetOptionsFromArray(
-        $args{commandline} || [],
-        $config,
-        map {
-            join('|', $_, ($SHORTCUTS_FOR{$_} || [])->@*) . '=s',
-        } sort keys %DEFAULTS,
-    ) or die pod2usage(1);
+    if($args{commandline}) {
+        GetOptionsFromArray(
+            $args{commandline},
+            $config,
+            map {
+                join('|', $_, ($SHORTCUTS_FOR{$_} || [])->@*) . '=s',
+            } sort keys %DEFAULTS,
+        ) or die pod2usage(1);
+    }
 
     $config->{$_} //= $ENV{'MYRIAD_' . uc($_)} for grep { exists $ENV{'MYRIAD_' . uc($_)} } keys %DEFAULTS;
 
@@ -108,8 +121,11 @@ BUILD (%args) {
 
     $config->{$_} //= $DEFAULTS{$_} for keys %DEFAULTS;
 
+    $config->{$_} = Ryu::Observable->new($config->{$_}) for keys %$config;
     $log->debugf("Config is %s", $config);
 }
+
+method key($key) { return $config->{$key} // die 'unknown config key ' . $key }
 
 1;
 

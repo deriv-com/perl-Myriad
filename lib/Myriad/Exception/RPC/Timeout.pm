@@ -6,16 +6,11 @@ use warnings;
 # VERSION
 # AUTHORITY
 
-use parent qw(Ryu::Exception);
-
 no indirect qw(fatal);
 
-use Role::Tiny::With;
-
-with 'Myriad::Exception';
+use Myriad::Exception::Builder;
 
 sub category { 'rpc' }
-
 sub message { 'Timeout' }
 
 1;

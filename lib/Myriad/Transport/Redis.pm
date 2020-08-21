@@ -37,11 +37,17 @@ use Net::Async::Redis;
 use Log::Any qw($log);
 use List::Util qw(pairmap);
 
+has $redis_uri;
 has $redis;
 has $wait_time = 15_000;
 has $batch_count = 50;
 
 has $ryu;
+
+method configure (%args) {
+    $redis_uri = delete $args{redis_uri} if exists $args{redis_uri};
+    return $self->next::method(%args);
+}
 
 method ryu {$ryu}
 
@@ -132,7 +138,7 @@ method next_id($id) {
 
 method _add_to_loop($) {
     $self->add_child(
-        $redis = Net::Async::Redis->new(uri => $ENV{MYRIAD_REDIS_URI} // 'redis://localhost'),
+        $redis = Net::Async::Redis->new(uri => $redis_uri),
     );
 
     $self->add_child(

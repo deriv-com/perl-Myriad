@@ -6,7 +6,7 @@ requires 'Syntax::Keyword::Dynamically', '>= 0.05';
 requires 'Syntax::Keyword::Try', '>= 0.18';
 requires 'Future', '>= 0.45';
 requires 'Future::AsyncAwait', '>= 0.43';
-requires 'Object::Pad', '>= 0.31';
+requires 'Object::Pad', '>= 0.32';
 requires 'Role::Tiny', '>= 2.000';
 # Streams
 requires 'Ryu', '>= 2.003';

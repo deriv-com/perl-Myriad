@@ -26,14 +26,48 @@ Each of these is an attribute that can be applied to a method.
 
 =cut
 
-use Attribute::Handlers;
-
 use Myriad::Registry;
 
 use Log::Any qw($log);
 use Exporter qw(import export_to_level);
 
-our @IMPORT = our @IMPORT_OK = qw(RPC Stream Batch);
+use Sub::Util ();
+
+my %known_attributes = (
+    RPC => 'rpc',
+    Stream => 'stream',
+    Sink => 'sink',
+    Batch => 'batch'
+);
+
+=head2 MODIFY_CODE_ATTRIBUTES
+
+Due to L<Attribute::Handlers> limitations at runtime, we need to pick
+up attributes ourselves.
+
+=cut
+
+sub apply_attributes {
+    my ($class, %args) = @_;
+    my $pkg = $args{class};
+    my ($method) = Sub::Util::subname($args{code}) =~ /::([^:]+)$/;
+    for my $attr ($args{attributes}->@*) {
+        my ($type, $args) = $attr =~ m{^([a-z]+)(.*$)}si;
+        # Nasty, but functional for now - this will likely be replaced by
+        # an m//gc parser later with a restricted set of options.
+        $args = +{ eval "$args" } if length $args;
+
+        $log->infof('Attrbute %s (%s) applying to %s', $type, $args, $pkg);
+        die 'unknown attribute ' . $type unless my $handler = $known_attributes{$type};
+        $class->$handler(
+            $pkg,
+            $method,
+            $args{code},
+            $args
+        );
+    }
+    return;
+}
 
 =head2 RPC
 
@@ -47,24 +81,14 @@ This will cause the method to be registered in L<Myriad::Registry/add_rpc>.
 
 =cut
 
-sub UNIVERSAL::RPC : ATTR {
-    my ($package, $symbol, $referent, $attr, $data, $phase, $filename, $linenum) = @_;
-    die 'Invalid attribute - should be applied to a coderef' unless ref($referent) eq 'CODE';
-    my $method = *{$symbol}{NAME};
-    $log->tracef(
-        'Marking %s::%s as an RPC method (%s) via %s at %s:%d',
-        $package,
-        $method,
-        $data,
-        $phase,
-        $filename,
-        $linenum
-    );
+sub rpc {
+    my ($class, $pkg, $method, $code, $args) = @_;
     Myriad::Registry->add_rpc(
-        $package,
+        $pkg,
         $method,
-        $referent
-    )
+        $code,
+        $args
+    );
 }
 
 =head2 Stream
@@ -85,23 +109,13 @@ and is responsible for streaming data into that sink until cancelled.
 
 =cut
 
-sub Stream : ATTR {
-    my ($package, $symbol, $referent, $attr, $data, $phase, $filename, $linenum) = @_;
-    die 'Invalid attribute - should be applied to a coderef' unless ref($referent) eq 'CODE';
-    my $method = *{$symbol}{NAME};
-    $log->tracef(
-        'Marking %s::%s as a Stream method (%s) via %s at %s:%d',
-        $package,
-        $method,
-        $data,
-        $phase,
-        $filename,
-        $linenum
-    );
+sub stream {
+    my ($class, $pkg, $method, $code, $args) = @_;
     Myriad::Registry->add_stream(
-        $package,
+        $pkg,
         $method,
-        $referent
+        $code,
+        $args,
     );
 }
 
@@ -117,23 +131,13 @@ arrayref batches of data.
 
 =cut
 
-sub Batch : ATTR {
-    my ($package, $symbol, $referent, $attr, $data, $phase, $filename, $linenum) = @_;
-    die 'Invalid attribute - should be applied to a coderef' unless ref($referent) eq 'CODE';
-    my $method = *{$symbol}{NAME};
-    $log->tracef(
-        'Marking %s::%s as a Batch method (%s) via %s at %s:%d',
-        $package,
-        $method,
-        $data,
-        $phase,
-        $filename,
-        $linenum
-    );
+sub batch {
+    my ($class, $pkg, $method, $code, $args) = @_;
     Myriad::Registry->add_batch(
-        $package,
+        $pkg,
         $method,
-        $referent
+        $code,
+        $args,
     );
 }
 
