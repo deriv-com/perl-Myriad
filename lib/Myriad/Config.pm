@@ -32,6 +32,7 @@ use Getopt::Long qw(GetOptionsFromArray);
 use Config::Any;
 use YAML::XS;
 use List::Util qw(pairmap);
+use Ryu::Observable;
 use Log::Any qw($log);
 
 =head1 PACKAGE VARIABLES
@@ -119,6 +120,7 @@ BUILD (%args) {
 
     $config->{$_} //= $DEFAULTS{$_} for keys %DEFAULTS;
 
+    $config->{$_} = Ryu::Observable->new($config->{$_}) for keys %$config;
     $log->debugf("Config is %s", $config);
 }
 
