@@ -49,7 +49,7 @@ sub Defer : ATTR(CODE) {
         # either zero (default behaviour) or if we have a random
         # delay assigned, use that to drive a uniform rand() call
         await $self->loop->delay_future(
-            after => RANDOM_DELAY && rand(RANDOM_DELAY)
+            after => rand(RANDOM_DELAY)
         );
 
         $log->tracef('deferred call to %s::%s', $package, $name);
@@ -57,7 +57,7 @@ sub Defer : ATTR(CODE) {
         return await $self->$code(
             @args
         );
-    }
+    } if RANDOM_DELAY;
 }
 
 1;
