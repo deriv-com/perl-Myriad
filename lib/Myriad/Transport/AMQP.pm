@@ -9,7 +9,7 @@ use warnings;
 use utf8;
 use Object::Pad;
 
-class Myriad::Transport::AMQP extends Myriad::Notifier;
+class Myriad::Transport::AMQP extends IO::Async::Notifier;
 
 use Future::AsyncAwait;
 use Syntax::Keyword::Try;

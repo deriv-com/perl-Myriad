@@ -9,7 +9,7 @@ use warnings;
 use utf8;
 use Object::Pad;
 
-class Myriad::Transport::Redis extends Myriad::Notifier;
+class Myriad::Transport::Redis extends IO::Async::Notifier;
 
 =pod
 

@@ -9,7 +9,7 @@ use warnings;
 use utf8;
 use Object::Pad;
 
-class Myriad::Transport::PostgreSQL extends Myriad::Notifier;
+class Myriad::Transport::PostgreSQL extends IO::Async::Notifier;
 
 use Future::AsyncAwait;
 use Syntax::Keyword::Try;

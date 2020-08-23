@@ -148,8 +148,6 @@ Documentation for these classes may also be of use:
 
 =item * L<Myriad::Config> - general config support, commandline/file/storage
 
-=item * L<Myriad::Notifier> - L<IO::Async::Notifier> layer, probably due for removal
-
 =back
 
 =head1 METHODS
