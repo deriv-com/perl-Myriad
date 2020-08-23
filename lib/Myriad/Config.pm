@@ -126,7 +126,24 @@ BUILD (%args) {
     $log->debugf("Config is %s", $config);
 }
 
-method key($key) { return $config->{$key} // die 'unknown config key ' . $key }
+method key ($key) { return $config->{$key} // die 'unknown config key ' . $key }
+
+method define ($key, $v) {
+    die 'already exists - ' . $key if exists $config->{$key} or exists $DEFAULTS{$key};
+    $config->{$key} = $DEFAULTS{$key} = Ryu::Observable->new($v);
+}
+
+method DESTROY { }
+
+method AUTOLOAD () {
+    my ($k) = our $AUTOLOAD =~ m{^.*::([^:]+)$};
+    # We enforce `_` because everything should be namespaced
+    die 'unknown k ' . $k unless $k =~ /_/;
+    die 'unknown config key ' . $k unless exists $config->{$k};
+    my $code = method () { return $self->key($k); };
+    { no strict 'refs'; *$k = $code; }
+    return $self->$code();
+}
 
 1;
 
