@@ -141,6 +141,28 @@ sub batch {
     );
 }
 
+=head2 Sink
+
+Mark this as an async method which should be called repeatedly to generate
+arrayref batches of data.
+
+ has $id = 0;
+ async method example_batch : Batch {
+  return [ ++$id ];
+ }
+
+=cut
+
+sub sink {
+    my ($class, $pkg, $method, $code, $args) = @_;
+    Myriad::Registry->add_sink(
+        $pkg,
+        $method,
+        $code,
+        $args,
+    );
+}
+
 1;
 
 =head1 AUTHOR
