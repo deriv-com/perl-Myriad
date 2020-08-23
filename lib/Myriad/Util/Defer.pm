@@ -14,7 +14,14 @@ no indirect qw(fatal);
 
 =head1 NAME
 
-Myriad::Util::Defer
+Myriad::Util::Defer - provide a deferred wrapper attribute
+
+=head1 DESCRIPTION
+
+This is used to make an async method delay processing until later.
+
+It can be controlled by the C<MYRIAD_RANDOM_DELAY> environment variable,
+and defaults to no delay.
 
 =cut
 

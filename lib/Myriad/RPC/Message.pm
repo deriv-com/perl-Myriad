@@ -23,8 +23,9 @@ Myriad::RPC::Message - RPC message implementation
 
 =head1 DESCRIPTION
 
-This class is to handle the decoding/encoding and verification of the RPC messages received from the transport layer
-It will throw an exception when the message is bad or doesn't match the structure.
+This class is to handle the decoding/encoding and verification of the RPC messages received
+from the transport layer. It will throw an exception when the message is invalid or doesn't
+match the structure.
 
 =cut
 
@@ -94,7 +95,7 @@ BUILD(%args) {
 
 Encode the message into a JSON string
 
-It'll throw an exception if the it could not encode the message.
+It'll throw an exception if the message can't be encoded.
 
 =cut
 
