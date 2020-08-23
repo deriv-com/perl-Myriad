@@ -26,6 +26,7 @@ are available, and what they can do.
 use Future::AsyncAwait;
 
 use Myriad::Exception;
+use Myriad::Exception::Registry;
 
 our %RPC;
 our %STREAM;
@@ -51,7 +52,7 @@ Returns a hashref of RPC definitions for the given class.
 
 sub rpc_for {
     my ($class, $pkg) = @_;
-    return $RPC{$pkg} // Myriad::Exception->throw('unknown package ' . $pkg);
+    return $RPC{$pkg} // Myriad::Exception::Registry->throw(reason => 'unknown package ' . $pkg);
 }
 
 =head2 add_stream
@@ -73,7 +74,7 @@ Returns a hashref of stream methods for the given class.
 
 sub streams_for {
     my ($class, $pkg) = @_;
-    return $STREAM{$pkg} // Myriad::Exception->throw('unknown package ' . $pkg);
+    return $STREAM{$pkg} // Myriad::Exception::Registry->throw('unknown package ' . $pkg);
 }
 
 =head2 add_batch
