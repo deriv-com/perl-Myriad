@@ -1,2 +1,4 @@
 FROM deriv/dzil
-CMD [ "/bin/bash" ]
+ARG HTTP_PROXY
+RUN dzil install
+ENTRYPOINT "myriad.pl"
