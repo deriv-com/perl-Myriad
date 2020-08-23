@@ -41,7 +41,7 @@ use Log::Any qw($log);
 with 'Myriad::Role::Storage';
 
 # Common datastore
-my %data;
+has %data;
 
 =head2 get
 
