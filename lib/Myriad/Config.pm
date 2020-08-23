@@ -107,7 +107,8 @@ BUILD (%args) {
             my ($item, $prefix) = @_;
             my $code = __SUB__;
             $log->tracef('Checking %s with prefix %s', $item, $prefix);
-            pairmap {
+            # Recursive expansion for any nested data
+            return pairmap {
                 ref($b)
                 ? $code->(
                     $b,

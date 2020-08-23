@@ -33,7 +33,9 @@ use Log::Any qw($log);
 has $myriad;
 
 BUILD (%args) {
-    Scalar::Util::weaken($myriad = $args{myriad} // die 'needs a Myriad parent object');
+    Scalar::Util::weaken(
+        $myriad = $args{myriad} // die 'needs a Myriad parent object'
+    );
 }
 
 =head2 service
