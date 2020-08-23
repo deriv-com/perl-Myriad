@@ -30,6 +30,7 @@ use Myriad::Exception;
 our %RPC;
 our %STREAM;
 our %BATCH;
+our %SINK;
 
 =head2 add_rpc
 
@@ -94,7 +95,29 @@ Returns a hashref of batch methods for the given class.
 
 sub batches_for {
     my ($class, $pkg) = @_;
-    return $BATCH{$pkg} ;
+    return $BATCH{$pkg};
+}
+
+=head2 add_sink
+
+Registers a new sink method for the given class.
+
+=cut
+
+sub add_sink {
+    my ($class, $pkg, $method, $code) = @_;
+    $SINK{$pkg}{$method} = $code;
+}
+
+=head2 sinkes_for
+
+Returns a hashref of sink methods for the given class.
+
+=cut
+
+sub sinkes_for {
+    my ($class, $pkg) = @_;
+    return $SINK{$pkg} ;
 }
 
 1;
