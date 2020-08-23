@@ -26,17 +26,39 @@ jobs:
           name: Run test
           command: |
             export PERL5LIB=$(pwd)/deps/lib/perl5:$(pwd)/deps/lib/perl5/$(perl -MConfig -le'print $Config{archname}'):$PERL5LIB
-            # Upstream Pod::Inherit is no longer maintained, we may end up needing
-            # to fork this but for now we can patch it out...
-            patch -p0 /opt/perl-5.32.0/lib/site_perl/5.32.0/Pod/Inherit.pm < pod-inherit.patch
             dzil test
       - run:
           name: Author tests
           command: |
             export PERL5LIB=$(pwd)/deps/lib/perl5:$(pwd)/deps/lib/perl5/$(perl -MConfig -le'print $Config{archname}'):$PERL5LIB
             dzil xtest
+  push:
+    docker:
+      - image: cimg/base:2020.01
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Run test
+          command: |
+            docker build -t deriv/myriad .
+            echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+            docker push deriv/myriad
 workflows:
   version: 2
   build-workflow:
     jobs:
       - build
+  merged:
+    jobs:
+      - build:
+          context: perl
+          filters:
+            branches:
+              only: /^master$/
+      - push:
+          context: perl
+          filters:
+            branches:
+              only: /^master$/
