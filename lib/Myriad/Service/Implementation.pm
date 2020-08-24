@@ -40,11 +40,19 @@ use constant MAX_EXPONENTIAL_BACKOFF => 2;
 sub MODIFY_CODE_ATTRIBUTES {
     my ($class, $code, @attrs) = @_;
     Myriad::Service::Attributes->apply_attributes(
-        class => $class,
-        code => $code,
+        class      => $class,
+        code       => $code,
         attributes => \@attrs
     );
 }
+
+has $ryu;
+has $redis;
+has $myriad;
+has $service_name;
+has $rpc;
+has %active_batch;
+has %rpc_map;
 
 =head1 ATTRIBUTES
 
@@ -56,8 +64,6 @@ Provides a common L<Ryu::Async> instance.
 
 =cut
 
-has $ryu;
-
 method ryu () { $ryu }
 
 =head2 redis
@@ -66,7 +72,6 @@ The L<Myriad::Storage> instance.
 
 =cut
 
-has $redis;
 method redis () { $redis }
 
 =head2 myriad
@@ -75,7 +80,6 @@ The L<Myriad> instance which owns this service. Stored internally as a weak refe
 
 =cut
 
-has $myriad;
 method myriad () { $myriad }
 
 =head2 service_name
@@ -84,10 +88,7 @@ The name of the service, defaults to the package name.
 
 =cut
 
-has $service_name;
 method service_name () { $service_name //= lc(ref($self) =~ s{::}{_}gr) }
-
-has $rpc;
 
 =head1 METHODS
 
@@ -121,9 +122,6 @@ This will trigger a number of actions:
 =back
 
 =cut
-
-has %active_batch;
-has %rpc_map;
 
 method _add_to_loop($loop) {
     $self->add_child(
@@ -175,7 +173,6 @@ method setup_rpc($code, $src) {
     })->resolve->retain();
 }
 
-
 =head1 ASYNC METHODS
 
 =cut
@@ -201,7 +198,6 @@ async method process_batch($k, $code, $src) {
         }
     }
 }
-
 
 method setup_default_routes() {
     my $error_src = $ryu->source(label => "rpc:__ERROR");
