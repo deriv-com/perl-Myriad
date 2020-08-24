@@ -18,8 +18,6 @@ use Sys::Hostname qw(hostname);
 use Log::Any::Adapter qw(Stderr), log_level => 'info';
 use Log::Any qw($log);
 
-use Myriad::UI::Readline;
-
 try {
     my $hostname = hostname();
     $log->infof('Starting Myriad on %s pid %d at %s', $hostname, $$, Time::Moment->now->to_string);
