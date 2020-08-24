@@ -47,19 +47,12 @@ alternative.
 
 # Default values
 
-our %DEFAULTS;
-
-UNITCHECK {
-    %DEFAULTS = (
-        config_path => 'config.yml',
-        redis_uri   => 'redis://localhost:6379',
-        log_level   => 'info',
-    );
-    no strict 'refs';
-    for my $k (keys %DEFAULTS) {
-        *$k = sub { shift->key($k) };
-    }
-}
+our %DEFAULTS = (
+    config_path  => 'config.yml',
+    redis_uri    => 'redis://localhost:6379',
+    log_level    => 'info',
+    library_path => '',
+);
 
 =head2 SHORTCUTS_FOR
 
@@ -68,7 +61,9 @@ The C<< %SHORTCUTS_FOR >> hash allows commandline shortcuts for common parameter
 =cut
 
 our %SHORTCUTS_FOR = (
-    config_path => [qw(c)],
+    config_path  => [qw(c)],
+    log_level    => [qw(l)],
+    library_path => [qw(lib)],
 );
 
 # Our configuration so far. Populated via L</BUILD>,
@@ -122,6 +117,7 @@ BUILD (%args) {
 
     $config->{$_} //= $DEFAULTS{$_} for keys %DEFAULTS;
 
+    push @INC, split /,:/, $config->{library_path} if $config->{library_path};
     $config->{$_} = Ryu::Observable->new($config->{$_}) for keys %$config;
     $log->debugf("Config is %s", $config);
 }
