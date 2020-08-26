@@ -6,6 +6,10 @@ use warnings;
 # VERSION
 # AUTHORITY
 
+use Object::Pad;
+
+class Myriad::Registry;
+
 use utf8;
 
 =encoding utf8
@@ -27,11 +31,57 @@ use Future::AsyncAwait;
 
 use Myriad::Exception;
 use Myriad::Exception::Registry;
+use Scalar::Util ();
 
-our %RPC;
-our %STREAM;
-our %BATCH;
-our %SINK;
+has $myriad;
+
+has $rpc = {};
+has $service_by_name = {};
+has $batch = {};
+has $sink = {};
+has $stream = {};
+
+BUILD (%args) {
+    Scalar::Util::weaken($myriad = $args{myriad});
+}
+
+=head2 add_service
+
+Instantiates and adds a new service to the L</loop>.
+
+Returns the service instance.
+
+=cut
+
+async method add_service ($srv, %args) {
+    $srv = $srv->new(
+        redis => $self->redis
+    ) unless blessed($srv) and $srv->isa('Myriad::Service');
+
+    my $name = $args{name} || $srv->service_name;
+    $log->infof('Add service [%s]', $name);
+    $self->loop->add(
+        $srv
+    );
+    my $k = Scalar::Util::refaddr($srv);
+    Scalar::Util::weaken($self->{services_by_name}{$name} = $srv);
+    $self->{services}{$k} = $srv;
+
+    await $srv->startup;
+    return;
+}
+
+=head2 service_by_name
+
+Looks up the given service, returning the instance if it exists.
+
+Will throw an exception if the service cannot be found.
+
+=cut
+
+method service_by_name ($k) {
+    return $services_by_name->{$k} // Myriad::Exception::Registry->throw(reason => 'service ' . $k . ' not found');
+}
 
 =head2 add_rpc
 
@@ -39,9 +89,8 @@ Registers a new RPC method for the given class.
 
 =cut
 
-sub add_rpc {
-    my ($class, $pkg, $method, $code) = @_;
-    $RPC{$pkg}{$method} = $code;
+method add_rpc ($pkg, $method, $code) {
+    $rpc->{$pkg}{$method} = $code;
 }
 
 =head2 rpc_for
@@ -50,9 +99,8 @@ Returns a hashref of RPC definitions for the given class.
 
 =cut
 
-sub rpc_for {
-    my ($class, $pkg) = @_;
-    return $RPC{$pkg} // Myriad::Exception::Registry->throw(reason => 'unknown package ' . $pkg);
+method rpc_for ($pkg) {
+    return $rpc->{$pkg} // Myriad::Exception::Registry->throw(reason => 'unknown package ' . $pkg);
 }
 
 =head2 add_stream
@@ -61,9 +109,8 @@ Registers a new stream method for the given class.
 
 =cut
 
-sub add_stream {
-    my ($class, $pkg, $method, $code) = @_;
-    $STREAM{$pkg}{$method} = $code;
+method add_stream ($pkg, $method, $code) {
+    $stream->{$pkg}{$method} = $code;
 }
 
 =head2 streams_for
@@ -72,9 +119,8 @@ Returns a hashref of stream methods for the given class.
 
 =cut
 
-sub streams_for {
-    my ($class, $pkg) = @_;
-    return $STREAM{$pkg} // Myriad::Exception::Registry->throw('unknown package ' . $pkg);
+method streams_for ($pkg) {
+    return $stream->{$pkg} // Myriad::Exception::Registry->throw('unknown package ' . $pkg);
 }
 
 =head2 add_batch
@@ -83,9 +129,8 @@ Registers a new batch method for the given class.
 
 =cut
 
-sub add_batch {
-    my ($class, $pkg, $method, $code) = @_;
-    $BATCH{$pkg}{$method} = $code;
+method add_batch ($pkg, $method, $code) {
+    $batch->{$pkg}{$method} = $code;
 }
 
 =head2 batches_for
@@ -94,9 +139,8 @@ Returns a hashref of batch methods for the given class.
 
 =cut
 
-sub batches_for {
-    my ($class, $pkg) = @_;
-    return $BATCH{$pkg};
+method batches_for ($pkg) {
+    return $batch->{$pkg};
 }
 
 =head2 add_sink
@@ -105,20 +149,18 @@ Registers a new sink method for the given class.
 
 =cut
 
-sub add_sink {
-    my ($class, $pkg, $method, $code) = @_;
-    $SINK{$pkg}{$method} = $code;
+method add_sink ($pkg, $method, $code) {
+    $sink->{$pkg}{$method} = $code;
 }
 
-=head2 sinkes_for
+=head2 sinks_for
 
 Returns a hashref of sink methods for the given class.
 
 =cut
 
-sub sinkes_for {
-    my ($class, $pkg) = @_;
-    return $SINK{$pkg} ;
+method sinks_for ($pkg) {
+    return $sink->{$pkg};
 }
 
 1;

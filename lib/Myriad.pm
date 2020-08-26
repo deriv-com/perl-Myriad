@@ -130,7 +130,7 @@ Documentation for these classes may also be of use:
 
 =over 4
 
-=item * L<Myriad::Exception> - generic errors, provides L<Myriad::Exception/throw> and we recommend that all service errors inherit from this
+=item * L<Myriad::Exception> - generic errors, provides L<Myriad::Exception/throw> and we recommend that all service errors implement this rôle
 
 =item * L<Myriad::Plugin> - adds specific functionality to services
 
@@ -158,6 +158,7 @@ use Myriad::Commands;
 use Myriad::Exception;
 use Myriad::Exception::InternalError;
 
+use Myriad::Registry;
 use Myriad::RPC;
 use Myriad::Role::RPC;
 
@@ -194,7 +195,10 @@ Currently takes no useful parameters.
 
 sub new {
     my $class = shift;
-    bless { @_ }, $class
+    bless {
+        shutdown_tasks => [],
+        @_ 
+    }, $class
 }
 
 =head2 configure_from_argv
@@ -280,6 +284,19 @@ sub http {
     };
 }
 
+=head2 registry
+
+Returns the common L<Myriad::Registry> representing the current service state.
+
+=cut
+
+sub registry {
+    my ($self) = @_;
+    $self->{registry} //= Myriad::Registry->new(
+        myriad => $self,
+    );
+}
+
 =head2 add_service
 
 Instantiates and adds a new service to the L</loop>.
@@ -288,22 +305,11 @@ Returns the service instance.
 
 =cut
 
-async sub add_service {
-    my ($self, $srv, %args) = @_;
-    $srv = $srv->new(
-        redis => $self->redis
-    ) unless blessed($srv) and $srv->isa('Myriad::Service');
-    my $name = $args{name} || $srv->service_name;
-    $log->infof('Add service [%s]', $name);
-    $self->loop->add(
-        $srv
+async sub add_service ($self, $srv, %args) {
+    return $self->registry->add_service(
+        service => $srv,
+        %args
     );
-    my $k = Scalar::Util::refaddr($srv);
-    Scalar::Util::weaken($self->{services_by_name}{$name} = $srv);
-    $self->{services}{$k} = $srv;
-
-    await $srv->startup;
-    return;
 }
 
 =head2 service_by_name
@@ -314,9 +320,10 @@ Will throw an exception if the service cannot be found.
 
 =cut
 
-sub service_by_name {
-    my ($self, $k) = @_;
-    return $self->{services_by_name}{$k} // Myriad::Exception->throw(reason => 'service ' . $k . ' not found');
+sub service_by_name ($self, $srv) {
+    return $self->registry->service_by_name(
+        $srv,
+    );
 }
 
 =head2 shutdown
@@ -338,7 +345,7 @@ async sub shutdown {
     );
 
     $f->done unless $f->is_ready;
-    $f->without_cancel
+    return $f->without_cancel;
 }
 
 =head2 on_shutdown
