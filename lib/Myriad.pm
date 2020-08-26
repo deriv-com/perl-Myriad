@@ -202,7 +202,7 @@ Currently takes no useful parameters.
 
 sub new {
     my $class = shift;
-    bless { @_ }, $class
+    bless { shutdown_tasks => [], @_ }, $class
 }
 
 =head2 configure_from_argv
