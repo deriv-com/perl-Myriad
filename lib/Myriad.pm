@@ -89,8 +89,6 @@ Details on the request are in L<Myriad::RPC::Request> and the response to be sen
 
 =item * L<Myriad::RPC::Perl>
 
-=item * L<Myriad::RPC::AMQP>
-
 =back
 
 =head2 Subscriptions
@@ -107,8 +105,6 @@ Subscription implementations include:
 
 =item * L<Myriad::Subscription::Perl>
 
-=item * L<Myriad::Subscription::AMQP>
-
 =back
 
 Note that I<some layers don't have implementations for all transports> - MQ for example does not really provide a concept of "storage".
@@ -122,8 +118,6 @@ Each of these implementations is supposed to separate out the logic from the act
 =item * L<Myriad::Transport::PostgreSQL>
 
 =item * L<Myriad::Transport::Perl>
-
-=item * L<Myriad::Transport::AMQP>
 
 =back
 
