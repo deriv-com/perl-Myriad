@@ -34,7 +34,7 @@ requires 'Net::Async::OpenTracing', '>= 1.000';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
 requires 'Log::Any::Adapter::Multiplexor', '>= 0.03';
 # Transport
-requires 'Net::Async::Redis', '>= 2.005';
+requires 'Net::Async::Redis', '>= 2.006';
 requires 'Net::Async::HTTP', '>= 0.47';
 requires 'Net::Async::HTTP::Server', '>= 0.13';
 requires 'Net::Async::Redis', '>= 2.004';
