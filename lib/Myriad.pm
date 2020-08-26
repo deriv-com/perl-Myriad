@@ -401,7 +401,7 @@ sub setup_tracing {
         )
     );
     $self->on_shutdown(async sub {
-        $self->{tracing}->sync
+        await $self->{tracing}->sync
     });
 }
 
