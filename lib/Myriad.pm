@@ -347,6 +347,14 @@ async sub shutdown {
     $f->without_cancel
 }
 
+=head2 on_shutdown
+
+Registers a coderef to be called during shutdown.
+
+The coderef is expected to return a L<Future> indicating completion.
+
+=cut
+
 sub on_shutdown {
     my ($self, $code) = @_;
     push $self->{shutdown_tasks}->@*, $code;
@@ -388,6 +396,12 @@ sub setup_logging {
     $code->();
     return;
 }
+
+=head2 setup_tracing
+
+Prepare L<OpenTracing> collection.
+
+=cut
 
 sub setup_tracing {
     my ($self) = @_;
