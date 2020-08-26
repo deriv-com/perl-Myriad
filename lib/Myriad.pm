@@ -176,6 +176,9 @@ use Scalar::Util qw(blessed weaken);
 use Log::Any qw($log);
 use Log::Any::Adapter;
 
+use OpenTracing::Any qw($tracer);
+use Net::Async::OpenTracing;
+
 # Note that we don't use Object::Pad as heavily within the core framework as we
 # would expect in microservices - this is mainly due to complications regarding
 # rôle/inheritance behaviour, and at some future point we expect to refactor code
@@ -228,6 +231,7 @@ async sub configure_from_argv {
         commandline => \@args
     );
     $self->setup_logging;
+    $self->setup_tracing;
 
     $self->{commands} = my $commands = Myriad::Commands->new(
         myriad => $self
@@ -335,11 +339,20 @@ async sub shutdown {
         or die 'attempting to shut down before we have started, this will not end well';
 
     my @shutdown_operations = map { $self->{services}{$_}->shutdown } keys $self->{services}->%*;
+    push @shutdown_operations, $self->{shutdown_tasks}->@*;
 
-    await Future->wait_all(@shutdown_operations);
+    await Future->wait_all(
+        @shutdown_operations
+    );
 
     $f->done unless $f->is_ready;
     $f->without_cancel
+}
+
+sub on_shutdown {
+    my ($self, $code) = @_;
+    push $self->{shutdown_tasks}->@*, $code;
+    $self
 }
 
 =head2 shutdown_future
@@ -376,6 +389,20 @@ sub setup_logging {
     });
     $code->();
     return;
+}
+
+sub setup_tracing {
+    my ($self) = @_;
+    $self->loop->add(
+        $self->{tracing} = Net::Async::OpenTracing->new(
+            host => $self->config->opentracing_host,
+            port => $self->config->opentracing_port,
+            protocol => 'jaeger',
+        )
+    );
+    $self->on_shutdown(async sub {
+        $self->{tracing}->sync
+    });
 }
 
 =head2 run

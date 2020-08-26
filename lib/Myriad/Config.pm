@@ -29,6 +29,7 @@ Configuration support.
 use feature qw(current_sub);
 
 use Getopt::Long qw(GetOptionsFromArray);
+use Pod::Usage;
 use Config::Any;
 use YAML::XS;
 use List::Util qw(pairmap);
@@ -54,6 +55,8 @@ UNITCHECK {
         config_path => 'config.yml',
         redis_uri   => 'redis://localhost:6379',
         log_level   => 'info',
+        opentracing_host => 'localhost',
+        opentracing_port => 6832,
     );
     no strict 'refs';
     for my $k (keys %DEFAULTS) {
