@@ -83,7 +83,7 @@ This will cause the method to be registered in L<Myriad::Registry/add_rpc>.
 
 sub rpc {
     my ($class, $pkg, $method, $code, $args) = @_;
-    Myriad::Registry->add_rpc(
+    $Myriad::REGISTRY->add_rpc(
         $pkg,
         $method,
         $code,
@@ -111,7 +111,7 @@ and is responsible for streaming data into that sink until cancelled.
 
 sub stream {
     my ($class, $pkg, $method, $code, $args) = @_;
-    Myriad::Registry->add_stream(
+    $Myriad::REGISTRY->add_stream(
         $pkg,
         $method,
         $code,
@@ -133,7 +133,7 @@ arrayref batches of data.
 
 sub batch {
     my ($class, $pkg, $method, $code, $args) = @_;
-    Myriad::Registry->add_batch(
+    $Myriad::REGISTRY->add_batch(
         $pkg,
         $method,
         $code,
@@ -155,7 +155,7 @@ arrayref batches of data.
 
 sub sink {
     my ($class, $pkg, $method, $code, $args) = @_;
-    Myriad::Registry->add_sink(
+    $Myriad::REGISTRY->add_sink(
         $pkg,
         $method,
         $code,

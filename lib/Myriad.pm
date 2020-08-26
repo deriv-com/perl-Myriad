@@ -149,6 +149,7 @@ Documentation for these classes may also be of use:
 =cut
 
 no indirect qw(fatal);
+use experimental qw(signatures);
 
 use Future;
 use Future::AsyncAwait;
@@ -171,6 +172,11 @@ use Log::Any::Adapter;
 
 use OpenTracing::Any qw($tracer);
 use Net::Async::OpenTracing;
+
+our $REGISTRY;
+BEGIN {
+    $REGISTRY = Myriad::Registry->new;
+}
 
 # Note that we don't use Object::Pad as heavily within the core framework as we
 # would expect in microservices - this is mainly due to complications regarding
@@ -292,9 +298,7 @@ Returns the common L<Myriad::Registry> representing the current service state.
 
 sub registry {
     my ($self) = @_;
-    $self->{registry} //= Myriad::Registry->new(
-        myriad => $self,
-    );
+    $self->{registry} //= $REGISTRY;
 }
 
 =head2 add_service

@@ -81,7 +81,9 @@ Will throw an exception if the service cannot be found.
 =cut
 
 method service_by_name ($k) {
-    return $service_by_name->{$k} // Myriad::Exception::Registry->throw(reason => 'service ' . $k . ' not found');
+    return $service_by_name->{$k} // Myriad::Exception::Registry->throw(
+        reason => 'service ' . $k . ' not found'
+    );
 }
 
 =head2 add_rpc
@@ -90,7 +92,7 @@ Registers a new RPC method for the given class.
 
 =cut
 
-method add_rpc ($pkg, $method, $code) {
+method add_rpc ($pkg, $method, $code, $args) {
     $rpc->{$pkg}{$method} = $code;
 }
 
@@ -101,7 +103,9 @@ Returns a hashref of RPC definitions for the given class.
 =cut
 
 method rpc_for ($pkg) {
-    return $rpc->{$pkg} // Myriad::Exception::Registry->throw(reason => 'unknown package ' . $pkg);
+    return $rpc->{$pkg} // Myriad::Exception::Registry->throw(
+        reason => 'unknown package ' . $pkg
+    );
 }
 
 =head2 add_stream
@@ -110,7 +114,7 @@ Registers a new stream method for the given class.
 
 =cut
 
-method add_stream ($pkg, $method, $code) {
+method add_stream ($pkg, $method, $code, $args) {
     $stream->{$pkg}{$method} = $code;
 }
 
