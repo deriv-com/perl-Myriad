@@ -3,6 +3,5 @@ libidn2-dev
 pkg-config
 libtool-bin
 libc-dev
-libxml2-dev
 git
 make
