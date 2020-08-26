@@ -31,8 +31,9 @@ use Future::AsyncAwait;
 
 use Myriad::Exception;
 use Myriad::Exception::Registry;
-use Scalar::Util ();
+use Scalar::Util qw(blessed);
 
+use Log::Any qw($log);
 has $myriad;
 
 has $rpc = {};
@@ -64,7 +65,7 @@ async method add_service ($srv, %args) {
         $srv
     );
     my $k = Scalar::Util::refaddr($srv);
-    Scalar::Util::weaken($self->{services_by_name}{$name} = $srv);
+    Scalar::Util::weaken($self->{service_by_name}{$name} = $srv);
     $self->{services}{$k} = $srv;
 
     await $srv->startup;
@@ -80,7 +81,7 @@ Will throw an exception if the service cannot be found.
 =cut
 
 method service_by_name ($k) {
-    return $services_by_name->{$k} // Myriad::Exception::Registry->throw(reason => 'service ' . $k . ' not found');
+    return $service_by_name->{$k} // Myriad::Exception::Registry->throw(reason => 'service ' . $k . ' not found');
 }
 
 =head2 add_rpc
