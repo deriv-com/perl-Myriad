@@ -58,7 +58,7 @@ workflows:
   version: 2
   build-workflow:
     jobs:
-      - test
+      - run_tests
   merged:
     jobs:
       - run_tests:
