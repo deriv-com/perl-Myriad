@@ -29,6 +29,7 @@ Configuration support.
 use feature qw(current_sub);
 
 use Getopt::Long qw(GetOptionsFromArray);
+use Pod::Usage;
 use Config::Any;
 use YAML::XS;
 use List::Util qw(pairmap);
@@ -48,10 +49,12 @@ alternative.
 # Default values
 
 our %DEFAULTS = (
-    config_path  => 'config.yml',
-    redis_uri    => 'redis://localhost:6379',
-    log_level    => 'info',
-    library_path => '',
+    config_path      => 'config.yml',
+    redis_uri        => 'redis://localhost:6379',
+    log_level        => 'info',
+    library_path     => '',
+    opentracing_host => 'localhost',
+    opentracing_port => 6832,
 );
 
 =head2 SHORTCUTS_FOR

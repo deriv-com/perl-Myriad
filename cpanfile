@@ -22,7 +22,7 @@ requires 'Log::Any::Adapter', '>= 1.708';
 requires 'Config::Any', '>= 0.32';
 requires 'YAML::XS', '>= 0.81';
 requires 'Metrics::Any', '>= 0.05';
-requires 'OpenTracing::Any', '>= 1.000';
+requires 'OpenTracing::Any', '>= 1.003';
 requires 'JSON::MaybeUTF8', '>= 1.002';
 requires 'Time::Moment', '>= 0.44';
 requires 'Sys::Hostname';
@@ -30,7 +30,7 @@ requires 'Pod::Simple::Text';
 requires 'Scope::Guard';
 requires 'Check::UnitCheck';
 # Integration
-requires 'Net::Async::OpenTracing'; # , '>= 1.000';
+requires 'Net::Async::OpenTracing', '>= 1.000';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
 requires 'Log::Any::Adapter::Multiplexor', '>= 0.03';
 # Transport
