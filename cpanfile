@@ -37,7 +37,6 @@ requires 'Log::Any::Adapter::Multiplexor', '>= 0.03';
 requires 'Net::Async::Redis', '>= 2.006';
 requires 'Net::Async::HTTP', '>= 0.47';
 requires 'Net::Async::HTTP::Server', '>= 0.13';
-requires 'Net::Async::Redis', '>= 2.004';
 requires 'Net::Async::AMQP', '>= 2.000';
 requires 'Net::Async::SMTP', '>= 0.002';
 requires 'Database::Async', '>= 0.010';
