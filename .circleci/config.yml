@@ -53,6 +53,7 @@ jobs:
           command: echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_LOGIN" --password-stdin
       - docker/push:
           image: deriv/myriad
+          tag: 'latest'
 
 workflows:
   version: 2
@@ -66,4 +67,6 @@ workflows:
           filters: *filter_only_master
       - update_docker_image:
           context: perl
+          requires:
+            - run_tests
           filters: *filter_only_master
