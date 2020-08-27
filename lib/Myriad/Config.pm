@@ -48,21 +48,14 @@ alternative.
 
 # Default values
 
-our %DEFAULTS;
-
-UNITCHECK {
-    %DEFAULTS = (
-        config_path => 'config.yml',
-        redis_uri   => 'redis://localhost:6379',
-        log_level   => 'info',
-        opentracing_host => 'localhost',
-        opentracing_port => 6832,
-    );
-    no strict 'refs';
-    for my $k (keys %DEFAULTS) {
-        *$k = sub { shift->key($k) };
-    }
-}
+our %DEFAULTS = (
+    config_path      => 'config.yml',
+    redis_uri        => 'redis://localhost:6379',
+    log_level        => 'info',
+    library_path     => '',
+    opentracing_host => 'localhost',
+    opentracing_port => 6832,
+);
 
 =head2 SHORTCUTS_FOR
 
@@ -71,7 +64,9 @@ The C<< %SHORTCUTS_FOR >> hash allows commandline shortcuts for common parameter
 =cut
 
 our %SHORTCUTS_FOR = (
-    config_path => [qw(c)],
+    config_path  => [qw(c)],
+    log_level    => [qw(l)],
+    library_path => [qw(lib)],
 );
 
 # Our configuration so far. Populated via L</BUILD>,
@@ -110,7 +105,8 @@ BUILD (%args) {
             my ($item, $prefix) = @_;
             my $code = __SUB__;
             $log->tracef('Checking %s with prefix %s', $item, $prefix);
-            pairmap {
+            # Recursive expansion for any nested data
+            return pairmap {
                 ref($b)
                 ? $code->(
                     $b,
@@ -124,11 +120,29 @@ BUILD (%args) {
 
     $config->{$_} //= $DEFAULTS{$_} for keys %DEFAULTS;
 
+    push @INC, split /,:/, $config->{library_path} if $config->{library_path};
     $config->{$_} = Ryu::Observable->new($config->{$_}) for keys %$config;
     $log->debugf("Config is %s", $config);
 }
 
-method key($key) { return $config->{$key} // die 'unknown config key ' . $key }
+method key ($key) { return $config->{$key} // die 'unknown config key ' . $key }
+
+method define ($key, $v) {
+    die 'already exists - ' . $key if exists $config->{$key} or exists $DEFAULTS{$key};
+    $config->{$key} = $DEFAULTS{$key} = Ryu::Observable->new($v);
+}
+
+method DESTROY { }
+
+method AUTOLOAD () {
+    my ($k) = our $AUTOLOAD =~ m{^.*::([^:]+)$};
+    # We enforce `_` because everything should be namespaced
+    die 'unknown k ' . $k unless $k =~ /_/;
+    die 'unknown config key ' . $k unless exists $config->{$k};
+    my $code = method () { return $self->key($k); };
+    { no strict 'refs'; *$k = $code; }
+    return $self->$code();
+}
 
 1;
 
