@@ -5,4 +5,4 @@ RUN dzil install \
  && git clean -fd \
  && apt purge --autoremove -y \
  && rm -rf .git .circleci
-ENTRYPOINT "myriad.pl"
+ENTRYPOINT ["myriad.pl"]
