@@ -48,6 +48,7 @@ jobs:
           docker_layer_caching: true
       - docker/build:
           image: deriv/myriad
+          tag: 'latest'
       - run:
           name: Docker Hub login
           command: echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_LOGIN" --password-stdin
