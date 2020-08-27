@@ -24,6 +24,9 @@ Myriad::Service::Attributes - microservice coördination
 
 Each of these is an attribute that can be applied to a method.
 
+Note that this class is just a simple passthrough to L<Myriad::Registry>,
+which does all the real work.
+
 =cut
 
 use Myriad::Registry;
@@ -57,8 +60,9 @@ sub apply_attributes {
         # an m//gc parser later with a restricted set of options.
         $args = +{ eval "$args" } if length $args;
 
-        $log->infof('Attrbute %s (%s) applying to %s', $type, $args, $pkg);
-        die 'unknown attribute ' . $type unless my $handler = $known_attributes{$type};
+        $log->infof('Attribute %s (%s) applying to %s', $type, $args, $pkg);
+        my $handler = $known_attributes{$type}
+            or die 'unknown attribute ' . $type;
         $class->$handler(
             $pkg,
             $method,
