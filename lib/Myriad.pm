@@ -341,8 +341,15 @@ async sub shutdown {
     my $f = $self->{shutdown}
         or die 'attempting to shut down before we have started, this will not end well';
 
-    my @shutdown_operations = map { $self->{services}{$_}->shutdown } keys $self->{services}->%*;
-    push @shutdown_operations, map { $_->() } splice $self->{shutdown_tasks}->@*;
+    # Each service may have its own shutdown or cleanup operations
+    my @shutdown_operations = map {
+        $self->{services}{$_}->shutdown
+    } keys $self->{services}->%*;
+
+    # We also have generic tasks, such as transport or RPC/subscription
+    push @shutdown_operations, map {
+        $_->()
+    } splice $self->{shutdown_tasks}->@*;
 
     await Future->wait_all(
         @shutdown_operations
