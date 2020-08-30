@@ -8,7 +8,7 @@ use warnings;
 
 use Object::Pad;
 
-class Myriad::Registry;
+class Myriad::Registry extends IO::Async::Notifier;
 
 use utf8;
 
@@ -54,9 +54,10 @@ Returns the service instance.
 
 =cut
 
-async method add_service ($srv, %args) {
+async method add_service (%args) {
+    my $srv = delete $args{service};
     $srv = $srv->new(
-        redis => $self->redis
+        %args
     ) unless blessed($srv) and $srv->isa('Myriad::Service');
 
     my $name = $args{name} || $srv->service_name;

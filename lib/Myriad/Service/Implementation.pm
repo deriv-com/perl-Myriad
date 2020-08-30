@@ -132,10 +132,10 @@ method _add_to_loop($loop) {
         $rpc = Myriad::RPC::Implementation::Redis->new(redis => $redis, service => ref($self), ryu => $ryu)
     );
 
-    if (my $rpc_calls = Myriad::Registry->rpc_for(ref($self))) {
+    if (my $rpc_calls = $Myriad::REGISTRY->rpc_for(ref($self))) {
         foreach my $method (keys $rpc_calls->%*) {
             my $code = $rpc_calls->{$method};
-            my $src = $ryu->source(lable => "rpc:$method");
+            my $src = $ryu->source(label => "rpc:$method");
             $rpc_map{$method} = [
                 $src,
                 $self->setup_rpc($code, $src)
@@ -146,7 +146,7 @@ method _add_to_loop($loop) {
         $rpc->{rpc_map} = \%rpc_map;
     }
 
-    if (my $batches = Myriad::Registry->batches_for(ref($self))) {
+    if (my $batches = $Myriad::REGISTRY->batches_for(ref($self))) {
         for my $k (keys $batches->%*) {
             $log->tracef('Starting batch process %s for %s', $k, ref($self));
             my $code = $batches->{$k};
@@ -208,7 +208,7 @@ method setup_default_routes() {
         }];
 
 
-    my $dead_src = $ryu->source(lable => "rpc:__DEAD_MSG");
+    my $dead_src = $ryu->source(label => "rpc:__DEAD_MSG");
 
     $rpc_map{__DEAD_MSG} = [
         $dead_src,

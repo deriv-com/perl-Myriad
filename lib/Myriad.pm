@@ -178,6 +178,10 @@ BEGIN {
     $REGISTRY = Myriad::Registry->new;
 }
 
+IO::Async::Loop->new->add(
+    $REGISTRY
+);
+
 # Note that we don't use Object::Pad as heavily within the core framework as we
 # would expect in microservices - this is mainly due to complications regarding
 # rôle/inheritance behaviour, and at some future point we expect to refactor code
@@ -310,8 +314,9 @@ Returns the service instance.
 =cut
 
 async sub add_service ($self, $srv, %args) {
-    return $self->registry->add_service(
+    return await $self->registry->add_service(
         service => $srv,
+        redis => $self->redis,
         %args
     );
 }
