@@ -1,13 +1,10 @@
 package Myriad;
 # ABSTRACT: async microservice framework
 
-use strict;
-use warnings;
+use Myriad::Class;
 
 our $VERSION = '0.001';
 # AUTHORITY
-
-use utf8;
 
 =encoding utf8
 
@@ -148,11 +145,7 @@ Documentation for these classes may also be of use:
 
 =cut
 
-no indirect qw(fatal);
-use experimental qw(signatures);
-
 use Future;
-use Future::AsyncAwait;
 
 use Myriad::Config;
 use Myriad::Commands;
@@ -166,11 +159,8 @@ use Myriad::Role::RPC;
 use Myriad::Transport::Redis;
 use Myriad::Transport::HTTP;
 
-use Scalar::Util qw(blessed weaken);
-use Log::Any qw($log);
 use Log::Any::Adapter;
 
-use OpenTracing::Any qw($tracer);
 use Net::Async::OpenTracing;
 
 our $REGISTRY;
@@ -181,6 +171,33 @@ BEGIN {
 IO::Async::Loop->new->add(
     $REGISTRY
 );
+
+# The IO::Async::Loop instance
+has $loop;
+# Any coderefs to call when shutdown is requested
+has $shutdown_tasks = [ ];
+# The Myriad::Config instance
+has $config;
+# Registered commands for the management interface
+has $commands;
+# Our temporary Net::Async::Redis instance that should
+# really be abstracted away by the ::Transport and
+# storage/rpc/subscription abstractions
+has $redis;
+# The Net::Async::HTTP::Server instance for endpoint
+# requests
+has $http;
+# Future representing shutdown
+has $shutdown;
+# Future for passing to things that want to react to
+# shutdown, pretty much everything outside this file
+# should only be able to access this one
+has $shutdown_without_cancel;
+# The Net::Async::OpenTracing instance
+has $tracing;
+# Any service definitions wait what why is this here,
+# can we not use the registry instead?
+has $services = {};
 
 # Note that we don't use Object::Pad as heavily within the core framework as we
 # would expect in microservices - this is mainly due to complications regarding
@@ -193,23 +210,7 @@ Returns the main L<IO::Async::Loop> instance for this process.
 
 =cut
 
-sub loop { shift->{loop} //= IO::Async::Loop->new }
-
-=head2 new
-
-Instantiates.
-
-Currently takes no useful parameters.
-
-=cut
-
-sub new {
-    my $class = shift;
-    bless {
-        shutdown_tasks => [],
-        @_ 
-    }, $class
-}
+method loop { $loop //= IO::Async::Loop->new }
 
 =head2 configure_from_argv
 
@@ -229,17 +230,17 @@ Expects a list of parameters and applies the following logic for each one:
 
 =cut
 
-async sub configure_from_argv {
-    my ($self, @args) = @_;
-
+async method configure_from_argv (@args) {
     # Allow config parsing to extract the information
-    $self->{config} = Myriad::Config->new(
+    $self->loop;
+    $config = Myriad::Config->new(
         commandline => \@args
     );
     $self->setup_logging;
     $self->setup_tracing;
+    $self->redis;
 
-    $self->{commands} = my $commands = Myriad::Commands->new(
+    $commands = Myriad::Commands->new(
         myriad => $self
     );
     # At this point, we expect `@args` to contain only the plain
@@ -257,7 +258,7 @@ async sub configure_from_argv {
     }
 }
 
-sub config { shift->{config} }
+method config () { $config }
 
 =head2 redis
 
@@ -265,16 +266,15 @@ The L<Net::Async::Redis> (or compatible) instance used for service coördination
 
 =cut
 
-sub redis {
-    my ($self, %args) = @_;
-    $self->{redis} //= do {
-        $self->loop->add(
-            my $redis = Myriad::Transport::Redis->new(
-                redis_uri => $self->config->redis_uri->as_string
+method redis () {
+    unless($redis) {
+        $loop->add(
+            $redis = Myriad::Transport::Redis->new(
+                redis_uri => $config->redis_uri->as_string
             )
         );
-        $redis
-    };
+    }
+    $redis
 }
 
 =head2 http
@@ -284,14 +284,13 @@ and metrics.
 
 =cut
 
-sub http {
-    my ($self, %args) = @_;
-    $self->{http} //= do {
-        $self->loop->add(
-            my $http = Myriad::Transport::HTTP->new
+method http () {
+    unless($http) {
+        $loop->add(
+            $http = Myriad::Transport::HTTP->new
         );
-        $http
-    };
+    }
+    $http
 }
 
 =head2 registry
@@ -300,10 +299,7 @@ Returns the common L<Myriad::Registry> representing the current service state.
 
 =cut
 
-sub registry {
-    my ($self) = @_;
-    $self->{registry} //= $REGISTRY;
-}
+method registry () { $REGISTRY }
 
 =head2 add_service
 
@@ -313,10 +309,10 @@ Returns the service instance.
 
 =cut
 
-async sub add_service ($self, $srv, %args) {
+async method add_service ($srv, %args) {
     return await $self->registry->add_service(
         service => $srv,
-        redis => $self->redis,
+        redis => $redis,
         %args
     );
 }
@@ -329,7 +325,7 @@ Will throw an exception if the service cannot be found.
 
 =cut
 
-sub service_by_name ($self, $srv) {
+method service_by_name ($srv) {
     return $self->registry->service_by_name(
         $srv,
     );
@@ -341,20 +337,19 @@ Requests shutdown.
 
 =cut
 
-async sub shutdown {
-    my ($self) = @_;
-    my $f = $self->{shutdown}
+async method shutdown {
+    my $f = $shutdown
         or die 'attempting to shut down before we have started, this will not end well';
 
     # Each service may have its own shutdown or cleanup operations
     my @shutdown_operations = map {
-        $self->{services}{$_}->shutdown
-    } keys $self->{services}->%*;
+        $services->{$_}->shutdown
+    } keys $services->%*;
 
     # We also have generic tasks, such as transport or RPC/subscription
     push @shutdown_operations, map {
         $_->()
-    } splice $self->{shutdown_tasks}->@*;
+    } splice $shutdown_tasks->@*;
 
     await Future->wait_all(
         @shutdown_operations
@@ -372,9 +367,8 @@ The coderef is expected to return a L<Future> indicating completion.
 
 =cut
 
-sub on_shutdown {
-    my ($self, $code) = @_;
-    push $self->{shutdown_tasks}->@*, $code;
+method on_shutdown ($code) {
+    push $shutdown_tasks->@*, $code;
     $self
 }
 
@@ -387,11 +381,9 @@ triggered by a fault or a Unix signal.
 
 =cut
 
-sub shutdown_future {
-    my ($self) = @_;
-
-    return $self->{shutdown_without_cancel} //= (
-        $self->{shutdown} //= $self->loop->new_future->set_label('shutdown')
+method shutdown_future () {
+    return $shutdown_without_cancel //= (
+        $shutdown //= $loop->new_future->set_label('shutdown')
     )->without_cancel;
 }
 
@@ -401,9 +393,8 @@ Prepare for logging.
 
 =cut
 
-sub setup_logging {
-    my ($self) = @_;
-    my $level = $self->config->log_level;
+method setup_logging () {
+    my $level = $config->log_level;
     $level->subscribe(my $code = sub {
         Log::Any::Adapter->import(
             qw(Stderr),
@@ -420,18 +411,18 @@ Prepare L<OpenTracing> collection.
 
 =cut
 
-sub setup_tracing {
-    my ($self) = @_;
-    $self->loop->add(
-        $self->{tracing} = Net::Async::OpenTracing->new(
-            host => $self->config->opentracing_host,
-            port => $self->config->opentracing_port,
+method setup_tracing () {
+    $loop->add(
+        $tracing = Net::Async::OpenTracing->new(
+            host => $config->opentracing_host,
+            port => $config->opentracing_port,
             protocol => 'jaeger',
         )
     );
     $self->on_shutdown(async sub {
-        await $self->{tracing}->sync
+        await $tracing->sync
     });
+    return;
 }
 
 =head2 run
@@ -442,17 +433,16 @@ Applies signal handlers for TERM and QUIT, then starts the loop.
 
 =cut
 
-sub run {
-    my ($self) = @_;
-    $self->loop->attach_signal(TERM => sub {
+method run () {
+    $loop->attach_signal(TERM => method {
         $log->infof('TERM received, exit');
         $self->shutdown->await
     });
-    $self->loop->attach_signal(INT => sub {
+    $loop->attach_signal(INT => method {
         $log->infof('INT received, exit');
         $self->shutdown->await
     });
-    $self->loop->attach_signal(QUIT => async sub {
+    $loop->attach_signal(QUIT => async method {
         $log->infof('QUIT received, exit');
         $self->shutdown->await
     });
