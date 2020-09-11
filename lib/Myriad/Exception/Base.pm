@@ -1,9 +1,13 @@
 package Myriad::Exception::Base;
 
-use Myriad::Class;
+use strict;
+use warnings;
 
 # VERSION
 # AUTHORITY
+
+no indirect qw(fatal);
+use utf8;
 
 =encoding utf8
 
@@ -13,7 +17,7 @@ Myriad::Exception::Base - common class for all exceptions
 
 =head1 DESCRIPTION
 
-See L<Myriad::Exception> for the rôle that defines the exception API.
+See L<Myriad::Exception> for the rôle which defines the exception API.
 
 =cut
 
@@ -21,16 +25,26 @@ use Myriad::Exception;
 
 use overload '""' => sub { shift->as_string }, bool => sub { 1 }, fallback => 1;
 
-has $reason;
-
-BUILD (%args) {
-    $reason = delete $args{reason};
-    die 'extra parameters to exception constructor' if %args;
+sub new {
+    my ($class, %args) = @_;
+    bless \%args, $class
 }
 
-method reason { $reason }
+=head2 reason
 
-method as_string { $self->message }
+The failure reason. Freeform text.
+
+=cut
+
+sub reason { shift->reason }
+
+=head2 as_string
+
+Returns the exception message as a string.
+
+=cut
+
+sub as_string { shift->message }
 
 1;
 
