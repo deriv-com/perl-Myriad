@@ -125,7 +125,7 @@ use Log::Any qw($log);
 use OpenTracing::Any qw($log);
 
 sub import {
-    my ($called_on, @args) = @_;
+    my ($called_on, %args) = @_;
     my $class = __PACKAGE__;
     my $pkg = caller(0);
 
@@ -180,7 +180,7 @@ sub import {
     # but can be seen in action in this test:
     # https://metacpan.org/source/PEVANS/Object-Pad-0.21/t/70mop-create-class.t#L30
     Object::Pad->import_into($pkg);
-    Object::Pad->begin_class($pkg); #, extends => 'Myriad::Service::Implementation');
+    Object::Pad->begin_class($pkg, ($args{extends} ? (extends => $args{extends}) : ()));
 
     {
         no strict 'refs';

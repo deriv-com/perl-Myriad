@@ -1,12 +1,9 @@
 package Myriad::Exception::Base;
 
-use strict;
-use warnings;
+use Myriad::Class;
 
 # VERSION
 # AUTHORITY
-
-use utf8;
 
 =encoding utf8
 
@@ -24,12 +21,14 @@ use Myriad::Exception;
 
 use overload '""' => sub { shift->as_string }, bool => sub { 1 }, fallback => 1;
 
-sub new {
-    my ($class, %args) = @_;
-    bless \%args, $class
+has $reason;
+
+BUILD (%args) {
+    $reason = delete $args{reason};
+    die 'extra parameters to exception constructor' if %args;
 }
 
-sub as_string { shift->message }
+method as_string { $self->message }
 
 1;
 

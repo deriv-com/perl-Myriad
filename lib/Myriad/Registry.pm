@@ -1,16 +1,9 @@
 package Myriad::Registry;
 
-use strict;
-use warnings;
+use Myriad::Class extends => 'IO::Async::Notifier';
 
 # VERSION
 # AUTHORITY
-
-use Object::Pad;
-
-class Myriad::Registry extends IO::Async::Notifier;
-
-use utf8;
 
 =encoding utf8
 
@@ -27,13 +20,9 @@ are available, and what they can do.
 
 =cut
 
-use Future::AsyncAwait;
-
 use Myriad::Exception;
 use Myriad::Exception::Registry;
-use Scalar::Util qw(blessed);
 
-use Log::Any qw($log);
 has $myriad;
 
 has $rpc = {};
@@ -43,7 +32,7 @@ has $sink = {};
 has $stream = {};
 
 BUILD (%args) {
-    Scalar::Util::weaken($myriad = $args{myriad});
+    weaken($myriad = $args{myriad});
 }
 
 =head2 add_service
@@ -65,8 +54,8 @@ async method add_service (%args) {
     $self->loop->add(
         $srv
     );
-    my $k = Scalar::Util::refaddr($srv);
-    Scalar::Util::weaken($self->{service_by_name}{$name} = $srv);
+    my $k = refaddr($srv);
+    weaken($self->{service_by_name}{$name} = $srv);
     $self->{services}{$k} = $srv;
 
     await $srv->startup;
@@ -126,7 +115,7 @@ Returns a hashref of stream methods for the given class.
 =cut
 
 method streams_for ($pkg) {
-    return $stream->{$pkg} // Myriad::Exception::Registry->throw('unknown package ' . $pkg);
+    return $stream->{$pkg} // Myriad::Exception::Registry->throw(reason => 'unknown package ' . $pkg);
 }
 
 =head2 add_batch
