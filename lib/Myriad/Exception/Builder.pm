@@ -24,21 +24,29 @@ use Check::UnitCheck;
 use Myriad::Exception;
 use Myriad::Exception::Base;
 
+require Myriad::Class;
+
 sub import {
-    my ($class, @args) = @_;
-    my $pkg = caller;
-    { no strict 'refs'; push @{$pkg . '::ISA'}, qw(Myriad::Exception::Base); }
-    my $code = sub {
+    my ($class, %args) = @_;
+    for my $k (sort keys %args) {
+        my $pkg = 'Myriad::Exception::' . $k;
+        # my $pkg = caller;
+        Myriad::Class->import(
+            target  => $pkg,
+            extends => qw(Myriad::Exception::Base)
+        );
+        {
+            no strict 'refs';
+            my $data = $args{$k};
+            warn "keys = " . join ',', sort keys %$data;
+            *{$pkg . '::' . $_} = $data->{$_} for keys %$data;
+        }
+        die 'cannot' unless $pkg->can('reason');
+        die 'cannot' unless $pkg->can('category');
         Role::Tiny->apply_roles_to_package(
             $pkg => 'Myriad::Exception'
         )
-    };
-    # Allow Myriad::Exception::Base->import from unit tests
-    return $code->() if grep { /:immediate/ } @args;
-
-    # ... but most of the time, we're a standalone .pm with
-    # a `use Myriad::Exception::Base;` line
-    Check::UnitCheck::unitcheckify($code);
+    }
 }
 
 1;

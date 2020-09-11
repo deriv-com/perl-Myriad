@@ -6,6 +6,7 @@ use Test::Fatal;
 
 BEGIN { require Myriad::Exception::Builder; }
 
+BEGIN {
 subtest 'needs category' => sub {
     like(exception {
         package Exception::Example::MissingCategory;
@@ -37,6 +38,7 @@ subtest 'can ->throw' => sub {
     }, qw(Exception::Example::Throwable));
     is("$ex", 'this was thrown', 'message survived');
 };
+}
 
 done_testing;
 

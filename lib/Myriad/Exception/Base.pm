@@ -28,6 +28,8 @@ BUILD (%args) {
     die 'extra parameters to exception constructor' if %args;
 }
 
+method reason { $reason }
+
 method as_string { $self->message }
 
 1;

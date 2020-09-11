@@ -127,7 +127,7 @@ use OpenTracing::Any qw($log);
 sub import {
     my ($called_on, %args) = @_;
     my $class = __PACKAGE__;
-    my $pkg = caller(0);
+    my $pkg = $args{target} // caller(0);
 
     # Apply core syntax and rules
     strict->import;
