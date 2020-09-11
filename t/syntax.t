@@ -7,7 +7,10 @@ use Test::Fatal;
 use Log::Any::Adapter qw(TAP);
 use Log::Any qw($log);
 
-BEGIN { require Myriad::Service; }
+BEGIN {
+    require Myriad;
+    require Myriad::Service;
+}
 
 $log->infof('starting');
 
