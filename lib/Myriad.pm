@@ -337,7 +337,7 @@ Requests shutdown.
 
 =cut
 
-async method shutdown {
+async method shutdown () {
     my $f = $shutdown
         or die 'attempting to shut down before we have started, this will not end well';
 
@@ -383,7 +383,7 @@ triggered by a fault or a Unix signal.
 
 method shutdown_future () {
     return $shutdown_without_cancel //= (
-        $shutdown //= $loop->new_future->set_label('shutdown')
+        $shutdown //= $self->loop->new_future->set_label('shutdown')
     )->without_cancel;
 }
 
