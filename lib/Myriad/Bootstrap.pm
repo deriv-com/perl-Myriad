@@ -39,15 +39,17 @@ Signals:
 
 =back
 
-=cut
+The purpose of this class is to support development usage: it provides a
+minimal base set of code that can load up the real modules in separate
+forks, and tear them down again when dependencies or local files change.
 
-=head2 allow_modules
+We avoid even the standard CPAN modules because one of the changes we're
+watching for is C<< cpanfile >> content changing, if there's a new module
+or updated version we want to be very sure that it's properly loaded.
 
-Add modules to the whitelist.
-
-Takes a list of module names in the same format as C<< %INC >> keys.
-
-Don't ever use this.
+One thing we explicitly B<don't> try to do is handle Perl version or executable
+changing from underneath us - so this is very much a fork-and-call approach,
+rather than fork-and-exec.
 
 =cut
 
@@ -59,9 +61,29 @@ our %ALLOWED_MODULES = map {
     ),
     __PACKAGE__;
 
+=head1 METHODS - Class
+
+=head2 allow_modules
+
+Add modules to the whitelist.
+
+Takes a list of module names in the same format as C<< %INC >> keys.
+
+Don't ever use this.
+
+=cut
+
 sub allow_modules {
+    my $class = shift;
     @ALLOWED_MODULES{@_} = (1) x @_;
 }
+
+=head2 boot
+
+Given a target coderef or classname, prepares the fork and communication
+pipe, then starts the code.
+
+=cut
 
 sub boot {
     my ($class, $target) = @_;
@@ -81,6 +103,7 @@ sub boot {
             POSIX  => [qw(WNOHANG)],
         );
         unless($pid) {
+            # We've forked, so we're free to load any extra modules we'd like here
             require Module::Load;
             for my $pkg (sort keys %constant_map) {
                 Module::Load::load($pkg);
@@ -93,6 +116,8 @@ sub boot {
             exit 0;
         }
         {
+            # A poor attempt at a data-exchange protocol indeed, but one with the advantage
+            # of simplicity and readability for anyone investigating via `strace`
             my @constants = map @$_, values %constant_map;
             while(<$child>) {
                 my ($k, $v) = /^([^=]+)=(.*)$/;
@@ -168,7 +193,7 @@ sub boot {
                     my $rslt = sysread $child_pipe, my $buf, 4096;
                     last ACTIVE unless $rslt;
                     $input .= $buf;
-                    while($input =~ s/^(.*)[\r\n]+//) {
+                    while($input =~ s/^[\r\n]*(.*)[\r\n]+//) {
                         say "Received from child: $1";
                     }
                 }
