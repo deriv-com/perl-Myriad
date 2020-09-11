@@ -1,18 +1,9 @@
 package Myriad::Config;
 
-use strict;
-use warnings;
+use Myriad::Class;
 
 # VERSION
 # AUTHORITY
-
-use Object::Pad;
-
-class Myriad::Config;
-
-no indirect qw(fatal);
-
-use utf8;
 
 =encoding utf8
 
@@ -34,7 +25,6 @@ use Config::Any;
 use YAML::XS;
 use List::Util qw(pairmap);
 use Ryu::Observable;
-use Log::Any qw($log);
 
 =head1 PACKAGE VARIABLES
 
