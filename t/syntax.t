@@ -9,6 +9,10 @@ use Log::Any qw($log);
 
 BEGIN { require Myriad::Service; }
 
+# Need to have the main functionality loaded so that Myriad::Registry
+# can work as expected.
+require Myriad;
+
 $log->infof('starting');
 
 # Assorted syntax helper checks. So much eval.
