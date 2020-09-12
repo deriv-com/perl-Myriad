@@ -26,7 +26,8 @@ scaling for larger systems.
 Overall this framework encourages - but does not enforce - single-responsibility
 in each microservice: each service should integrate with at most one external system,
 and integration should be kept in separate services from business logic or aggregation.
-This is at odds with common microservice frameworks, so perhaps it would be more accurate to say that this framework is aimed at developing "nanoservices" instead.
+This is at odds with common microservice frameworks, so perhaps it would be more accurate
+to say that this framework is aimed at developing "nanoservices" instead.
 
 =head2 Do you need this?
 
@@ -103,6 +104,8 @@ Subscription implementations include:
 =item * L<Myriad::Subscription::Perl>
 
 =back
+
+=head2 Transports
 
 Note that I<some layers don't have implementations for all transports> - MQ for example does not really provide a concept of "storage".
 
