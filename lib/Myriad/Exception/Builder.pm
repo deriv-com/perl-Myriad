@@ -24,31 +24,20 @@ See L<Myriad::Exception> for the rôle that defines the exception API.
 use Myriad::Exception;
 use Myriad::Exception::Base;
 
-use Exporter qw(import export_to_level);
-
+# Not currently used, but nice as a hint
 our @EXPORT = our @EXPORT_OK = qw(declare_exception);
 
-sub old_import {
+# When importing, you can set the default category to avoid some
+# repetition when there's a long list of exceptions to be defining
+our %DEFAULT_CATEGORY_FOR_CLASS;
+
+sub import {
     my ($class, %args) = @_;
-    for my $k (sort keys %args) {
-        my $pkg = 'Myriad::Exception::' . $k;
-        # my $pkg = caller;
-        Myriad::Class->import(
-            target  => $pkg,
-            extends => qw(Myriad::Exception::Base)
-        );
-        {
-            no strict 'refs';
-            my $data = $args{$k};
-            warn "keys = " . join ',', sort keys %$data;
-            *{$pkg . '::' . $_} = $data->{$_} for keys %$data;
-        }
-        die 'cannot' unless $pkg->can('reason');
-        die 'cannot' unless $pkg->can('category');
-        Role::Tiny->apply_roles_to_package(
-            $pkg => 'Myriad::Exception'
-        )
-    }
+    my $pkg = caller;
+    no strict 'refs';
+    $DEFAULT_CATEGORY_FOR_CLASS{$pkg} = delete $args{category} if exists $args{category};
+    die 'unexpected parameters: ' . join ',', sort keys %args if %args;
+    *{$pkg . '::declare_exception'} = $class->can('declare_exception');
 }
 
 =head2 declare_exception
@@ -69,8 +58,6 @@ e.g.  L<Myriad::RPC> when calling this would end up with classes under L<Myriad:
 but C<SomeCompany::Service::Example> would get L<Myriad::Exception::SomeCompany::Service::Example>
 as the exception base class.
 
-You can override this by passing something else to L</import>.
-
 Takes the following parameters:
 
 =over 4
@@ -87,6 +74,8 @@ Details can currently include:
 
 =item * C<category>
 
+=item * C<message>
+
 =back
 
 Returns the generated classname.
@@ -95,6 +84,7 @@ Returns the generated classname.
 
 sub declare_exception {
     my ($name, %args) = @_;
+    my $caller = caller;
 
     my $pkg = join '::', (
         delete($args{package}) || ('Myriad::Exception::' . (caller =~ s{^Myriad::}{}r))
@@ -102,11 +92,11 @@ sub declare_exception {
 
     no strict 'refs';
     push @{$pkg . '::ISA'}, qw(Myriad::Exception::Base);
-    my $category = delete $args{category} // 'unknown';
+    my $category = delete $args{category} // $DEFAULT_CATEGORY_FOR_CLASS{$caller};
     die 'invalid category ' . $category unless $category =~ /^[0-9a-z_]+$/;
     *{$pkg . '::category'} = sub { $category };
     my $message = delete $args{message} // 'unknown';
-    *{$pkg . '::message'} = sub { $message };
+    *{$pkg . '::message'} = sub { $message . ' (category=' . shift->category . ')' };
     Role::Tiny->apply_roles_to_package(
         $pkg => 'Myriad::Exception'
     )
