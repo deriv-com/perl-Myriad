@@ -145,6 +145,7 @@ sub import {
     my ($called_on, @args) = @_;
     my $class = __PACKAGE__;
     my $pkg = caller(0);
+    $INC{($pkg =~ s{::}{/}gr) . '.pm'} //= 1;
 
     if(grep { $_ eq ':custom' } @args) {
         push @{$pkg . '::ISA' }, 'Myriad::Service::Implementation';
