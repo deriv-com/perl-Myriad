@@ -139,7 +139,7 @@ use Net::Async::HTTP;
 use Myriad::Service::Implementation;
 
 use Log::Any qw($log);
-use OpenTracing::Any qw($log);
+use OpenTracing::Any qw($tracer);
 
 sub import {
     my ($called_on, @args) = @_;
