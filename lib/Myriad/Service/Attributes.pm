@@ -37,10 +37,12 @@ use Exporter qw(import export_to_level);
 use Sub::Util ();
 
 my %known_attributes = (
-    RPC => 'rpc',
-    Stream => 'stream',
-    Sink => 'sink',
-    Batch => 'batch'
+    RPC      => 'rpc',
+    Stream   => 'stream',
+    Sink     => 'sink',
+    Batch    => 'batch',
+    Emitter  => 'emitter',
+    Receiver => 'receiver',
 );
 
 =head2 MODIFY_CODE_ATTRIBUTES
@@ -160,6 +162,40 @@ arrayref batches of data.
 sub sink {
     my ($class, $pkg, $method, $code, $args) = @_;
     $Myriad::REGISTRY->add_sink(
+        $pkg,
+        $method,
+        $code,
+        $args,
+    );
+}
+
+=head2 Emitter
+
+Indicates a method which should be called on startup, which given a
+L<Ryu::Sink> will emit events to that sink until it's done.
+
+=cut
+
+sub emitter {
+    my ($class, $pkg, $method, $code, $args) = @_;
+    $Myriad::REGISTRY->add_emitter(
+        $pkg,
+        $method,
+        $code,
+        $args,
+    );
+}
+
+=head2 Receiver
+
+Indicates a method which should be called on startup and passed a
+L<Ryu::Source>. Events will be emitted to that source until termination.
+
+=cut
+
+sub receiver {
+    my ($class, $pkg, $method, $code, $args) = @_;
+    $Myriad::REGISTRY->add_receiver(
         $pkg,
         $method,
         $code,

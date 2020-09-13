@@ -38,6 +38,8 @@ has $service_by_name = {};
 has $batch = {};
 has $sink = {};
 has $stream = {};
+has $emitter = {};
+has $receiver = {};
 
 BUILD (%args) {
     weaken($myriad = $args{myriad});
@@ -132,7 +134,7 @@ Registers a new batch method for the given class.
 
 =cut
 
-method add_batch ($pkg, $method, $code) {
+method add_batch ($pkg, $method, $code, $args) {
     $batch->{$pkg}{$method} = $code;
 }
 
@@ -152,7 +154,7 @@ Registers a new sink method for the given class.
 
 =cut
 
-method add_sink ($pkg, $method, $code) {
+method add_sink ($pkg, $method, $code, $args) {
     $sink->{$pkg}{$method} = $code;
 }
 
@@ -164,6 +166,46 @@ Returns a hashref of sink methods for the given class.
 
 method sinks_for ($pkg) {
     return $sink->{$pkg};
+}
+
+=head2 add_emitter
+
+Registers a new emitter method for the given class.
+
+=cut
+
+method add_emitter ($pkg, $method, $code, $args) {
+    $emitter->{$pkg}{$method} = $code;
+}
+
+=head2 emitters_for
+
+Returns a hashref of emitter methods for the given class.
+
+=cut
+
+method emitters_for ($pkg) {
+    return $emitter->{$pkg};
+}
+
+=head2 add_receiver
+
+Registers a new receiver method for the given class.
+
+=cut
+
+method add_receiver ($pkg, $method, $code, $args) {
+    $receiver->{$pkg}{$method} = $code;
+}
+
+=head2 receivers_for
+
+Returns a hashref of receiver methods for the given class.
+
+=cut
+
+method receivers_for ($pkg) {
+    return $receiver->{$pkg};
 }
 
 1;
