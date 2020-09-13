@@ -20,7 +20,15 @@ are available, and what they can do.
 
 =cut
 
-use Myriad::Exception;
+use Myriad::Exception::Builder category => 'registry';
+
+declare_exception ServiceNotFound => (
+    message => 'Unable to locate the given service',
+);
+declare_exception UnknownClass => (
+    message => 'Unable to locate the given class for component lookup',
+);
+
 use Myriad::Exception::Registry;
 
 has $myriad;
@@ -71,7 +79,7 @@ Will throw an exception if the service cannot be found.
 =cut
 
 method service_by_name ($k) {
-    return $service_by_name->{$k} // Myriad::Exception::Registry->throw(
+    return $service_by_name->{$k} // Myriad::Exception::Registry::ServiceNotFound->throw(
         reason => 'service ' . $k . ' not found'
     );
 }
@@ -93,7 +101,7 @@ Returns a hashref of RPC definitions for the given class.
 =cut
 
 method rpc_for ($pkg) {
-    return $rpc->{$pkg} // Myriad::Exception::Registry->throw(
+    return $rpc->{$pkg} // Myriad::Exception::Registry::UnknownClass->throw(
         reason => 'unknown package ' . $pkg
     );
 }
