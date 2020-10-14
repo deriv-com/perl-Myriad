@@ -23,27 +23,6 @@ Myriad::Class - common pragmata for L<Myriad> core modules
   $log->infof('Starting %s', __PACKAGE__);
  }
 
- # Trivial RPC call, provides the `example` method
- async method example : RPC {
-  return { ok => 1 };
- }
-
- # Slightly more useful - return all the original parameters.
- # Due to an unfortunate syntactical choice in core Perl, the
- # whitespace before the (%args) is *mandatory*, without that
- # you're actually passing (%args) to the RPC attribute...
- async method echo : RPC (%args) {
-  return \%args;
- }
-
- # Default internal diagnostics checks are performed automatically,
- # this method is called after the microservice status such as Redis
- # connections, exception status etc. are verified
- async method diagnostics ($level) {
-  my ($self, $level) = @_;
-  return 'ok';
- }
-
  1;
 
 =head1 DESCRIPTION
