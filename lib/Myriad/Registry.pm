@@ -58,8 +58,15 @@ async method add_service (%args) {
     $srv = $srv->new(
         %args
     ) unless blessed($srv) and $srv->isa('Myriad::Service');
+    my $pkg = ref $srv;
 
     my $name = $args{name} || $srv->service_name;
+    $rpc->{$pkg} ||= {};
+    $stream->{$pkg} ||= {};
+    $batch->{$pkg} ||= {};
+    $sink->{$pkg} ||= {};
+    $emitter->{$pkg} ||= {};
+    $receiver->{$pkg} ||= {};
     $log->infof('Add service [%s]', $name);
     $self->loop->add(
         $srv
@@ -175,7 +182,11 @@ Registers a new emitter method for the given class.
 =cut
 
 method add_emitter ($pkg, $method, $code, $args) {
-    $emitter->{$pkg}{$method} = $code;
+    $args->{channel} //= $method;
+    $emitter->{$pkg}{$method} = {
+        code => $code,
+        args => $args,
+    };
 }
 
 =head2 emitters_for
@@ -195,7 +206,11 @@ Registers a new receiver method for the given class.
 =cut
 
 method add_receiver ($pkg, $method, $code, $args) {
-    $receiver->{$pkg}{$method} = $code;
+    $args->{channel} //= $method;
+    $receiver->{$pkg}{$method} = {
+        code => $code,
+        args => $args,
+    };
 }
 
 =head2 receivers_for

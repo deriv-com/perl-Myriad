@@ -55,6 +55,7 @@ async method service (@args) {
         my ($module) = @_;
         $log->debugf('Loading %s', $module);
         require_module($module);
+        $log->errorf('loaded %s but it cannot ->new?', $module) unless $module->can('new');
         await $myriad->add_service($module);
     }, foreach => \@modules, concurrent => 4);
 }
