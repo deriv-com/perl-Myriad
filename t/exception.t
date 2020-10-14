@@ -1,10 +1,27 @@
 use strict;
 use warnings;
 
+package Local::Test;
 use Test::More;
 use Test::Fatal;
 
-BEGIN { require Myriad::Exception::Builder; }
+use Myriad::Exception::Builder;
+
+subtest 'can declare exceptions' => sub {
+    is(exception {
+        declare_exception Example => category => 'some_category', message => 'this is a message';
+    }, undef, 'can declare an exception with category and message');
+    can_ok('Myriad::Exception::Local::Test::Example', qw(new category message reason));
+    my $ex = new_ok('Myriad::Exception::Local::Test::Example' => [
+    ]);
+    is($ex->message, 'this is a message', 'message is correct');
+    is($ex->category, 'some_category', 'category is correct');
+    is("$ex", 'this is a message', 'stringifies too');
+};
+
+done_testing;
+
+__END__
 
 subtest 'needs category' => sub {
     like(exception {

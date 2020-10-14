@@ -8,7 +8,7 @@ use warnings;
 
 use Object::Pad;
 
-class Myriad::Transport::HTTP extends Myriad::Notifier;
+class Myriad::Transport::HTTP extends IO::Async::Notifier;
 
 use curry;
 

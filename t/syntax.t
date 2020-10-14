@@ -7,7 +7,14 @@ use Test::Fatal;
 use Log::Any::Adapter qw(TAP);
 use Log::Any qw($log);
 
-BEGIN { require Myriad::Service; }
+BEGIN {
+    require Myriad;
+    require Myriad::Service;
+}
+
+# Need to have the main functionality loaded so that Myriad::Registry
+# can work as expected.
+require Myriad;
 
 $log->infof('starting');
 

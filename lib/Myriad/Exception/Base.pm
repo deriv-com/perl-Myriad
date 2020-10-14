@@ -6,6 +6,7 @@ use warnings;
 # VERSION
 # AUTHORITY
 
+no indirect qw(fatal);
 use utf8;
 
 =encoding utf8
@@ -16,7 +17,7 @@ Myriad::Exception::Base - common class for all exceptions
 
 =head1 DESCRIPTION
 
-See L<Myriad::Exception> for the rôle that defines the exception API.
+See L<Myriad::Exception> for the rôle which defines the exception API.
 
 =cut
 
@@ -28,6 +29,20 @@ sub new {
     my ($class, %args) = @_;
     bless \%args, $class
 }
+
+=head2 reason
+
+The failure reason. Freeform text.
+
+=cut
+
+sub reason { shift->reason }
+
+=head2 as_string
+
+Returns the exception message as a string.
+
+=cut
 
 sub as_string { shift->message }
 

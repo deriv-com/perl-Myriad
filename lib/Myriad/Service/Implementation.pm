@@ -12,6 +12,8 @@ use Future::AsyncAwait;
 use Syntax::Keyword::Try;
 
 use Myriad::RPC::Implementation::Redis;
+use Myriad::Subscription::Implementation::Redis;
+
 use Myriad::Exception;
 
 class Myriad::Service::Implementation extends IO::Async::Notifier;
@@ -40,11 +42,21 @@ use constant MAX_EXPONENTIAL_BACKOFF => 2;
 sub MODIFY_CODE_ATTRIBUTES {
     my ($class, $code, @attrs) = @_;
     Myriad::Service::Attributes->apply_attributes(
-        class => $class,
-        code => $code,
+        class      => $class,
+        code       => $code,
         attributes => \@attrs
     );
 }
+
+has $ryu;
+has $redis;
+has $myriad;
+has $service_name;
+has $rpc;
+has %active_batch;
+has %rpc_map;
+
+has $sub;
 
 =head1 ATTRIBUTES
 
@@ -56,8 +68,6 @@ Provides a common L<Ryu::Async> instance.
 
 =cut
 
-has $ryu;
-
 method ryu () { $ryu }
 
 =head2 redis
@@ -66,7 +76,6 @@ The L<Myriad::Storage> instance.
 
 =cut
 
-has $redis;
 method redis () { $redis }
 
 =head2 myriad
@@ -75,7 +84,6 @@ The L<Myriad> instance which owns this service. Stored internally as a weak refe
 
 =cut
 
-has $myriad;
 method myriad () { $myriad }
 
 =head2 service_name
@@ -84,10 +92,7 @@ The name of the service, defaults to the package name.
 
 =cut
 
-has $service_name;
 method service_name () { $service_name //= lc(ref($self) =~ s{::}{_}gr) }
-
-has $rpc;
 
 =head1 METHODS
 
@@ -122,34 +127,64 @@ This will trigger a number of actions:
 
 =cut
 
-has %active_batch;
-has %rpc_map;
-
 method _add_to_loop($loop) {
+    $log->infof('Adding %s to loop', ref $self);
+    my $registry = $Myriad::REGISTRY;
     $self->add_child(
         $ryu = Ryu::Async->new
     );
 
     $self->add_child(
-        $rpc = Myriad::RPC::Implementation::Redis->new(redis => $redis, service => ref($self), ryu => $ryu)
+        $sub = Myriad::Subscription::Implementation::Redis->new(
+            redis   => $redis,
+            service => ref($self),
+            ryu     => $ryu
+        )
     );
+    $sub->run->on_fail(sub { $log->errorf('failed on sub run - %s', [ @_ ]) })->retain;
 
-    if (my $rpc_calls = Myriad::Registry->rpc_for(ref($self))) {
-        foreach my $method (keys $rpc_calls->%*) {
-            my $code = $rpc_calls->{$method};
-            my $src = $ryu->source(lable => "rpc:$method");
-            $rpc_map{$method} = [
-                $src,
-                $self->setup_rpc($code, $src)
-            ];
+    if(my $emitters = $registry->emitters_for(ref($self))) {
+        for my $method (sort keys $emitters->%*) {
+            $log->infof('Found emitter %s as %s', $method, $emitters->{$method});
+            my $spec = $emitters->{$method};
+            my $chan = $spec->{args}{channel} // die 'expected a channel, but there was none to be found';
+            my $sink = $ryu->sink(
+                label => "emitter:$chan",
+            );
+            $sub->create_from_source(
+                source => $sink->source,
+                channel => $chan,
+            );
+            my $code = $spec->{code};
+            $spec->{current} = $self->$code(
+                $sink,
+                $self,
+            )->retain;
         }
-
-        $self->setup_default_routes();
-        $rpc->{rpc_map} = \%rpc_map;
     }
 
-    if (my $batches = Myriad::Registry->batches_for(ref($self))) {
-        for my $k (keys $batches->%*) {
+    if(my $receivers = $registry->receivers_for(ref($self))) {
+        for my $method (sort keys $receivers->%*) {
+            $log->infof('Found receiver %s as %s', $method, $receivers->{$method});
+            my $spec = $receivers->{$method};
+            my $chan = $spec->{args}{channel} // die 'expected a channel, but there was none to be found';
+            my $sink = $ryu->sink(
+                label => "receiver:$chan",
+            );
+            $sub->create_from_sink(
+                sink => $sink,
+                channel => $chan,
+                client => ref($self) . '/' . $method,
+            );
+            my $code = $spec->{code};
+            $spec->{current} = $self->$code(
+                $sink->source,
+                $self,
+            )->retain;
+        }
+    }
+    if (my $batches = $registry->batches_for(ref($self))) {
+        for my $k (sort keys $batches->%*) {
             $log->tracef('Starting batch process %s for %s', $k, ref($self));
             my $code = $batches->{$k};
             my $src = $self->ryu->source(label => 'batch:' . $k);
@@ -157,6 +192,29 @@ method _add_to_loop($loop) {
                 $src,
                 $self->process_batch($k, $code, $src)
             ];
+        }
+    }
+
+    if (my $rpc_calls = $registry->rpc_for(ref($self))) {
+        $self->add_child(
+            $rpc = Myriad::RPC::Implementation::Redis->new(
+                redis   => $redis,
+                service => ref($self),
+                ryu     => $ryu
+            )
+        ) if %$rpc_calls;
+        for my $method (sort keys $rpc_calls->%*) {
+            my $code = $rpc_calls->{$method};
+            my $src = $ryu->source(label => "rpc:$method");
+            $rpc_map{$method} = [
+                $src,
+                $self->setup_rpc($code, $src)
+            ];
+        }
+
+        if(%$rpc_calls) {
+            $self->setup_default_routes;
+            $rpc->{rpc_map} = \%rpc_map;
         }
     }
 
@@ -174,7 +232,6 @@ method setup_rpc($code, $src) {
         }
     })->resolve->retain();
 }
-
 
 =head1 ASYNC METHODS
 
@@ -202,7 +259,6 @@ async method process_batch($k, $code, $src) {
     }
 }
 
-
 method setup_default_routes() {
     my $error_src = $ryu->source(label => "rpc:__ERROR");
     $rpc_map{__ERROR} = [
@@ -212,7 +268,7 @@ method setup_default_routes() {
         }];
 
 
-    my $dead_src = $ryu->source(lable => "rpc:__DEAD_MSG");
+    my $dead_src = $ryu->source(label => "rpc:__DEAD_MSG");
 
     $rpc_map{__DEAD_MSG} = [
         $dead_src,
@@ -238,7 +294,8 @@ Start the service and perform any operation needed before announcing the service
 =cut
 
 async method startup {
-    await $rpc->start();
+    return unless $rpc;
+    await $rpc->start;
 };
 
 =head2 diagnostics
@@ -262,6 +319,7 @@ Gracefully shut down the service by
 =cut
 
 async method shutdown {
+    return unless $rpc;
     try {
         await Future->wait_any($self->loop->timeout_future(after => 30), $rpc->stop);
     } catch ($error) {

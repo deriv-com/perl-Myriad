@@ -9,7 +9,7 @@ use warnings;
 use Future::AsyncAwait;
 use Object::Pad;
 
-class Myriad::Storage::Implementation::Perl extends Myriad::Notifier;
+class Myriad::Storage::Implementation::Perl extends IO::Async::Notifier;
 
 use parent qw(Myriad::Util::Defer);
 
@@ -41,7 +41,7 @@ use Log::Any qw($log);
 with 'Myriad::Role::Storage';
 
 # Common datastore
-my %data;
+has %data;
 
 =head2 get
 

@@ -27,6 +27,12 @@ use Role::Tiny;
 
 requires qw(category message);
 
+=head2 throw
+
+Instantiates a new exception and throws it (by calling L<perlfunc/die>).
+
+=cut
+
 sub throw {
     my $self = shift;
     $self = $self->new(@_) unless Scalar::Util::blessed($self);

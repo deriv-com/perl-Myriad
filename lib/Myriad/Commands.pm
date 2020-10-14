@@ -1,16 +1,9 @@
 package Myriad::Commands;
 
-use strict;
-use warnings;
+use Myriad::Class;
 
 # VERSION
 # AUTHORITY
-
-use Object::Pad;
-
-class Myriad::Commands;
-
-no indirect qw(fatal);
 
 =head1 NAME
 
@@ -22,18 +15,16 @@ Provides top-level commands, such as loading a service or making an RPC call.
 
 =cut
 
-use Future::AsyncAwait;
-use Syntax::Keyword::Try;
 use Future::Utils qw(fmap0);
 
 use Module::Runtime qw(require_module);
 
-use Log::Any qw($log);
-
 has $myriad;
 
 BUILD (%args) {
-    Scalar::Util::weaken($myriad = $args{myriad} // die 'needs a Myriad parent object');
+    weaken(
+        $myriad = $args{myriad} // die 'needs a Myriad parent object'
+    );
 }
 
 =head2 service
@@ -64,6 +55,7 @@ async method service (@args) {
         my ($module) = @_;
         $log->debugf('Loading %s', $module);
         require_module($module);
+        $log->errorf('loaded %s but it cannot ->new?', $module) unless $module->can('new');
         await $myriad->add_service($module);
     }, foreach => \@modules, concurrent => 4);
 }

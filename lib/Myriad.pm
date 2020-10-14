@@ -1,13 +1,10 @@
 package Myriad;
 # ABSTRACT: async microservice framework
 
-use strict;
-use warnings;
+use Myriad::Class;
 
 our $VERSION = '0.001';
 # AUTHORITY
-
-use utf8;
 
 =encoding utf8
 
@@ -29,7 +26,8 @@ scaling for larger systems.
 Overall this framework encourages - but does not enforce - single-responsibility
 in each microservice: each service should integrate with at most one external system,
 and integration should be kept in separate services from business logic or aggregation.
-This is at odds with common microservice frameworks, so perhaps it would be more accurate to say that this framework is aimed at developing "nanoservices" instead.
+This is at odds with common microservice frameworks, so perhaps it would be more accurate
+to say that this framework is aimed at developing "nanoservices" instead.
 
 =head2 Do you need this?
 
@@ -89,8 +87,6 @@ Details on the request are in L<Myriad::RPC::Request> and the response to be sen
 
 =item * L<Myriad::RPC::Perl>
 
-=item * L<Myriad::RPC::AMQP>
-
 =back
 
 =head2 Subscriptions
@@ -107,9 +103,9 @@ Subscription implementations include:
 
 =item * L<Myriad::Subscription::Perl>
 
-=item * L<Myriad::Subscription::AMQP>
-
 =back
+
+=head2 Transports
 
 Note that I<some layers don't have implementations for all transports> - MQ for example does not really provide a concept of "storage".
 
@@ -123,8 +119,6 @@ Each of these implementations is supposed to separate out the logic from the act
 
 =item * L<Myriad::Transport::Perl>
 
-=item * L<Myriad::Transport::AMQP>
-
 =back
 
 which deal with the lower-level interaction with the protocol, connection management and so on. More details on that
@@ -136,7 +130,7 @@ Documentation for these classes may also be of use:
 
 =over 4
 
-=item * L<Myriad::Exception> - generic errors, provides L<Myriad::Exception/throw> and we recommend that all service errors inherit from this
+=item * L<Myriad::Exception> - generic errors, provides L<Myriad::Exception/throw> and we recommend that all service errors implement this rôle
 
 =item * L<Myriad::Plugin> - adds specific functionality to services
 
@@ -148,36 +142,65 @@ Documentation for these classes may also be of use:
 
 =item * L<Myriad::Config> - general config support, commandline/file/storage
 
-=item * L<Myriad::Notifier> - L<IO::Async::Notifier> layer, probably due for removal
-
 =back
 
 =head1 METHODS
 
 =cut
 
-no indirect qw(fatal);
-
 use Future;
-use Future::AsyncAwait;
 
 use Myriad::Config;
 use Myriad::Commands;
 use Myriad::Exception;
 use Myriad::Exception::InternalError;
 
+use Myriad::Registry;
 use Myriad::RPC;
 use Myriad::Role::RPC;
 
 use Myriad::Transport::Redis;
 use Myriad::Transport::HTTP;
 
-use Scalar::Util qw(blessed weaken);
-use Log::Any qw($log);
 use Log::Any::Adapter;
 
-use OpenTracing::Any qw($tracer);
 use Net::Async::OpenTracing;
+
+our $REGISTRY;
+BEGIN {
+    $REGISTRY = Myriad::Registry->new;
+}
+
+IO::Async::Loop->new->add(
+    $REGISTRY
+);
+
+# The IO::Async::Loop instance
+has $loop;
+# Any coderefs to call when shutdown is requested
+has $shutdown_tasks = [ ];
+# The Myriad::Config instance
+has $config;
+# Registered commands for the management interface
+has $commands;
+# Our temporary Net::Async::Redis instance that should
+# really be abstracted away by the ::Transport and
+# storage/rpc/subscription abstractions
+has $redis;
+# The Net::Async::HTTP::Server instance for endpoint
+# requests
+has $http;
+# Future representing shutdown
+has $shutdown;
+# Future for passing to things that want to react to
+# shutdown, pretty much everything outside this file
+# should only be able to access this one
+has $shutdown_without_cancel;
+# The Net::Async::OpenTracing instance
+has $tracing;
+# Any service definitions wait what why is this here,
+# can we not use the registry instead?
+has $services = {};
 
 # Note that we don't use Object::Pad as heavily within the core framework as we
 # would expect in microservices - this is mainly due to complications regarding
@@ -190,20 +213,7 @@ Returns the main L<IO::Async::Loop> instance for this process.
 
 =cut
 
-sub loop { shift->{loop} //= IO::Async::Loop->new }
-
-=head2 new
-
-Instantiates.
-
-Currently takes no useful parameters.
-
-=cut
-
-sub new {
-    my $class = shift;
-    bless { shutdown_tasks => [], @_ }, $class
-}
+method loop { $loop //= IO::Async::Loop->new }
 
 =head2 configure_from_argv
 
@@ -223,17 +233,17 @@ Expects a list of parameters and applies the following logic for each one:
 
 =cut
 
-async sub configure_from_argv {
-    my ($self, @args) = @_;
-
+async method configure_from_argv (@args) {
     # Allow config parsing to extract the information
-    $self->{config} = Myriad::Config->new(
+    $self->loop;
+    $config = Myriad::Config->new(
         commandline => \@args
     );
     $self->setup_logging;
     $self->setup_tracing;
+    $self->redis;
 
-    $self->{commands} = my $commands = Myriad::Commands->new(
+    $commands = Myriad::Commands->new(
         myriad => $self
     );
     # At this point, we expect `@args` to contain only the plain
@@ -251,7 +261,7 @@ async sub configure_from_argv {
     }
 }
 
-sub config { shift->{config} }
+method config () { $config }
 
 =head2 redis
 
@@ -259,16 +269,15 @@ The L<Net::Async::Redis> (or compatible) instance used for service coördination
 
 =cut
 
-sub redis {
-    my ($self, %args) = @_;
-    $self->{redis} //= do {
-        $self->loop->add(
-            my $redis = Myriad::Transport::Redis->new(
-                redis_uri => $self->config->redis_uri->as_string
+method redis () {
+    unless($redis) {
+        $loop->add(
+            $redis = Myriad::Transport::Redis->new(
+                redis_uri => $config->redis_uri->as_string
             )
         );
-        $redis
-    };
+    }
+    $redis
 }
 
 =head2 http
@@ -278,15 +287,22 @@ and metrics.
 
 =cut
 
-sub http {
-    my ($self, %args) = @_;
-    $self->{http} //= do {
-        $self->loop->add(
-            my $http = Myriad::Transport::HTTP->new
+method http () {
+    unless($http) {
+        $loop->add(
+            $http = Myriad::Transport::HTTP->new
         );
-        $http
-    };
+    }
+    $http
 }
+
+=head2 registry
+
+Returns the common L<Myriad::Registry> representing the current service state.
+
+=cut
+
+method registry () { $REGISTRY }
 
 =head2 add_service
 
@@ -296,22 +312,12 @@ Returns the service instance.
 
 =cut
 
-async sub add_service {
-    my ($self, $srv, %args) = @_;
-    $srv = $srv->new(
-        redis => $self->redis
-    ) unless blessed($srv) and $srv->isa('Myriad::Service');
-    my $name = $args{name} || $srv->service_name;
-    $log->infof('Add service [%s]', $name);
-    $self->loop->add(
-        $srv
+async method add_service ($srv, %args) {
+    return await $self->registry->add_service(
+        service => $srv,
+        redis => $redis,
+        %args
     );
-    my $k = Scalar::Util::refaddr($srv);
-    Scalar::Util::weaken($self->{services_by_name}{$name} = $srv);
-    $self->{services}{$k} = $srv;
-
-    await $srv->startup;
-    return;
 }
 
 =head2 service_by_name
@@ -322,9 +328,10 @@ Will throw an exception if the service cannot be found.
 
 =cut
 
-sub service_by_name {
-    my ($self, $k) = @_;
-    return $self->{services_by_name}{$k} // Myriad::Exception->throw(reason => 'service ' . $k . ' not found');
+method service_by_name ($srv) {
+    return $self->registry->service_by_name(
+        $srv,
+    );
 }
 
 =head2 shutdown
@@ -333,24 +340,38 @@ Requests shutdown.
 
 =cut
 
-async sub shutdown {
-    my ($self) = @_;
-    my $f = $self->{shutdown}
+async method shutdown () {
+    my $f = $shutdown
         or die 'attempting to shut down before we have started, this will not end well';
 
-    my @shutdown_operations = map { $self->{services}{$_}->shutdown } keys $self->{services}->%*;
-    push @shutdown_operations, map { $_->() } splice $self->{shutdown_tasks}->@*;
+    # Each service may have its own shutdown or cleanup operations
+    my @shutdown_operations = map {
+        $services->{$_}->shutdown
+    } keys $services->%*;
+
+    # We also have generic tasks, such as transport or RPC/subscription
+    push @shutdown_operations, map {
+        $_->()
+    } splice $shutdown_tasks->@*;
+
     await Future->wait_all(
         @shutdown_operations
     );
 
     $f->done unless $f->is_ready;
-    $f->without_cancel
+    return $f->without_cancel;
 }
 
-sub on_shutdown {
-    my ($self, $code) = @_;
-    push $self->{shutdown_tasks}->@*, $code;
+=head2 on_shutdown
+
+Registers a coderef to be called during shutdown.
+
+The coderef is expected to return a L<Future> indicating completion.
+
+=cut
+
+method on_shutdown ($code) {
+    push $shutdown_tasks->@*, $code;
     $self
 }
 
@@ -363,11 +384,9 @@ triggered by a fault or a Unix signal.
 
 =cut
 
-sub shutdown_future {
-    my ($self) = @_;
-
-    return $self->{shutdown_without_cancel} //= (
-        $self->{shutdown} //= $self->loop->new_future->set_label('shutdown')
+method shutdown_future () {
+    return $shutdown_without_cancel //= (
+        $shutdown //= $self->loop->new_future->set_label('shutdown')
     )->without_cancel;
 }
 
@@ -377,9 +396,8 @@ Prepare for logging.
 
 =cut
 
-sub setup_logging {
-    my ($self) = @_;
-    my $level = $self->config->log_level;
+method setup_logging () {
+    my $level = $config->log_level;
     $level->subscribe(my $code = sub {
         Log::Any::Adapter->import(
             qw(Stderr),
@@ -390,18 +408,24 @@ sub setup_logging {
     return;
 }
 
-sub setup_tracing {
-    my ($self) = @_;
-    $self->loop->add(
-        $self->{tracing} = Net::Async::OpenTracing->new(
-            host => $self->config->opentracing_host,
-            port => $self->config->opentracing_port,
+=head2 setup_tracing
+
+Prepare L<OpenTracing> collection.
+
+=cut
+
+method setup_tracing () {
+    $loop->add(
+        $tracing = Net::Async::OpenTracing->new(
+            host => $config->opentracing_host,
+            port => $config->opentracing_port,
             protocol => 'jaeger',
         )
     );
     $self->on_shutdown(async sub {
-        await $self->{tracing}->sync
+        await $tracing->sync
     });
+    return;
 }
 
 =head2 run
@@ -412,17 +436,16 @@ Applies signal handlers for TERM and QUIT, then starts the loop.
 
 =cut
 
-sub run {
-    my ($self) = @_;
-    $self->loop->attach_signal(TERM => sub {
+method run () {
+    $loop->attach_signal(TERM => method {
         $log->infof('TERM received, exit');
         $self->shutdown->await
     });
-    $self->loop->attach_signal(INT => sub {
+    $loop->attach_signal(INT => method {
         $log->infof('INT received, exit');
         $self->shutdown->await
     });
-    $self->loop->attach_signal(QUIT => async sub {
+    $loop->attach_signal(QUIT => async method {
         $log->infof('QUIT received, exit');
         $self->shutdown->await
     });

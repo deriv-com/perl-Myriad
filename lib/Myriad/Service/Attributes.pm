@@ -24,6 +24,9 @@ Myriad::Service::Attributes - microservice coördination
 
 Each of these is an attribute that can be applied to a method.
 
+Note that this class is just a simple passthrough to L<Myriad::Registry>,
+which does all the real work.
+
 =cut
 
 use Myriad::Registry;
@@ -34,10 +37,12 @@ use Exporter qw(import export_to_level);
 use Sub::Util ();
 
 my %known_attributes = (
-    RPC => 'rpc',
-    Stream => 'stream',
-    Sink => 'sink',
-    Batch => 'batch'
+    RPC      => 'rpc',
+    Stream   => 'stream',
+    Sink     => 'sink',
+    Batch    => 'batch',
+    Emitter  => 'emitter',
+    Receiver => 'receiver',
 );
 
 =head2 MODIFY_CODE_ATTRIBUTES
@@ -57,8 +62,9 @@ sub apply_attributes {
         # an m//gc parser later with a restricted set of options.
         $args = +{ eval "$args" } if length $args;
 
-        $log->infof('Attrbute %s (%s) applying to %s', $type, $args, $pkg);
-        die 'unknown attribute ' . $type unless my $handler = $known_attributes{$type};
+        $log->infof('Attribute %s (%s) applying to %s', $type, $args, $pkg);
+        my $handler = $known_attributes{$type}
+            or die 'unknown attribute ' . $type;
         $class->$handler(
             $pkg,
             $method,
@@ -83,7 +89,7 @@ This will cause the method to be registered in L<Myriad::Registry/add_rpc>.
 
 sub rpc {
     my ($class, $pkg, $method, $code, $args) = @_;
-    Myriad::Registry->add_rpc(
+    $Myriad::REGISTRY->add_rpc(
         $pkg,
         $method,
         $code,
@@ -111,7 +117,7 @@ and is responsible for streaming data into that sink until cancelled.
 
 sub stream {
     my ($class, $pkg, $method, $code, $args) = @_;
-    Myriad::Registry->add_stream(
+    $Myriad::REGISTRY->add_stream(
         $pkg,
         $method,
         $code,
@@ -133,7 +139,63 @@ arrayref batches of data.
 
 sub batch {
     my ($class, $pkg, $method, $code, $args) = @_;
-    Myriad::Registry->add_batch(
+    $Myriad::REGISTRY->add_batch(
+        $pkg,
+        $method,
+        $code,
+        $args,
+    );
+}
+
+=head2 Sink
+
+Mark this as an async method which should be called repeatedly to generate
+arrayref batches of data.
+
+ has $id = 0;
+ async method example_batch : Batch {
+  return [ ++$id ];
+ }
+
+=cut
+
+sub sink {
+    my ($class, $pkg, $method, $code, $args) = @_;
+    $Myriad::REGISTRY->add_sink(
+        $pkg,
+        $method,
+        $code,
+        $args,
+    );
+}
+
+=head2 Emitter
+
+Indicates a method which should be called on startup, which given a
+L<Ryu::Sink> will emit events to that sink until it's done.
+
+=cut
+
+sub emitter {
+    my ($class, $pkg, $method, $code, $args) = @_;
+    $Myriad::REGISTRY->add_emitter(
+        $pkg,
+        $method,
+        $code,
+        $args,
+    );
+}
+
+=head2 Receiver
+
+Indicates a method which should be called on startup and passed a
+L<Ryu::Source>. Events will be emitted to that source until termination.
+
+=cut
+
+sub receiver {
+    my ($class, $pkg, $method, $code, $args) = @_;
+    $Myriad::REGISTRY->add_receiver(
         $pkg,
         $method,
         $code,

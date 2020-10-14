@@ -34,11 +34,9 @@ requires 'Net::Async::OpenTracing', '>= 1.000';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
 requires 'Log::Any::Adapter::Multiplexor', '>= 0.03';
 # Transport
-requires 'Net::Async::Redis', '>= 2.005';
+requires 'Net::Async::Redis', '>= 3.000';
 requires 'Net::Async::HTTP', '>= 0.47';
 requires 'Net::Async::HTTP::Server', '>= 0.13';
-requires 'Net::Async::Redis', '>= 2.004';
-requires 'Net::Async::AMQP', '>= 2.000';
 requires 'Net::Async::SMTP', '>= 0.002';
 requires 'Database::Async', '>= 0.010';
 requires 'Database::Async::Engine::PostgreSQL', '>= 0.008';

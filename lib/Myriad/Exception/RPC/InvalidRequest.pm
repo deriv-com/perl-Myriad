@@ -1,19 +1,16 @@
 package Myriad::Exception::RPC::InvalidRequest;
 
-use strict;
-use warnings;
+use Myriad::Class;
 
 # VERSION
 # AUTHORITY
 
-no indirect qw(fatal);
-
 use Myriad::Exception::Builder;
 
-sub reason { shift->{reason} }
+has $message;
 
-sub category { 'rpc' }
-sub message { $_[0]->{message} //= 'invalid request due to: ' . $_[0]->reason }
+method category { 'rpc' }
+method message { $_[0]->{message} //= 'invalid request due to: ' . $_[0]->reason }
 
 1;
 

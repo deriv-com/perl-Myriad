@@ -14,7 +14,14 @@ no indirect qw(fatal);
 
 =head1 NAME
 
-Myriad::Util::Defer
+Myriad::Util::Defer - provide a deferred wrapper attribute
+
+=head1 DESCRIPTION
+
+This is used to make an async method delay processing until later.
+
+It can be controlled by the C<MYRIAD_RANDOM_DELAY> environment variable,
+and defaults to no delay.
 
 =cut
 
@@ -42,7 +49,7 @@ sub Defer : ATTR(CODE) {
         # either zero (default behaviour) or if we have a random
         # delay assigned, use that to drive a uniform rand() call
         await $self->loop->delay_future(
-            after => RANDOM_DELAY && rand(RANDOM_DELAY)
+            after => rand(RANDOM_DELAY)
         );
 
         $log->tracef('deferred call to %s::%s', $package, $name);
@@ -50,7 +57,7 @@ sub Defer : ATTR(CODE) {
         return await $self->$code(
             @args
         );
-    }
+    } if RANDOM_DELAY;
 }
 
 1;
