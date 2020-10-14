@@ -1,15 +1,9 @@
 package Myriad::Transport::Redis;
 
-use strict;
-use warnings;
+use Myriad::Class extends => qw(IO::Async::Notifier);
 
 # VERSION
 # AUTHORITY
-#
-use utf8;
-use Object::Pad;
-
-class Myriad::Transport::Redis extends IO::Async::Notifier;
 
 =pod
 
@@ -27,18 +21,15 @@ It should also cover retry for stateless calls.
 
 =cut
 
-use Future::AsyncAwait;
-use Syntax::Keyword::Try;
-
 use Myriad::Redis::Pending;
 
 use Net::Async::Redis;
 
-use Log::Any qw($log);
 use List::Util qw(pairmap);
 
 has $redis_uri;
 has $redis;
+has $redis_pool = [ ];
 has $wait_time = 15_000;
 has $batch_count = 50;
 
@@ -136,7 +127,7 @@ method next_id($id) {
     $left . '-' . $right
 }
 
-method _add_to_loop($) {
+method _add_to_loop(@) {
     $self->add_child(
         $redis = Net::Async::Redis->new(uri => $redis_uri),
     );
@@ -366,7 +357,7 @@ Acknowledge a message from a Redis stream.
 
 =cut
 
-async method ack($stream, $group, $message_id) {
+async method ack ($stream, $group, $message_id) {
     await $redis->xack($stream, $group, $message_id);
 }
 
@@ -422,6 +413,36 @@ This currently just execute C<XPENDING> without any filtering.
 
 async method pending_messages_info($stream, $group) {
     await $redis->xpending($stream, $group);
+}
+
+async method xadd (@args) {
+    return await $redis->xadd(@args);
+}
+
+async method redis_from_pool {
+    $log->infof('Redis pool count: %d', 0 + $redis_pool->@*);
+    return shift $redis_pool->@* if $redis_pool->@*;
+    $self->add_child(
+        my $instance = Net::Async::Redis->new(uri => $redis_uri),
+    );
+    await $instance->connected;
+    return $instance;
+}
+
+async method xreadgroup (@args) {
+    my $instance = await $self->redis_from_pool;
+    # This should also be possible with a try/finally combination...
+    # but that's currently failing with the $redis_pool slot not being
+    # defined
+    return await $instance->xreadgroup(@args)->on_ready(sub {
+        $log->tracef('Returning instance to pool, count now %d', 0 + $redis_pool->@*);
+        push $redis_pool->@*, $instance
+
+    });
+}
+
+async method xgroup (@args) {
+    return await $redis->xgroup(@args);
 }
 
 1;
