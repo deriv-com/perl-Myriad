@@ -493,6 +493,7 @@ Here are a list of the Perl microservice implementations that we're aware of:
 
 =item * L<https://mojolicious.org> - more of a web framework, but a popular one
 
+=item * L<Async::Microservice> - L<AnyEvent>-based, using HTTP as a protocol, currently a minimal wrapper intended to be used with OpenAPI services
 =back
 
 =head2 Java
