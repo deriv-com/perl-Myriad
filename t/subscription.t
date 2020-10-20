@@ -8,12 +8,12 @@ my @received;
 
 package Example::Service {
     use Myriad::Service;
-    method simple_emitter : Emitter(
+    async method simple_emitter : Emitter(
         channel => 'example'
     ) ($sink, $api, $args) {
         $sink->from([1..10]);
     }
-    method simple_receiver : Receiver(
+    async method simple_receiver : Receiver(
         channel => 'example'
     ) ($src, $api, $args) {
         $src->each(sub { push @received, $_ });
