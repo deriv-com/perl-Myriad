@@ -32,7 +32,7 @@ match the structure.
 use Syntax::Keyword::Try;
 use JSON::MaybeUTF8 qw(:v1);
 
-use Myriad::Exception::RPC;
+use Myriad::RPC;
 
 has $rpc;
 has $id;

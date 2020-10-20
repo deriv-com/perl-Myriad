@@ -9,6 +9,8 @@ use warnings;
 no indirect qw(fatal);
 use utf8;
 
+use constant ERROR_CATEGORY => 'rpc';
+
 =encoding utf8
 
 =head1 NAME
@@ -26,8 +28,6 @@ Myriad::RPC - microservice RPC abstraction
 use Role::Tiny;
 use Myriad::Exception::Builder;
 
-has $error_category = 'rpc';
-
 =head1 Exceptions
 
 =cut
@@ -39,7 +39,7 @@ Returned when there is issue parsing the request, or if the request parameters a
 =cut
 
 declare_exception InvalidRequest => (
-    category => $error_category,
+    category => ERROR_CATEGORY,
     message => 'Invalid request'
 );
 
@@ -50,7 +50,7 @@ Returned if the requested method is not recognized by the service.
 =cut
 
 declare_exception MethodNotFound => (
-    category => $error_category,
+    category => ERROR_CATEGORY,
     message => 'Method not found'
 );
 
@@ -61,7 +61,7 @@ Returned when there is an external timeout or the request deadline is already pa
 =cut
 
 declare_exception Timeout => (
-    category => $error_category,
+    category => ERROR_CATEGORY,
     message => 'Timeout'
 );
 

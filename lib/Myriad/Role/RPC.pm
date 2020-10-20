@@ -42,8 +42,6 @@ use Future::AsyncAwait;
 
 use Myriad::RPC::Message;
 
-use Myriad::Exception::RPC;
-
 =head1 METHODS
 
 The following methods are required in any concrete classes which implement this rôle.

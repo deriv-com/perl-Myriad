@@ -32,7 +32,6 @@ use Scalar::Util qw(blessed);
 
 use Log::Any qw($log);
 
-use Myriad::Exception::RPC;
 use Myriad::Exception::InternalError;
 use Myriad::RPC::Message;
 
