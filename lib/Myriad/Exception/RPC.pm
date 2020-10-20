@@ -1,5 +1,8 @@
 package Myriad::Exception::RPC;
 
+# VERSION
+# AUTHORITY
+
 use Myriad::Exception::Builder;
 
 declare_exception InvalidRequest => (
