@@ -42,9 +42,7 @@ use Future::AsyncAwait;
 
 use Myriad::RPC::Message;
 
-use Myriad::Exception::RPC::MethodNotFound;
-use Myriad::Exception::RPC::InvalidRequest;
-use Myriad::Exception::RPC::Timeout;
+use Myriad::Exception::RPC;
 
 =head1 METHODS
 

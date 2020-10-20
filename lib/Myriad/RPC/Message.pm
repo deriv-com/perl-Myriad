@@ -32,7 +32,7 @@ match the structure.
 use Syntax::Keyword::Try;
 use JSON::MaybeUTF8 qw(:v1);
 
-use Myriad::Exception::RPC::InvalidRequest;
+use Myriad::Exception::RPC;
 
 has $rpc;
 has $id;
@@ -111,8 +111,8 @@ method encode {
             response   => encode_json_text($response),
             trace      => encode_json_text($trace),
         });
-    } catch {
-        Myriad::Exception::RPC::InvalidRequest->new("Bad message encoding")->throw;
+    } catch ($e) {
+        Myriad::Exception::RPC::InvalidRequest->throw(reason => $e);
     }
 }
 

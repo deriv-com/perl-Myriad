@@ -32,7 +32,7 @@ use Scalar::Util qw(blessed);
 
 use Log::Any qw($log);
 
-use Myriad::Exception::RPC::MethodNotFound;
+use Myriad::Exception::RPC;
 use Myriad::Exception::InternalError;
 use Myriad::RPC::Message;
 
@@ -95,7 +95,7 @@ async sub listener ($self) {
                     if (my $sub = $self->rpc_map->{$message->rpc}) {
                         $sub->[0]->emit($message);
                     } else {
-                        my $error = Myriad::Exception::RPC::MethodNotFound->new($message->rpc);
+                        my $error = Myriad::Exception::RPC::MethodNotFound->new(reason => $message->rpc);
                         $self->rpc_map->{'__ERROR'}->[0]->emit({message => $message, error => $error});
                     }
                 }
@@ -121,7 +121,7 @@ async sub reply_success ($self, $message, $response) {
 }
 
 async sub reply_error ($self, $message, $error) {
-    $message->response = { error => { code => $error->category, message => $error->message } };
+    $message->response = { error => { category => $error->category, message => $error->message, reason => $error->reason } };
     await $self->_reply($message);
 }
 
