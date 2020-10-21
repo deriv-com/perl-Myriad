@@ -27,7 +27,7 @@ for my $key (qw/rpc message_id who deadline args/) {
         my $args = dclone $message_args;
         delete $args->{$key};
         Myriad::RPC::Message->new(%$args);
-    }, qr/^invalid request/, "->new without $key should not succeed");
+    }, qr{^Invalid request.*}, "->new without $key should not succeed");
 }
 
 my $message = Myriad::RPC::Message->new(%$message_args);

@@ -72,7 +72,7 @@ async method add_service (%args) {
         $srv
     );
     my $k = refaddr($srv);
-    weaken($self->{service_by_name}{$name} = $srv);
+    weaken($service_by_name->{$name} = $srv);
     $self->{services}{$k} = $srv;
 
     await $srv->startup;

@@ -36,7 +36,7 @@ The failure reason. Freeform text.
 
 =cut
 
-sub reason { shift->reason }
+sub reason { shift->{reason} }
 
 =head2 as_string
 

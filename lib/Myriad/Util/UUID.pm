@@ -1,5 +1,8 @@
 package Myriad::Util::UUID;
 
+# VERSION
+# AUTHORITY
+
 use strict;
 use warnings;
 

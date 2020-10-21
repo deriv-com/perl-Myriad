@@ -1,5 +1,8 @@
 package Myriad::Subscription::Implementation::Redis;
 
+# VERSION
+# AUTHORITY
+
 use Myriad::Class extends => qw(IO::Async::Notifier);
 
 use JSON::MaybeUTF8 qw(:v1);

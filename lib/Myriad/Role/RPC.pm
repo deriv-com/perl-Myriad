@@ -42,10 +42,6 @@ use Future::AsyncAwait;
 
 use Myriad::RPC::Message;
 
-use Myriad::Exception::RPC::MethodNotFound;
-use Myriad::Exception::RPC::InvalidRequest;
-use Myriad::Exception::RPC::Timeout;
-
 =head1 METHODS
 
 The following methods are required in any concrete classes which implement this rôle.

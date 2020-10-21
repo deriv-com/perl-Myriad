@@ -213,6 +213,8 @@ sub import {
                 category => $pkg
             );
             *{$pkg . '::tracer'} = \(OpenTracing->global_tracer);
+
+            push @{$pkg . '::ISA' }, 'Myriad::Service';
         }
     }
 }
