@@ -95,6 +95,7 @@ my %WriteMakefileArgs = (
     "IPC::Open3" => 0,
     "Log::Any::Adapter::TAP" => 0,
     "Log::Any::Test" => 0,
+    "Ryu::Async" => "0.016",
     "Storable" => 0,
     "Test::CheckDeps" => "0.010",
     "Test::Deep" => "1.130",
@@ -105,7 +106,7 @@ my %WriteMakefileArgs = (
   },
   "VERSION" => "0.001",
   "test" => {
-    "TESTS" => "t/*.t"
+    "TESTS" => "t/*.t t/RPC/*.t"
   }
 );
 

@@ -37,21 +37,20 @@ isa_ok($rpc, 'IO::Async::Notifier');
 
     $rpc->create_from_sink(method => 'test', sink => $sink);
     $rpc->start()->retain;
-    
-        
+
     my $response = $loop->new_future;
     $message_args->{rpc} = 'not_found';
     $rpc->request($message_args, $response);
-        
+
     try {
         await $response;
     } catch ($e) {
         like($e, qr{Method not found}, '');
     }
 
-    
     $rpc->stop();
 
 })->()->get();
 
 done_testing;
+

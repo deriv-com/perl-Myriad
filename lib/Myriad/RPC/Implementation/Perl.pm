@@ -64,7 +64,7 @@ async method start () {
 method create_from_sink (%args) {
     my $sink   = $args{sink} // die 'need a sink';
     my $method = $args{method} // die 'need a method name';
-    
+
     $rpc_methods->{$method} = $sink;
 }
 
