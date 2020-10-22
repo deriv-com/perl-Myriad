@@ -13,7 +13,7 @@ use utf8;
 
 =head1 NAME
 
-Myriad::RPC::Role - microservice RPC abstraction
+Myriad::Role::RPC - microservice RPC abstraction
 
 =head1 SYNOPSIS
 

@@ -16,7 +16,7 @@ use utf8;
 
 =head1 NAME
 
-Myriad::RPC::Implementation::Redis - microservice RPC abstraction
+Myriad::RPC::Implementation::Redis - microservice RPC Redis implementation.
 
 =head1 DESCRIPTION
 

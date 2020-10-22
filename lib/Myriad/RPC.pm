@@ -65,6 +65,16 @@ declare_exception Timeout => (
     message => 'Timeout'
 );
 
+=head2 BadEncoding
+
+Returned when the service is unable to decode/encode the request correctly.
+
+=cut
+
+declare_exception BadEncoding => (
+    category => ERROR_CATEGORY,
+    message => 'Bad encoding'
+);
 
 1;
 
