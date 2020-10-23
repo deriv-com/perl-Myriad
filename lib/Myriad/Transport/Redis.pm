@@ -154,12 +154,14 @@ method iterate(%args) {
     my $stream = $args{stream};
     my $group = $args{group};
     my $client = $args{client};
+    my $instance;
     Future->wait_any(
         $src->completed->without_cancel,
         (async sub {
+            $instance = await $self->redis_from_pool;
             while (1) {
                 await $src->unblocked;
-                my ($batch) = await $redis->xreadgroup(
+                my ($batch) = await $instance->xreadgroup(
                     BLOCK   => $self->wait_time,
                     GROUP   => $group, $client,
                     COUNT   => $self->batch_count,
@@ -186,7 +188,12 @@ method iterate(%args) {
                 }
             }
         })->()->without_cancel
-    )->retain;
+    )->on_ready(sub {
+        $self->return_redis_pool($instance) if $instance;
+    })->on_fail(sub {
+        my $error = shift;
+        $log->errorf("Failed while iterating on messages due: %s", $error);
+    })->retain;
     $src;
 }
 
@@ -291,13 +298,15 @@ method pending(%args) {
     my $stream = $args{stream};
     my $group = $args{group};
     my $client = $args{client};
+    my $instance;
     Future->wait_any(
         $src->completed->without_cancel,
         (async sub {
+            $instance = await $self->redis_from_pool;
             my $start = '-';
             while (1) {
                 await $src->unblocked;
-                my ($pending) = await $redis->xpending(
+                my ($pending) = await $instance->xpending(
                     $stream,
                     $group,
                     $start, '+',
@@ -318,7 +327,12 @@ method pending(%args) {
                 last unless @$pending >= $self->batch_count;
             }
         })->(),
-    )->retain;
+    )->on_ready(sub {
+        $self->return_redis_to_pool($instance) if $instance;
+    })->on_fail(sub  {
+        my $error = shift;
+        $log->errorf("Failed while looking for pending messages due: %s", $error);
+    })->retain;
     $src;
 }
 
@@ -429,15 +443,18 @@ async method redis_from_pool {
     return $instance;
 }
 
+method return_redis_to_pool ($instance) {
+    $log->tracef('Returning instance to pool, count now %d', 0 + $redis_pool->@*);
+    push $redis_pool->@*, $instance
+}
+
 async method xreadgroup (@args) {
     my $instance = await $self->redis_from_pool;
     # This should also be possible with a try/finally combination...
     # but that's currently failing with the $redis_pool slot not being
     # defined
     return await $instance->xreadgroup(@args)->on_ready(sub {
-        $log->tracef('Returning instance to pool, count now %d', 0 + $redis_pool->@*);
-        push $redis_pool->@*, $instance
-
+        $self->return_redis_to_pool($instance);
     });
 }
 

@@ -6,6 +6,8 @@ use warnings;
 # VERSION
 # AUTHORITY
 
+use Syntax::Keyword::Try qw( try :experimental(typed) );
+
 use Role::Tiny::With;
 with 'Myriad::Role::RPC';
 
@@ -134,9 +136,13 @@ async method drop ($id) {
 
 Create a new request.
 
+=over 4
+
 =item * C<message> - A string that typically should contain JSON encoded message.
 
 =item * C<reply_future> - A L<Future> that is going to be resolved once the request is processed.
+
+=back
 
 =cut
 

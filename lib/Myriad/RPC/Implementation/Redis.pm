@@ -6,13 +6,10 @@ use warnings;
 # VERSION
 # AUTHORITY
 
-use parent qw(IO::Async::Notifier);
+use Role::Tiny::With;
+with 'Myriad::Role::RPC';
 
-no indirect qw(fatal);
-
-use utf8;
-
-=encoding utf8
+use Myriad::Class extends => qw(IO::Async::Notifier);
 
 =head1 NAME
 
@@ -22,38 +19,34 @@ Myriad::RPC::Implementation::Redis - microservice RPC Redis implementation.
 
 =cut
 
-use experimental qw(signatures);
-
-use Future::AsyncAwait;
-use Syntax::Keyword::Try;
 use Sys::Hostname qw(hostname);
-use Role::Tiny::With;
 use Scalar::Util qw(blessed);
-
-use Log::Any qw($log);
 
 use Myriad::Exception::InternalError;
 use Myriad::RPC::Message;
 
-with 'Myriad::RPC';
+has $redis;
+method redis { $redis }
 
-sub redis { shift->{redis} }
+has $service;
+method service { $service }
 
-sub service { shift->{service} }
-sub group_name { shift->{group_name} }
-sub whoami { shift->{whoami} }
+has $group_name;
+method group_name { $group_name }
 
-sub rpc_map { shift->{rpc_map} }
+has $whoami;
+method whoami { $whoami }
 
-sub configure ($self, %args) {
-    for my $k (qw(whoami group_name redis service)) {
-        $self->{$k} = delete $args{$k} if exists $args{$k};
-    }
-    $self->{whoami} //= hostname();
-    $self->{group_name} //= 'processors';
+has $rpc_methods;
+
+method configure (%args) {
+    $redis = delete $args{redis} if exists $args{redis};
+    $service = delete $args{service} if exists $args{service};
+    $whoami = hostname();
+    $group_name = 'processors';
 }
 
-async sub start ($self) {
+async method start () {
     await $self->redis->create_group(
         $self->service,
         $self->group_name
@@ -61,12 +54,20 @@ async sub start ($self) {
     await $self->listener;
 }
 
-async sub stop ($self) {
+method create_from_sink (%args) {
+    my $sink   = $args{sink} // die 'need a sink';
+    my $method = $args{method} // die 'need a method name';
+
+    $rpc_methods->{$method} = $sink;
+}
+
+
+async method stop () {
     $self->listener->cancel;
     return;
 }
 
-async sub listener ($self) {
+async method listener () {
     my %stream_config = (
         stream => $self->service,
         group  => $self->group_name,
@@ -74,7 +75,6 @@ async sub listener ($self) {
     );
     my $pending_requests = $self->redis->pending(%stream_config);
     my $incoming_request = $self->redis->iterate(%stream_config);
-
     try {
         await $incoming_request->merge($pending_requests)
             ->map(sub {
@@ -85,26 +85,27 @@ async sub listener ($self) {
                     $error = Myriad::Exception::InternalError->new($error) unless blessed($error) and $error->isa('Myriad::Exception');
                     return { error => $error, id => $data->{message_id} }
                 }
-            })->each(sub {
+            })->map(async sub {
                 if(my $error = $_->{error}) {
                     $log->warnf("error while parsing the incoming messages: %s", $error->message);
-                    $self->rpc_map->{__DEAD_MSG}->[0]->emit($_->{id});
+                    await $self->drop($_->{id});
                 } else {
                     my $message = $_->{message};
-                    if (my $sub = $self->rpc_map->{$message->rpc}) {
-                        $sub->[0]->emit($message);
+                    if (my $sink = $rpc_methods->{$message->rpc}) {
+                        $sink->emit($message);
                     } else {
-                        my $error = Myriad::Exception::RPC::MethodNotFound->new(reason => $message->rpc);
-                        $self->rpc_map->{'__ERROR'}->[0]->emit({message => $message, error => $error});
+                        my $error = Myriad::Exception::RPC::MethodNotFound->new(reason => "No such method: " . $message->rpc);
+                        await $self->reply_error($message, $error);
                     }
                 }
-            })->completed;
+            })->resolve->completed;
     } catch ($e) {
-        $log->fatalf("RPC listener stopped due to: %s", $e);
+        warn $e;
+        $log->errorf("RPC listener stopped due to: %s", $e);
     }
 }
 
-async sub _reply ($self, $message) {
+async method reply ($message) {
     try {
         await $self->redis->publish($message->who, $message->encode);
         await $self->redis->ack($self->service, $self->group_name, $message->id);
@@ -114,22 +115,22 @@ async sub _reply ($self, $message) {
     }
 }
 
-async sub reply_success ($self, $message, $response) {
+async method reply_success ($message, $response) {
     $message->response = { response => $response };
-    await $self->_reply($message);
+    await $self->reply($message);
 }
 
-async sub reply_error ($self, $message, $error) {
+async method reply_error ($message, $error) {
     $message->response = { error => { category => $error->category, message => $error->message, reason => $error->reason } };
-    await $self->_reply($message);
+    await $self->reply($message);
 }
 
-async sub drop ($self, $id) {
+async method drop ($id) {
     $log->debugf("Going to drop message: %s", $id);
     await $self->redis->ack($self->service, $self->group_name, $id);
 }
 
-async sub has_pending_requests ($self) {
+async method has_pending_requests () {
     my $stream_info = await $self->redis->pending_messages_info($self->service, $self->group_name);
     if($stream_info->[0]) {
         for my $consumer ($stream_info->[3]->@*) {
