@@ -9,6 +9,10 @@ use JSON::MaybeUTF8 qw(:v1);
 use Unicode::UTF8 qw(decode_utf8 encode_utf8);
 use Myriad::Util::UUID;
 
+use Role::Tiny::With;
+
+with 'Myriad::Role::Subscription';
+
 has $redis;
 has $ryu;
 has $service;
@@ -20,9 +24,14 @@ has $group = { };
 
 has $queues = [ ];
 
+has $should_shutdown = 0;
+has $stopped;
+
 BUILD {
     $uuid = Myriad::Util::UUID::uuid();
+    $stopped = $self->loop->new_future(label => 'subscription::redis::stopped');
 }
+
 method configure (%args) {
     $redis = delete $args{redis} if exists $args{redis};
     $ryu = delete $args{ryu} if exists $args{ryu};
@@ -32,7 +41,7 @@ method configure (%args) {
 
 method create_from_source (%args) {
     my $src = delete $args{source} or die 'need a source';
-    my $stream = 'some.service.' . $args{channel};
+    my $stream = $service . '.' . $args{channel};
     $src->each(sub {
         $log->infof('sub has an event! %s', $_);
         $redis->xadd(
@@ -44,23 +53,16 @@ method create_from_source (%args) {
 
 method create_from_sink (%args) {
     my $sink = delete $args{sink} or die 'need a sink';
-    my $stream = 'some.service.' . $args{channel};
+    my $stream = $service . '.' . $args{channel};
     $log->infof('created sub thing from sink');
     push $queues->@*, {
         key => $stream,
         client => $args{client},
         sink => $sink
     };
-#    $sisrc->each(sub {
-#        $log->infof('sub has an event! %s', $_);
-#        $redis->xadd(
-#            encode_utf8($stream) => '*',
-#            data => encode_json_utf8($_),
-#        );
-#    });
 }
 
-async method run {
+async method start {
     while (1) {
         # await $src->unblocked;
         if($queues->@*) {
@@ -106,7 +108,17 @@ async method run {
         } else {
             await $self->loop->delay_future(after => 1);
         }
+
+        if($should_shutdown) {
+            $stopped->done;
+            last;
+        }
     }
+}
+
+async method stop {
+    $should_shutdown = 1;
+    await $stopped;
 }
 
 1;
@@ -114,3 +126,4 @@ async method run {
 __END__
 
 1;
+
