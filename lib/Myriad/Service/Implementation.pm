@@ -12,7 +12,7 @@ use Future::AsyncAwait;
 use Syntax::Keyword::Try;
 
 use Myriad::RPC::Implementation::Redis;
-use Myriad::Subscription::Implementation::Redis;
+use Myriad::Subscription;
 
 use Myriad::Exception;
 
@@ -55,7 +55,7 @@ has $service_name;
 has $rpc;
 has %active_batch;
 has %rpc_map;
-
+has $subscription_transport;
 has $sub;
 
 =head1 ATTRIBUTES
@@ -94,6 +94,15 @@ The name of the service, defaults to the package name.
 
 method service_name () { $service_name //= lc(ref($self) =~ s{::}{_}gr) }
 
+=head2 subscription_transport
+
+The type of the Subscription transport e.g: redis or perl.
+
+=cut
+
+method subscription_transport () { $subscription_transport }
+ 
+
 =head1 METHODS
 
 =head2 configure
@@ -106,6 +115,7 @@ method configure(%args) {
     $redis = delete $args{redis} if exists $args{redis};
     $service_name = delete $args{name} if exists $args{name};
     Scalar::Util::weaken($myriad = delete $args{myriad}) if exists $args{myriad};
+    $subscription_transport = $args{subscription_transport} if exists $args{subscription_transport};  
     $self->next::method(%args);
 }
 
@@ -135,14 +145,14 @@ method _add_to_loop($loop) {
     );
 
     $self->add_child(
-        $sub = Myriad::Subscription::Implementation::Redis->new(
-            redis   => $redis,
-            service => ref($self),
-            ryu     => $ryu
+        $sub = Myriad::Subscription->new(
+            transport => $self->subscriptoin_transport,
+            redis     => $redis,
+            service   => ref($self),
+            ryu       => $ryu
         )
     );
-    $sub->run->on_fail(sub { $log->errorf('failed on sub run - %s', [ @_ ]) })->retain;
-
+ 
     if(my $emitters = $registry->emitters_for(ref($self))) {
         for my $method (sort keys $emitters->%*) {
             $log->infof('Found emitter %s as %s', $method, $emitters->{$method});
@@ -294,8 +304,10 @@ Start the service and perform any operation needed before announcing the service
 =cut
 
 async method startup {
-    return unless $rpc;
-    await $rpc->start;
+    my $wait_sub = $sub->run->on_fail(sub { $log->errorf('failed on sub run - %s', [ @_ ]) });
+    my $wait_rpc = $rpc->start if $rpc;
+
+    await Future->wait_all($waint_sub, $wait_rpc);
 };
 
 =head2 diagnostics
