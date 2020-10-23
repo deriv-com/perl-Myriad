@@ -53,6 +53,7 @@ has $redis;
 has $myriad;
 has $service_name;
 has $rpc;
+has $rpc_transport;
 has %active_batch;
 
 has $sub;
@@ -93,6 +94,14 @@ The name of the service, defaults to the package name.
 
 method service_name () { $service_name //= lc(ref($self) =~ s{::}{_}gr) }
 
+=head2 rpc_transport
+
+The type of the RPC transport e.g: redis or perl.
+
+=cut
+
+method rpc_transport () { $rpc_transport }
+
 =head1 METHODS
 
 =head2 configure
@@ -104,6 +113,7 @@ Populate internal configuration.
 method configure(%args) {
     $redis = delete $args{redis} if exists $args{redis};
     $service_name = delete $args{name} if exists $args{name};
+    $rpc_transport = delete $args{rpc_transport} if exists $args{rpc_transport};
     Scalar::Util::weaken($myriad = delete $args{myriad}) if exists $args{myriad};
     $self->next::method(%args);
 }
@@ -196,12 +206,13 @@ method _add_to_loop($loop) {
 
     if (my $rpc_calls = $registry->rpc_for(ref($self))) {
         $self->add_child(
-            $rpc = Myriad::RPC::Implementation::Redis->new(
+            $rpc = Myriad::RPC->new(
+                transport => $self->rpc_transport,
                 redis   => $redis,
                 service => ref($self),
-                ryu     => $ryu
             )
         ) if %$rpc_calls;
+
         for my $method (sort keys $rpc_calls->%*) {
             my $spec = $rpc_calls->{$method};
             my $sink = $ryu->sink(label => "rpc:$method");

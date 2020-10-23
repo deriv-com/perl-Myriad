@@ -57,6 +57,14 @@ and able to process requests.
 
 requires 'start';
 
+=head2 create_from_sink
+
+Register a new RPC method and attach a L<Ryu::Sink> to be able to publish messages when they are received.
+
+=cut
+
+requires 'create_from_sink';
+
 =head2 stop
 
 Deäctivate RPC - stop listening for messages.

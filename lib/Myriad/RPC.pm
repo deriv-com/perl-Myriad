@@ -25,8 +25,21 @@ Myriad::RPC - microservice RPC abstraction
 
 =cut
 
-use Role::Tiny;
+use Myriad::RPC::Implementation::Redis;
+use Myriad::RPC::Implementation::Perl;
+
 use Myriad::Exception::Builder;
+
+sub new {
+    my ($class, %args) = @_;
+    my $transport = delete $args{transport};
+
+    if ($transport eq 'redis') {
+        return Myriad::RPC::Implementation::Redis->new(%args);
+    } else {
+        return Myriad::RPC::Implementation::Perl->new(%args);
+    }
+}
 
 =head1 Exceptions
 

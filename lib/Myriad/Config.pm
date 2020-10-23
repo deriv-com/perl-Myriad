@@ -45,6 +45,7 @@ our %DEFAULTS = (
     library_path     => '',
     opentracing_host => 'localhost',
     opentracing_port => 6832,
+    rpc_transport    => 'redis',
 );
 
 =head2 SHORTCUTS_FOR
@@ -54,9 +55,10 @@ The C<< %SHORTCUTS_FOR >> hash allows commandline shortcuts for common parameter
 =cut
 
 our %SHORTCUTS_FOR = (
-    config_path  => [qw(c)],
-    log_level    => [qw(l)],
-    library_path => [qw(lib)],
+    config_path   => [qw(c)],
+    log_level     => [qw(l)],
+    library_path  => [qw(lib)],
+    rpc_transport => [qw(t)],
 );
 
 # Our configuration so far. Populated via L</BUILD>,
