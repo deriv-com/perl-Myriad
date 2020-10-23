@@ -34,10 +34,18 @@ sub new {
     my ($class, %args) = @_;
     my $transport = delete $args{transport};
 
+    # Passing args individually looks tedious but this is to avoid
+    # L<IO::Async::Notifier> exception when it doesn't recognize the key.
+
     if ($transport eq 'redis') {
-        return Myriad::RPC::Implementation::Redis->new(%args);
+        return Myriad::RPC::Implementation::Redis->new(
+            redis   => $args{redis},
+            service => $args{service},
+        );
     } else {
-        return Myriad::RPC::Implementation::Perl->new(%args);
+        return Myriad::RPC::Implementation::Perl->new(
+            service => $args{service},
+        );
     }
 }
 
