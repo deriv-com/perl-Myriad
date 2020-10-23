@@ -316,6 +316,7 @@ async method add_service ($srv, %args) {
     return await $self->registry->add_service(
         service => $srv,
         redis => $redis,
+        subscription_transport => $config ? $config->rpc_transport->as_string : '',
         %args
     );
 }

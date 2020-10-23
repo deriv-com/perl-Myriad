@@ -115,7 +115,7 @@ method configure(%args) {
     $redis = delete $args{redis} if exists $args{redis};
     $service_name = delete $args{name} if exists $args{name};
     Scalar::Util::weaken($myriad = delete $args{myriad}) if exists $args{myriad};
-    $subscription_transport = $args{subscription_transport} if exists $args{subscription_transport};  
+    $subscription_transport = delete $args{subscription_transport} if exists $args{subscription_transport};  
     $self->next::method(%args);
 }
 
@@ -146,7 +146,7 @@ method _add_to_loop($loop) {
 
     $self->add_child(
         $sub = Myriad::Subscription->new(
-            transport => $self->subscriptoin_transport,
+            transport => $self->subscription_transport,
             redis     => $redis,
             service   => ref($self),
             ryu       => $ryu
@@ -307,7 +307,7 @@ async method startup {
     my $wait_sub = $sub->run->on_fail(sub { $log->errorf('failed on sub run - %s', [ @_ ]) });
     my $wait_rpc = $rpc->start if $rpc;
 
-    await Future->wait_all($waint_sub, $wait_rpc);
+    await Future->wait_all($wait_sub, $wait_rpc);
 };
 
 =head2 diagnostics
@@ -331,21 +331,30 @@ Gracefully shut down the service by
 =cut
 
 async method shutdown {
-    return unless $rpc;
-    try {
-        await Future->wait_any($self->loop->timeout_future(after => 30), $rpc->stop);
-    } catch ($error) {
-        $log->warnf("Failed to stop accepting requests we might end up with unfinished requests due: %s", $error);
+    if($rpc) {
+        try {
+            await Future->wait_any($self->loop->timeout_future(after => 30), $rpc->stop);
+        } catch ($error) {
+            $log->warnf("Failed to stop accepting requests we might end up with unfinished requests due: %s", $error);
+        }
+
+        try {
+            await Future->wait_any($self->loop->timeout_future(after => 60 * 3), (async sub {
+                while ( await $rpc->has_pending_requests ) {
+                    await $self->loop->delay_future(after => 30);
+                }
+            })->());
+        } catch ($error) {
+            $log->warnf("Failed to wait for all requests to finish due: %s, unclean shutdown", $error);
+        }
     }
 
-    try {
-        await Future->wait_any($self->loop->timeout_future(after => 60 * 3), (async sub {
-            while ( await $rpc->has_pending_requests ) {
-                await $self->loop->delay_future(after => 30);
-            }
-        })->());
-    } catch ($error) {
-        $log->warnf("Failed to wait for all requests to finish due: %s, unclean shutdown", $error);
+    if($sub) {
+        try {
+            await Future->wait_any($self->loop->timeout_future(after => 60 * 3), $sub->stop);
+        } catch ($error) {
+            $log->warnf("Failed to wait for the subscription to end gracefully due: %s", $error);
+        }
     }
 }
 

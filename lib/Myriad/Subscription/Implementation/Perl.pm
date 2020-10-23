@@ -9,7 +9,6 @@ use Role::Tiny::With;
 
 with 'Myriad::Role::Subscription';
 
-has $ryu;
 has $service;
 
 has $channels = {};
@@ -23,7 +22,6 @@ BUILD {
 }
 
 method configure (%args) {
-    $ryu = delete $args{ryu} if exists $args{ryu};
     $service = delete $args{service} if exists $args{service};
     $self->next::method(%args);
 }
