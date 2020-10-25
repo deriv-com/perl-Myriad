@@ -12,7 +12,7 @@ use Future::AsyncAwait;
 use Syntax::Keyword::Try;
 
 use Myriad::RPC::Implementation::Redis;
-use Myriad::Subscription::Implementation::Redis;
+use Myriad::Subscription;
 
 use Myriad::Exception;
 
@@ -55,6 +55,7 @@ has $service_name;
 has $rpc;
 has $rpc_transport;
 has %active_batch;
+has $subscription_transport;
 
 has $sub;
 
@@ -94,6 +95,14 @@ The name of the service, defaults to the package name.
 
 method service_name () { $service_name //= lc(ref($self) =~ s{::}{_}gr) }
 
+=head2 subscription_transport
+
+The type of the Subscription transport e.g: redis or perl.
+
+=cut
+
+method subscription_transport () { $subscription_transport }
+ 
 =head2 rpc_transport
 
 The type of the RPC transport e.g: redis or perl.
@@ -115,6 +124,7 @@ method configure(%args) {
     $service_name = delete $args{name} if exists $args{name};
     $rpc_transport = delete $args{rpc_transport} if exists $args{rpc_transport};
     Scalar::Util::weaken($myriad = delete $args{myriad}) if exists $args{myriad};
+    $subscription_transport = delete $args{subscription_transport} if exists $args{subscription_transport};  
     $self->next::method(%args);
 }
 
@@ -144,14 +154,14 @@ method _add_to_loop($loop) {
     );
 
     $self->add_child(
-        $sub = Myriad::Subscription::Implementation::Redis->new(
-            redis   => $redis,
-            service => ref($self),
-            ryu     => $ryu
+        $sub = Myriad::Subscription->new(
+            transport => $self->subscription_transport,
+            redis     => $redis,
+            service   => ref($self),
+            ryu       => $ryu
         )
     );
-    $sub->run->on_fail(sub { $log->errorf('failed on sub run - %s', [ @_ ]) })->retain;
-
+ 
     if(my $emitters = $registry->emitters_for(ref($self))) {
         for my $method (sort keys $emitters->%*) {
             $log->infof('Found emitter %s as %s', $method, $emitters->{$method});
@@ -269,8 +279,10 @@ Start the service and perform any operation needed before announcing the service
 =cut
 
 async method startup {
-    return unless $rpc;
-    await $rpc->start;
+    my $wait_sub = $sub->run->on_fail(sub { $log->errorf('failed on sub run - %s', [ @_ ]) });
+    my $wait_rpc = $rpc->start if $rpc;
+
+    await Future->wait_all($wait_sub, $wait_rpc);
 };
 
 =head2 diagnostics
@@ -294,21 +306,30 @@ Gracefully shut down the service by
 =cut
 
 async method shutdown {
-    return unless $rpc;
-    try {
-        await Future->wait_any($self->loop->timeout_future(after => 30), $rpc->stop);
-    } catch ($error) {
-        $log->warnf("Failed to stop accepting requests we might end up with unfinished requests due: %s", $error);
+    if($rpc) {
+        try {
+            await Future->wait_any($self->loop->timeout_future(after => 30), $rpc->stop);
+        } catch ($error) {
+            $log->warnf("Failed to stop accepting requests we might end up with unfinished requests due: %s", $error);
+        }
+
+        try {
+            await Future->wait_any($self->loop->timeout_future(after => 60 * 3), (async sub {
+                while ( await $rpc->has_pending_requests ) {
+                    await $self->loop->delay_future(after => 30);
+                }
+            })->());
+        } catch ($error) {
+            $log->warnf("Failed to wait for all requests to finish due: %s, unclean shutdown", $error);
+        }
     }
 
-    try {
-        await Future->wait_any($self->loop->timeout_future(after => 60 * 3), (async sub {
-            while ( await $rpc->has_pending_requests ) {
-                await $self->loop->delay_future(after => 30);
-            }
-        })->());
-    } catch ($error) {
-        $log->warnf("Failed to wait for all requests to finish due: %s, unclean shutdown", $error);
+    if($sub) {
+        try {
+            await Future->wait_any($self->loop->timeout_future(after => 60 * 3), $sub->stop);
+        } catch ($error) {
+            $log->warnf("Failed to wait for the subscription to end gracefully due: %s", $error);
+        }
     }
 }
 

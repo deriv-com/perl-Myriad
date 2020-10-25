@@ -39,13 +39,14 @@ alternative.
 # Default values
 
 our %DEFAULTS = (
-    config_path      => 'config.yml',
-    redis_uri        => 'redis://localhost:6379',
-    log_level        => 'info',
-    library_path     => '',
-    opentracing_host => 'localhost',
-    opentracing_port => 6832,
-    rpc_transport    => 'redis',
+    config_path            => 'config.yml',
+    redis_uri              => 'redis://localhost:6379',
+    log_level              => 'info',
+    library_path           => '',
+    opentracing_host       => 'localhost',
+    opentracing_port       => 6832,
+    subscription_transport => 'redis',
+    rpc_transport          => 'redis',
 );
 
 =head2 SHORTCUTS_FOR
