@@ -30,10 +30,10 @@ method create_from_source (%args) {
     my $src          = delete $args{source} or die 'need a source';
     my $channel_name = $service . '.' . $args{channel};
     $channels->{$channel_name} = [];
-    
+
     $src->each(sub {
         my $message = shift;
-	push $channels->{$channel_name}->@*, $message;
+        push $channels->{$channel_name}->@*, $message;
     })->retain;
 }
 
