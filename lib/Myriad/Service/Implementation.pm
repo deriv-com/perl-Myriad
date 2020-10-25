@@ -102,7 +102,7 @@ The type of the Subscription transport e.g: redis or perl.
 =cut
 
 method subscription_transport () { $subscription_transport }
- 
+
 =head2 rpc_transport
 
 The type of the RPC transport e.g: redis or perl.
@@ -119,12 +119,12 @@ Populate internal configuration.
 
 =cut
 
-method configure(%args) {
+method configure (%args) {
     $redis = delete $args{redis} if exists $args{redis};
     $service_name = delete $args{name} if exists $args{name};
     $rpc_transport = delete $args{rpc_transport} if exists $args{rpc_transport};
     Scalar::Util::weaken($myriad = delete $args{myriad}) if exists $args{myriad};
-    $subscription_transport = delete $args{subscription_transport} if exists $args{subscription_transport};  
+    $subscription_transport = delete $args{subscription_transport} if exists $args{subscription_transport};
     $self->next::method(%args);
 }
 
@@ -161,7 +161,7 @@ method _add_to_loop($loop) {
             ryu       => $ryu
         )
     );
- 
+
     if(my $emitters = $registry->emitters_for(ref($self))) {
         for my $method (sort keys $emitters->%*) {
             $log->infof('Found emitter %s as %s', $method, $emitters->{$method});
@@ -279,8 +279,8 @@ Start the service and perform any operation needed before announcing the service
 =cut
 
 async method startup {
-    my $wait_sub = $sub->run->on_fail(sub { $log->errorf('failed on sub run - %s', [ @_ ]) });
-    my $wait_rpc = $rpc->start if $rpc;
+    my $wait_sub = $sub->start->on_fail(sub { $log->errorf('failed on sub run - %s', [ @_ ]) });
+    my $wait_rpc = $rpc ? $rpc->start : Future->done;
 
     await Future->wait_all($wait_sub, $wait_rpc);
 };
