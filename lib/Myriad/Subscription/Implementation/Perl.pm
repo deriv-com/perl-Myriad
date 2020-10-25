@@ -17,8 +17,8 @@ has $receivers = {};
 has $should_shutdown = 0;
 has $stopped;
 
-BUILD {
-    $stopped = $self->loop->new_future(label => 'subscription::redis::stopped');
+method _add_to_loop ($loop) {
+    $stopped = $loop->new_future(label => 'subscription::redis::stopped');
 }
 
 method configure (%args) {

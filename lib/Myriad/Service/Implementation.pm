@@ -119,7 +119,7 @@ Populate internal configuration.
 
 =cut
 
-method configure(%args) {
+method configure (%args) {
     $redis = delete $args{redis} if exists $args{redis};
     $service_name = delete $args{name} if exists $args{name};
     $rpc_transport = delete $args{rpc_transport} if exists $args{rpc_transport};
@@ -279,8 +279,8 @@ Start the service and perform any operation needed before announcing the service
 =cut
 
 async method startup {
-    my $wait_sub = $sub->run->on_fail(sub { $log->errorf('failed on sub run - %s', [ @_ ]) });
-    my $wait_rpc = $rpc->start if $rpc;
+    my $wait_sub = $sub->start->on_fail(sub { $log->errorf('failed on sub run - %s', [ @_ ]) });
+    my $wait_rpc = $rpc ? $rpc->start : Future->done;
 
     await Future->wait_all($wait_sub, $wait_rpc);
 };
