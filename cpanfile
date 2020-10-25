@@ -5,8 +5,8 @@ requires 'bareword::filehandles';
 requires 'Syntax::Keyword::Dynamically', '>= 0.05';
 requires 'Syntax::Keyword::Try', '>= 0.18';
 requires 'Future', '>= 0.45';
-requires 'Future::AsyncAwait', '>= 0.43';
-requires 'Object::Pad', '>= 0.32';
+requires 'Future::AsyncAwait', '>= 0.45';
+requires 'Object::Pad', '>= 0.33';
 requires 'Role::Tiny', '>= 2.000';
 # Streams
 requires 'Ryu', '>= 2.003';
@@ -38,7 +38,7 @@ requires 'Net::Async::Redis', '>= 3.000';
 requires 'Net::Async::HTTP', '>= 0.47';
 requires 'Net::Async::HTTP::Server', '>= 0.13';
 requires 'Net::Async::SMTP', '>= 0.002';
-requires 'Database::Async', '>= 0.010';
+requires 'Database::Async', '>= 0.012';
 requires 'Database::Async::Engine::PostgreSQL', '>= 0.008';
 # Introspection
 requires 'Devel::MAT::Dumper';
