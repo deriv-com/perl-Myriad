@@ -13,7 +13,7 @@ use utf8;
 
 =head1 NAME
 
-Myriad::RPC::Role - microservice RPC abstraction
+Myriad::Role::RPC - microservice RPC abstraction
 
 =head1 SYNOPSIS
 
@@ -56,6 +56,14 @@ and able to process requests.
 =cut
 
 requires 'start';
+
+=head2 create_from_sink
+
+Register a new RPC method and attach a L<Ryu::Sink> to be able to publish messages when they are received.
+
+=cut
+
+requires 'create_from_sink';
 
 =head2 stop
 

@@ -36,3 +36,4 @@ inc/
 
 # IDEs ( Some people !)
 .idea
+*.swp

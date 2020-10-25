@@ -25,8 +25,29 @@ Myriad::RPC - microservice RPC abstraction
 
 =cut
 
-use Role::Tiny;
+use Myriad::RPC::Implementation::Redis;
+use Myriad::RPC::Implementation::Perl;
+
 use Myriad::Exception::Builder;
+
+sub new {
+    my ($class, %args) = @_;
+    my $transport = delete $args{transport};
+
+    # Passing args individually looks tedious but this is to avoid
+    # L<IO::Async::Notifier> exception when it doesn't recognize the key.
+
+    if ($transport eq 'redis') {
+        return Myriad::RPC::Implementation::Redis->new(
+            redis   => $args{redis},
+            service => $args{service},
+        );
+    } else {
+        return Myriad::RPC::Implementation::Perl->new(
+            service => $args{service},
+        );
+    }
+}
 
 =head1 Exceptions
 
@@ -65,6 +86,16 @@ declare_exception Timeout => (
     message => 'Timeout'
 );
 
+=head2 BadEncoding
+
+Returned when the service is unable to decode/encode the request correctly.
+
+=cut
+
+declare_exception BadEncoding => (
+    category => ERROR_CATEGORY,
+    message => 'Bad encoding'
+);
 
 1;
 

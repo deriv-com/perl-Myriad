@@ -29,6 +29,7 @@ match the structure.
 
 =cut
 
+use Scalar::Util qw(blessed);
 use Syntax::Keyword::Try;
 use JSON::MaybeUTF8 qw(:v1);
 
@@ -76,18 +77,20 @@ Returns a L<Myriad::RPC::Message> or throw and exception.
 
 =cut
 
-BUILD(%args) {
-    $rpc = $args{rpc} // Myriad::Exception::RPC::InvalidRequest->new(reason => 'rpc is required')->throw;
-    $id = $args{message_id} // Myriad::Exception::RPC::InvalidRequest->new(reason => 'message_id is required')->throw;
-    $who = $args{who} // Myriad::Exception::RPC::InvalidRequest->new(reason => 'who is required')->throw;
-    $deadline = $args{deadline} // Myriad::Exception::RPC::InvalidRequest->new(reason => 'deadline is required')->throw;
+BUILD(%request) {
+    $rpc = $request{rpc} // Myriad::Exception::RPC::InvalidRequest->throw(reason => 'rpc is required');
+    $id = $request{message_id} // Myriad::Exception::RPC::InvalidRequest->throw(reason => 'message_id is required');
+    $who = $request{who} // Myriad::Exception::RPC::InvalidRequest->throw(reason => 'who is required');
+    $deadline = $request{deadline} // Myriad::Exception::RPC::InvalidRequest->throw(reason => 'deadline is required');
+    $args = $request{args} // Myriad::Exception::RPC::InvalidRequest->throw(reason => 'args is required');
+
     try {
-        $args = $args{args} ? decode_json_text($args{args}) : Myriad::Exception::RPC::InvalidRequest->new(reason => 'args is required')->throw;
-        $stash = $args{stash} ? decode_json_text($args{stash}) : {};
-        $trace = $args{trace} ? decode_json_text($args{trace}) : {};
+        $args  = decode_json_text($args);
+        $stash = $request{stash} ? decode_json_text($request{stash}) : {};
+        $trace = $request{trace} ? decode_json_text($request{trace}) : {};
         $response = {};
-    } catch {
-        Myriad::Exception::RPC::InvalidRequest->new(reason => "Bad message encoding")->throw();
+    } catch ($e) {
+        $e = Myriad::Exception::RPC::BadEncoding->new(reason => $e);
     }
 }
 
@@ -112,7 +115,7 @@ method encode {
             trace      => encode_json_text($trace),
         });
     } catch ($e) {
-        Myriad::Exception::RPC::InvalidRequest->throw(reason => $e);
+        Myriad::Exception::RPC::BadEncoding->throw(reason => $e);
     }
 }
 

@@ -100,7 +100,10 @@ Registers a new RPC method for the given class.
 =cut
 
 method add_rpc ($pkg, $method, $code, $args) {
-    $rpc->{$pkg}{$method} = $code;
+    $rpc->{$pkg}{$method} = {
+        code => $code,
+        args => $args,
+    };
 }
 
 =head2 rpc_for

@@ -53,8 +53,8 @@ has $redis;
 has $myriad;
 has $service_name;
 has $rpc;
+has $rpc_transport;
 has %active_batch;
-has %rpc_map;
 
 has $sub;
 
@@ -94,6 +94,14 @@ The name of the service, defaults to the package name.
 
 method service_name () { $service_name //= lc(ref($self) =~ s{::}{_}gr) }
 
+=head2 rpc_transport
+
+The type of the RPC transport e.g: redis or perl.
+
+=cut
+
+method rpc_transport () { $rpc_transport }
+
 =head1 METHODS
 
 =head2 configure
@@ -105,6 +113,7 @@ Populate internal configuration.
 method configure(%args) {
     $redis = delete $args{redis} if exists $args{redis};
     $service_name = delete $args{name} if exists $args{name};
+    $rpc_transport = delete $args{rpc_transport} if exists $args{rpc_transport};
     Scalar::Util::weaken($myriad = delete $args{myriad}) if exists $args{myriad};
     $self->next::method(%args);
 }
@@ -197,40 +206,34 @@ method _add_to_loop($loop) {
 
     if (my $rpc_calls = $registry->rpc_for(ref($self))) {
         $self->add_child(
-            $rpc = Myriad::RPC::Implementation::Redis->new(
+            $rpc = Myriad::RPC->new(
+                transport => $self->rpc_transport,
                 redis   => $redis,
                 service => ref($self),
-                ryu     => $ryu
             )
         ) if %$rpc_calls;
+
         for my $method (sort keys $rpc_calls->%*) {
-            my $code = $rpc_calls->{$method};
-            my $src = $ryu->source(label => "rpc:$method");
-            $rpc_map{$method} = [
-                $src,
-                $self->setup_rpc($code, $src)
-            ];
+            my $spec = $rpc_calls->{$method};
+            my $sink = $ryu->sink(label => "rpc:$method");
+            $rpc->create_from_sink(method => $method, sink => $sink);
+
+            my $code = $spec->{code};
+            $spec->{current} = $sink->source->map(async sub {
+                my $message = shift;
+                try {
+                    my $response = await $self->$code($message->args->%*);
+                    await $rpc->reply_success($message, $response);
+                } catch ($e) {
+                    await $rpc->reply_error($message, $e);
+                }
+            })->resolve->completed;
         }
 
-        if(%$rpc_calls) {
-            $self->setup_default_routes;
-            $rpc->{rpc_map} = \%rpc_map;
-        }
+
     }
 
     $self->next::method($loop);
-}
-
-method setup_rpc($code, $src) {
-    $src->map(async sub {
-        my $message = shift;
-        try {
-            my $data = await $self->$code($message->args->%*);
-            await $rpc->reply_success($message, $data);
-        } catch ($e) {
-            await $rpc->reply_error($message, $e);
-        }
-    })->resolve->retain();
 }
 
 =head1 ASYNC METHODS
@@ -256,34 +259,6 @@ async method process_batch($k, $code, $src) {
                 after => $backoff
             );
         }
-    }
-}
-
-method setup_default_routes() {
-    my $error_src = $ryu->source(label => "rpc:__ERROR");
-    $rpc_map{__ERROR} = [
-        $error_src,
-        async sub {
-            await $rpc->reply_error($_->{message}, $_->{error});
-        }];
-
-
-    my $dead_src = $ryu->source(label => "rpc:__DEAD_MSG");
-
-    $rpc_map{__DEAD_MSG} = [
-        $dead_src,
-        async sub {
-            await $rpc->drop(@_);
-        }];
-
-    for my $key (qw /__ERROR __DEAD_MSG/) {
-        $rpc_map{$key}->[0]->map(async sub {
-           try {
-               await $rpc_map{$key}->[1]($_);
-           } catch ($e) {
-               $log->warnf("Failed to handle RPC error $key due: %s", $e);
-           }
-        })->resolve->retain();
     }
 }
 
