@@ -146,7 +146,7 @@ This will trigger a number of actions:
 
 =cut
 
-async method _add_to_loop($loop) {
+method _add_to_loop($loop) {
     $log->tracef('Adding %s to loop', ref $self);
     $self->next::method($loop);
 }
