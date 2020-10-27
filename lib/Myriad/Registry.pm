@@ -75,7 +75,7 @@ async method add_service (%args) {
     weaken($service_by_name->{$name} = $srv);
     $self->{services}{$k} = $srv;
 
-    await $srv->startup;
+    await $srv->start;
     return;
 }
 
