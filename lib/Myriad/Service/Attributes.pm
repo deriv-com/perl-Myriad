@@ -62,7 +62,7 @@ sub apply_attributes {
         # an m//gc parser later with a restricted set of options.
         $args = +{ eval "$args" } if length $args;
 
-        $log->infof('Attribute %s (%s) applying to %s', $type, $args, $pkg);
+        $log->tracef('Attribute %s (%s) applying to %s', $type, $args, $pkg);
         my $handler = $known_attributes{$type}
             or die 'unknown attribute ' . $type;
         $class->$handler(

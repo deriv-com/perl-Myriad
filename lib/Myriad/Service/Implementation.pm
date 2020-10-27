@@ -147,7 +147,7 @@ This will trigger a number of actions:
 =cut
 
 method _add_to_loop($loop) {
-    $log->infof('Adding %s to loop', ref $self);
+    $log->tracef('Adding %s to loop', ref $self);
     my $registry = $Myriad::REGISTRY;
     $self->add_child(
         $ryu = Ryu::Async->new
@@ -164,7 +164,7 @@ method _add_to_loop($loop) {
 
     if(my $emitters = $registry->emitters_for(ref($self))) {
         for my $method (sort keys $emitters->%*) {
-            $log->infof('Found emitter %s as %s', $method, $emitters->{$method});
+            $log->tracef('Found emitter %s as %s', $method, $emitters->{$method});
             my $spec = $emitters->{$method};
             my $chan = $spec->{args}{channel} // die 'expected a channel, but there was none to be found';
             my $sink = $ryu->sink(
@@ -184,7 +184,7 @@ method _add_to_loop($loop) {
 
     if(my $receivers = $registry->receivers_for(ref($self))) {
         for my $method (sort keys $receivers->%*) {
-            $log->infof('Found receiver %s as %s', $method, $receivers->{$method});
+            $log->tracef('Found receiver %s as %s', $method, $receivers->{$method});
             my $spec = $receivers->{$method};
             my $chan = $spec->{args}{channel} // die 'expected a channel, but there was none to be found';
             my $sink = $ryu->sink(

@@ -434,7 +434,7 @@ async method xadd (@args) {
 }
 
 async method redis_from_pool {
-    $log->infof('Redis pool count: %d', 0 + $redis_pool->@*);
+    $log->tracef('Redis pool count: %d', 0 + $redis_pool->@*);
     return shift $redis_pool->@* if $redis_pool->@*;
     $self->add_child(
         my $instance = Net::Async::Redis->new(uri => $redis_uri),

@@ -148,6 +148,7 @@ Documentation for these classes may also be of use:
 
 =cut
 
+use curry;
 use Future;
 
 use Myriad::Config;
@@ -439,18 +440,18 @@ Applies signal handlers for TERM and QUIT, then starts the loop.
 =cut
 
 method run () {
-    $loop->attach_signal(TERM => method {
+    $loop->attach_signal(TERM => $self->$curry::weak(method {
         $log->infof('TERM received, exit');
         $self->shutdown->await
-    });
-    $loop->attach_signal(INT => method {
+    }));
+    $loop->attach_signal(INT => $self->$curry::weak(method {
         $log->infof('INT received, exit');
         $self->shutdown->await
-    });
-    $loop->attach_signal(QUIT => async method {
+    }));
+    $loop->attach_signal(QUIT => $self->$curry::weak(method {
         $log->infof('QUIT received, exit');
         $self->shutdown->await
-    });
+    }));
     $self->shutdown_future->await;
 }
 
