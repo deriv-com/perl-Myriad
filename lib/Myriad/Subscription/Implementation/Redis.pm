@@ -29,7 +29,6 @@ has $stopped;
 
 BUILD {
     $uuid = Myriad::Util::UUID::uuid();
-    $stopped = $self->loop->new_future(label => 'subscription::redis::stopped');
 }
 
 method configure (%args) {
@@ -43,7 +42,7 @@ method create_from_source (%args) {
     my $src = delete $args{source} or die 'need a source';
     my $stream = $service . '.' . $args{channel};
     $src->each(sub {
-        $log->infof('sub has an event! %s', $_);
+        $log->tracef('sub has an event! %s', $_);
         $redis->xadd(
             encode_utf8($stream) => '*',
             data => encode_json_utf8($_),
@@ -54,7 +53,7 @@ method create_from_source (%args) {
 method create_from_sink (%args) {
     my $sink = delete $args{sink} or die 'need a sink';
     my $stream = $service . '.' . $args{channel};
-    $log->infof('created sub thing from sink');
+    $log->tracef('created sub thing from sink');
     push $queues->@*, {
         key => $stream,
         client => $args{client},
@@ -63,17 +62,18 @@ method create_from_sink (%args) {
 }
 
 async method start {
+    $stopped = $self->loop->new_future(label => 'subscription::redis::stopped');
     while (1) {
         # await $src->unblocked;
         if($queues->@*) {
             my $item = shift $queues->@*;
             push $queues->@*, $item;
-            $log->infof('Will readgroup on %s', $item);
+            $log->tracef('Will readgroup on %s', $item);
             my $stream = $item->{key};
             my $sink = $item->{sink};
             unless(exists $group->{$stream}{$item->{client}}) {
                 try {
-                    $log->infof('Creating new group for stream %s client %s', $stream, $item->{client});
+                    $log->tracef('Creating new group for stream %s client %s', $stream, $item->{client});
                     await $redis->xgroup(create => $stream, $item->{client}, '0');
                 } catch {
                     die $@ unless $@ =~ /^BUSYGROUP/;
@@ -88,7 +88,7 @@ async method start {
                     $stream, '>'
                 )
             );
-            $log->infof('Read group %s', $streams);
+            $log->tracef('Read group %s', $streams);
             for my $stream (sort keys %$streams) {
                 my $data = $streams->{$stream};
                 for my $item ($data->@*) {
