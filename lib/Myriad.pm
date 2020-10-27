@@ -440,18 +440,14 @@ Applies signal handlers for TERM and QUIT, then starts the loop.
 =cut
 
 method run () {
-    $loop->attach_signal(TERM => $self->$curry::weak(method {
-        $log->infof('TERM received, exit');
-        $self->shutdown->await
-    }));
-    $loop->attach_signal(INT => $self->$curry::weak(method {
-        $log->infof('INT received, exit');
-        $self->shutdown->await
-    }));
-    $loop->attach_signal(QUIT => $self->$curry::weak(method {
-        $log->infof('QUIT received, exit');
-        $self->shutdown->await
-    }));
+    map {
+        my $signal = $_;
+        $loop->attach_signal($signal => $self->$curry::weak(method {
+            $log->infof("%s received, exit", $signal);
+            $self->shutdown->await;
+        }))
+    } qw(TERM INT QUIT);
+
     $self->shutdown_future->await;
 }
 
