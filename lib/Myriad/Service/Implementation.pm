@@ -93,7 +93,7 @@ The name of the service, defaults to the package name.
 
 =cut
 
-method service_name () { $service_name //= lc(ref($self) =~ s{::}{_}gr) }
+method service_name () { $service_name //= lc(ref($self) =~ s{::}{.}gr) }
 
 =head2 subscription_transport
 

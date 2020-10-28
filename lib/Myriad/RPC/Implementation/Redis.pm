@@ -31,6 +31,9 @@ method redis { $redis }
 has $service;
 method service { $service }
 
+has $stream;
+method stream { $stream //= $service . '/rpc'}
+
 has $group_name;
 method group_name { $group_name }
 
@@ -48,7 +51,7 @@ method configure (%args) {
 
 async method start () {
     await $self->redis->create_group(
-        $self->service,
+        $self->stream,
         $self->group_name
     );
     await $self->listener;
@@ -69,7 +72,7 @@ async method stop () {
 
 async method listener () {
     my %stream_config = (
-        stream => $self->service,
+        stream => $self->stream,
         group  => $self->group_name,
         client => $self->whoami
     );
@@ -108,7 +111,7 @@ async method listener () {
 async method reply ($message) {
     try {
         await $self->redis->publish($message->who, $message->encode);
-        await $self->redis->ack($self->service, $self->group_name, $message->id);
+        await $self->redis->ack($self->stream, $self->group_name, $message->id);
     } catch ($e) {
         $log->warnf("Failed to reply to client due: %s", $e);
         return;
@@ -127,11 +130,11 @@ async method reply_error ($message, $error) {
 
 async method drop ($id) {
     $log->debugf("Going to drop message: %s", $id);
-    await $self->redis->ack($self->service, $self->group_name, $id);
+    await $self->redis->ack($self->stream, $self->group_name, $id);
 }
 
 async method has_pending_requests () {
-    my $stream_info = await $self->redis->pending_messages_info($self->service, $self->group_name);
+    my $stream_info = await $self->redis->pending_messages_info($self->stream, $self->group_name);
     if($stream_info->[0]) {
         for my $consumer ($stream_info->[3]->@*) {
             return $consumer->[1] if $consumer->[0] eq $self->whoami;
