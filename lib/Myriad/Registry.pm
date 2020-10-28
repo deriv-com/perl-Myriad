@@ -67,7 +67,7 @@ async method add_service (%args) {
     $sink->{$pkg} ||= {};
     $emitter->{$pkg} ||= {};
     $receiver->{$pkg} ||= {};
-    $log->infof('Add service [%s]', $name);
+    $log->tracef('Going to add service %s', $name);
     $self->loop->add(
         $srv
     );
@@ -75,7 +75,12 @@ async method add_service (%args) {
     weaken($service_by_name->{$name} = $srv);
     $self->{services}{$k} = $srv;
 
-    await $srv->start;
+    try {
+        await $srv->start;
+        $log->infof('Added service [%s]', $name);
+    } catch ($e) {
+        $log->errorf('Failed to add service [%s] due: %s', $name, $e);
+    }
     return;
 }
 
