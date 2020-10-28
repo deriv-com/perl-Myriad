@@ -212,7 +212,7 @@ async method start {
             $self->loop->timeout_future(after => 10),
             $self->diagnostics(1),
         );
-        
+
         if ($diagnostics_ok) {
             if(my $emitters = $registry->emitters_for(ref($self))) {
                 for my $method (sort keys $emitters->%*) {
@@ -295,7 +295,7 @@ async method start {
         my $wait_rpc = $rpc ? $rpc->start : Future->done;
 
         Future->wait_all($wait_sub, $wait_rpc)->retain;
-    
+
     } catch ($e) {
         $log->errorf('Could not finish diagnostics for service %s in time.', $self->service_name);
         die $e;
