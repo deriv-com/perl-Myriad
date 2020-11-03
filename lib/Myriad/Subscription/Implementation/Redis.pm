@@ -52,7 +52,8 @@ method create_from_source (%args) {
 
 method create_from_sink (%args) {
     my $sink = delete $args{sink} or die 'need a sink';
-    my $stream = $service . '.' . $args{channel};
+    my $remote_service = $args{service} || $service;
+    my $stream = $remote_service . '.' . $args{channel};
     $log->tracef('created sub thing from sink');
     push $queues->@*, {
         key => $stream,
