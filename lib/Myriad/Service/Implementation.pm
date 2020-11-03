@@ -246,6 +246,7 @@ async method start {
                         sink => $sink,
                         channel => $chan,
                         client => ref($self) . '/' . $method,
+                        service => $spec->{args}{service},
                     );
                     my $code = $spec->{code};
                     $spec->{current} = $self->$code(
