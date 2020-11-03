@@ -170,8 +170,8 @@ method iterate(%args) {
                     )
                 );
                 $log->tracef('Read group %s', $batch);
-                for my $delivery ($batch->@*) {
-                    my ($stream, $data) = $delivery->@*;
+                for my $stream (sort keys $batch->%*) {
+                    my  $data = $batch->{$stream};
                     for my $item ($data->@*) {
                         my ($id, $args) = $item->@*;
                         $log->tracef(
@@ -189,7 +189,7 @@ method iterate(%args) {
             }
         })->()->without_cancel
     )->on_ready(sub {
-        $self->return_redis_pool($instance) if $instance;
+        $self->return_redis_to_pool($instance) if $instance;
     })->on_fail(sub {
         my $error = shift;
         $log->errorf("Failed while iterating on messages due: %s", $error);

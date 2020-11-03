@@ -585,6 +585,8 @@ Deriv Group Services Ltd. C<< DERIV@cpan.org >>
 
 =item * Eyad Arnabeh
 
+=item * Nael Alolwani
+
 =back
 
 =head1 LICENSE
