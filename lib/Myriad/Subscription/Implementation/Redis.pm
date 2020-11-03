@@ -40,7 +40,7 @@ method configure (%args) {
 
 method create_from_source (%args) {
     my $src = delete $args{source} or die 'need a source';
-    my $stream = $service . '.' . $args{channel};
+    my $stream = $service . '/' . $args{channel};
     $src->each(sub {
         $log->tracef('sub has an event! %s', $_);
         $redis->xadd(
@@ -53,7 +53,7 @@ method create_from_source (%args) {
 method create_from_sink (%args) {
     my $sink = delete $args{sink} or die 'need a sink';
     my $remote_service = $args{service} || $service;
-    my $stream = $remote_service . '.' . $args{channel};
+    my $stream = $remote_service . '/' . $args{channel};
     $log->tracef('created sub thing from sink');
     push $queues->@*, {
         key => $stream,
