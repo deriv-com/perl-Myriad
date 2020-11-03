@@ -3,7 +3,7 @@ requires 'mro';
 requires 'indirect';
 requires 'multidimensional';
 requires 'bareword::filehandles';
-requires 'Syntax::Keyword::Dynamically', '>= 0.05';
+requires 'Syntax::Keyword::Dynamically', '>= 0.06';
 requires 'Syntax::Keyword::Try', '>= 0.18';
 requires 'Future', '>= 0.45';
 requires 'Future::Queue';

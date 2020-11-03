@@ -10,10 +10,10 @@ use Object::Pad;
 use Future;
 use Future::AsyncAwait;
 use Syntax::Keyword::Try;
+use Syntax::Keyword::Dynamically;
+use OpenTracing::Any qw($tracer);
 
-use Myriad::RPC::Implementation::Redis;
 use Myriad::Subscription;
-
 use Myriad::Exception;
 
 class Myriad::Service::Implementation extends IO::Async::Notifier;
@@ -276,11 +276,16 @@ async method start {
                     my $code = $spec->{code};
                     $spec->{current} = $sink->source->map(async sub {
                         my $message = shift;
-                        try {
+                        # Avoid having nested spans for unrelated RPC
+                        dynamically $tracer->{current_span} = $tracer->span(operation_name => "rpc:" . $message->rpc);
+                       try {
                             my $response = await $self->$code($message->args->%*);
                             await $rpc->reply_success($message, $response);
+                            $tracer->current_span->tag(status => 'ok');
                         } catch ($e) {
                             await $rpc->reply_error($message, $e);
+                            $tracer->current_span->tag(status => 'failed');
+
                         }
                     })->resolve->completed;
                 }
