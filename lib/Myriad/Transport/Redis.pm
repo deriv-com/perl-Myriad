@@ -129,7 +129,7 @@ method next_id($id) {
 
 method _add_to_loop(@) {
     $self->add_child(
-        $redis = Net::Async::Redis->new(uri => $redis_uri),
+        $redis = Net::Async::Redis->new(uri => $redis_uri, hashrefs => 1),
     );
 
     $self->add_child(
@@ -437,7 +437,7 @@ async method redis_from_pool {
     $log->tracef('Redis pool count: %d', 0 + $redis_pool->@*);
     return shift $redis_pool->@* if $redis_pool->@*;
     $self->add_child(
-        my $instance = Net::Async::Redis->new(uri => $redis_uri),
+        my $instance = Net::Async::Redis->new(uri => $redis_uri, hashrefs => 1),
     );
     await $instance->connected;
     return $instance;

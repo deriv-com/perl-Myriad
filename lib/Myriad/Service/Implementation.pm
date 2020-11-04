@@ -219,16 +219,16 @@ async method start {
                     $log->tracef('Found emitter %s as %s', $method, $emitters->{$method});
                     my $spec = $emitters->{$method};
                     my $chan = $spec->{args}{channel} // die 'expected a channel, but there was none to be found';
-                    my $sink = $ryu->sink(
+                    my $src = $ryu->source(
                         label => "emitter:$chan",
                     );
                     $sub->create_from_source(
-                        source => $sink->source,
+                        source => $src,
                         channel => $chan,
                     );
                     my $code = $spec->{code};
                     $spec->{current} = $self->$code(
-                        $sink,
+                        $src,
                         $self,
                     )->retain;
                 }
@@ -256,13 +256,17 @@ async method start {
                 }
             }
             if (my $batches = $registry->batches_for(ref($self))) {
-                for my $k (sort keys $batches->%*) {
-                    $log->tracef('Starting batch process %s for %s', $k, ref($self));
-                    my $code = $batches->{$k};
-                    my $src = $self->ryu->source(label => 'batch:' . $k);
-                    $active_batch{$k} = [
+                for my $method (sort keys $batches->%*) {
+                    $log->tracef('Starting batch process %s for %s', $method, ref($self));
+                    my $code = $batches->{$method};
+                    my $src = $self->ryu->source(label => 'batch:' . $method);
+                    $sub->create_from_source(
+                        source => $src,
+                        channel => $method,
+                    );
+                    $active_batch{$method} = [
                         $src,
-                        $self->process_batch($k, $code, $src)
+                        $self->process_batch($method, $code, $src)
                     ];
                 }
             }
