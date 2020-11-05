@@ -181,20 +181,27 @@ async method process_batch($k, $code, $src) {
     $log->tracef('Start batch processing for %s', $k);
     while (1) {
         await $src->unblocked;
-        my $data = await $self->$code;
-        if ($data->@*) {
-            $backoff = 0;
-            $src->emit($_) for $data->@*;
-            # Defer next processing, give other events a chance
-            await $self->loop->delay_future(after => 0);
+        my $span = $tracer->span(operation_name => "batch:" . $k);
+        dynamically $tracer->{current_span} = $span;
+        try {
+            my $data = await $self->$code;
+            if ($data->@*) {
+                $backoff = 0;
+                $src->emit($_) for $data->@*;
+                # Defer next processing, give other events a chance
+                await $self->loop->delay_future(after => 0);
+            } else {
+                $backoff = min(MAX_EXPONENTIAL_BACKOFF, ($backoff || 0.02) * 2);
+                $log->tracef('Batch for %s returned no results, delaying for %dms before retry', $k, $backoff * 1000.0);
+                await $self->loop->delay_future(
+                    after => $backoff
+                );
+            }
+        } catch ($e) { 
+            $log->errorf("Failed while processing batch %s due: %s", $k, $e);
         }
-        else {
-            $backoff = min(MAX_EXPONENTIAL_BACKOFF, ($backoff || 0.02) * 2);
-            $log->tracef('Batch for %s returned no results, delaying for %dms before retry', $k, $backoff * 1000.0);
-            await $self->loop->delay_future(
-                after => $backoff
-            );
-        }
+
+        $span->finish;
     }
 }
 
@@ -277,8 +284,9 @@ async method start {
                     $spec->{current} = $sink->source->map(async sub {
                         my $message = shift;
                         # Avoid having nested spans for unrelated RPC
-                        dynamically $tracer->{current_span} = $tracer->span(operation_name => "rpc:" . $message->rpc);
-                       try {
+                        my $span = $tracer->span(operation_name => "rpc:" . $message->rpc);
+                        dynamically $tracer->{current_span} = $span; 
+                        try { 
                             my $response = await $self->$code($message->args->%*);
                             await $rpc->reply_success($message, $response);
                             $tracer->current_span->tag(status => 'ok');
@@ -287,6 +295,7 @@ async method start {
                             $tracer->current_span->tag(status => 'failed');
 
                         }
+                        $span->finish();
                     })->resolve->completed;
                 }
 
