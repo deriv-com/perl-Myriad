@@ -159,7 +159,7 @@ method iterate(%args) {
         (async sub {
             while (1) {
                 await $src->unblocked;
-                my %batch = await $self->xreadgroup(
+                my ($batch) = await $self->xreadgroup(
                     BLOCK   => $self->wait_time,
                     GROUP   => $group, $client,
                     COUNT   => $self->batch_count,
@@ -167,9 +167,9 @@ method iterate(%args) {
                         $stream, '>'
                     )
                 );
-                $log->warnf('Read group %s', \%batch);
-                for my $stream (sort keys %batch) {
-                    my  $data = $batch{$stream};
+                $log->tracef('Read group %s', $batch);
+                for my $stream (sort keys $batch->%*) {
+                    my  $data = $batch->{$stream};
                     for my $item ($data->@*) {
                         my ($id, $args) = $item->@*;
                         $log->tracef(
@@ -458,7 +458,7 @@ async method xreadgroup (@args) {
                 $b
             )
         } @$batch;
-        return %info;
+        return (\%info);
 }
 
 async method xgroup (@args) {
