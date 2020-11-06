@@ -154,14 +154,12 @@ method iterate(%args) {
     my $stream = $args{stream};
     my $group = $args{group};
     my $client = $args{client};
-    my $instance;
     Future->wait_any(
         $src->completed->without_cancel,
         (async sub {
-            $instance = await $self->redis_from_pool;
             while (1) {
                 await $src->unblocked;
-                my ($batch) = await $instance->xreadgroup(
+                my %batch = await $self->xreadgroup(
                     BLOCK   => $self->wait_time,
                     GROUP   => $group, $client,
                     COUNT   => $self->batch_count,
@@ -169,9 +167,9 @@ method iterate(%args) {
                         $stream, '>'
                     )
                 );
-                $log->tracef('Read group %s', $batch);
-                for my $stream (sort keys $batch->%*) {
-                    my  $data = $batch->{$stream};
+                $log->warnf('Read group %s', \%batch);
+                for my $stream (sort keys %batch) {
+                    my  $data = $batch{$stream};
                     for my $item ($data->@*) {
                         my ($id, $args) = $item->@*;
                         $log->tracef(
@@ -188,9 +186,7 @@ method iterate(%args) {
                 }
             }
         })->()->without_cancel
-    )->on_ready(sub {
-        $self->return_redis_to_pool($instance) if $instance;
-    })->on_fail(sub {
+    )->on_fail(sub {
         my $error = shift;
         $log->errorf("Failed while iterating on messages due: %s", $error);
     })->retain;
@@ -453,9 +449,16 @@ async method xreadgroup (@args) {
     # This should also be possible with a try/finally combination...
     # but that's currently failing with the $redis_pool slot not being
     # defined
-    return await $instance->xreadgroup(@args)->on_ready(sub {
+    my ($batch) =  await $instance->xreadgroup(@args)->on_ready(sub {
         $self->return_redis_to_pool($instance);
     });
+        my %info = pairmap {
+            (
+                ($a =~ tr/-/_/r),
+                $b
+            )
+        } @$batch;
+        return %info;
 }
 
 async method xgroup (@args) {
