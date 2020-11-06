@@ -32,6 +32,7 @@ has $redis;
 has $redis_pool = [ ];
 has $wait_time = 15_000;
 has $batch_count = 50;
+has $max_pool_count = 10;
 
 has $ryu;
 
@@ -440,15 +441,17 @@ async method redis_from_pool {
 }
 
 method return_redis_to_pool ($instance) {
-    $log->tracef('Returning instance to pool, count now %d', 0 + $redis_pool->@*);
-    push $redis_pool->@*, $instance
+    if ((my $pool_count = 0 +  $redis_pool->@*) <= $max_pool_count) {
+        $log->tracef('Returning instance to pool, count now %d', 0 + $pool_count);
+        push $redis_pool->@*, $instance
+    } else {
+        $log->warnf('Max pool count reached! removing instance from pool, count now %d', $pool_count);
+        $self->remove_child($instance);
+    }
 }
 
 async method xreadgroup (@args) {
     my $instance = await $self->redis_from_pool;
-    # This should also be possible with a try/finally combination...
-    # but that's currently failing with the $redis_pool slot not being
-    # defined
     my ($batch) =  await $instance->xreadgroup(@args)->on_ready(sub {
         $self->return_redis_to_pool($instance);
     });
