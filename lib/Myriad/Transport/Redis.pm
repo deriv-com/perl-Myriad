@@ -32,12 +32,14 @@ has $redis;
 has $redis_pool = [ ];
 has $wait_time = 15_000;
 has $batch_count = 50;
-has $max_pool_count = 10;
+has $max_pool_count;
 
 has $ryu;
 
 method configure (%args) {
     $redis_uri = delete $args{redis_uri} if exists $args{redis_uri};
+    $max_pool_count = exists $args{max_pool_count} ? delete $args{max_pool_count} : 10;
+
     return $self->next::method(%args);
 }
 
