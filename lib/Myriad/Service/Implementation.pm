@@ -219,16 +219,16 @@ async method start {
                     $log->tracef('Found emitter %s as %s', $method, $emitters->{$method});
                     my $spec = $emitters->{$method};
                     my $chan = $spec->{args}{channel} // die 'expected a channel, but there was none to be found';
-                    my $src = $ryu->source(
+                    my $sink = $ryu->sink(
                         label => "emitter:$chan",
                     );
                     $sub->create_from_source(
-                        source => $src,
+                        source => $sink->source,
                         channel => $chan,
                     );
                     my $code = $spec->{code};
                     $spec->{current} = $self->$code(
-                        $src,
+                        $sink,
                         $self,
                     )->retain;
                 }
@@ -259,14 +259,14 @@ async method start {
                 for my $method (sort keys $batches->%*) {
                     $log->tracef('Starting batch process %s for %s', $method, ref($self));
                     my $code = $batches->{$method};
-                    my $src = $self->ryu->source(label => 'batch:' . $method);
+                    my $sink = $ryu->sink(label => 'batch:' . $method);
                     $sub->create_from_source(
-                        source => $src,
+                        source => $sink->source,
                         channel => $method,
                     );
                     $active_batch{$method} = [
-                        $src,
-                        $self->process_batch($method, $code, $src)
+                        $sink,
+                        $self->process_batch($method, $code, $sink)
                     ];
                 }
             }
