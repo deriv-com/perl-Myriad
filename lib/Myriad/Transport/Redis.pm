@@ -30,6 +30,8 @@ use List::Util qw(pairmap);
 has $redis_uri;
 has $redis;
 has $redis_pool = [ ];
+has $waiting_redis_pool = [];
+has $pending_redis_count = 0;
 has $wait_time = 15_000;
 has $batch_count = 50;
 has $max_pool_count;
@@ -433,22 +435,32 @@ async method xadd (@args) {
 }
 
 async method redis_from_pool {
-    $log->tracef('Redis pool count: %d', 0 + $redis_pool->@*);
-    return shift $redis_pool->@* if $redis_pool->@*;
-    $self->add_child(
-        my $instance = Net::Async::Redis->new(uri => $redis_uri),
-    );
-    await $instance->connected;
-    return $instance;
+    $log->tracef('Available Redis pool count: %d', 0 + $redis_pool->@*);
+    if (my $available_redis = shift $redis_pool->@*) {
+        $pending_redis_count++;
+        return await $self->loop->new_future->done($available_redis);
+    } elsif ($pending_redis_count < $max_pool_count) {
+        ++$pending_redis_count;
+        $self->add_child(
+            my $instance = Net::Async::Redis->new(uri => $redis_uri),
+        );
+        await $instance->connected;
+        return await $self->loop->new_future->done($instance);
+    }
+    push @$waiting_redis_pool, my $f = $self->loop->new_future;
+    $log->warnf('All Redis instances are pending, added to waiting list. Current Redis count: %d/%d | Waiting count: %d', $pending_redis_count, $max_pool_count, 0 + $waiting_redis_pool->@*);
+    return await $f;
+
 }
 
 method return_redis_to_pool ($instance) {
-    if ((my $pool_count = 0 +  $redis_pool->@*) <= $max_pool_count) {
-        $log->tracef('Returning instance to pool, count now %d', 0 + $pool_count);
-        push $redis_pool->@*, $instance
+
+    if( my $waiting_redis = shift $waiting_redis_pool->@*) {
+        $waiting_redis->done($instance)
     } else {
-        $log->warnf('Max pool count reached! removing instance from pool, count now %d', $pool_count);
-        $self->remove_child($instance);
+        push $redis_pool->@*, $instance;
+        $log->tracef('Returning instance to pool, Redis used/available now %d/%d', $pending_redis_count, 0 + $redis_pool->@*);
+        $pending_redis_count--;
     }
 }
 
