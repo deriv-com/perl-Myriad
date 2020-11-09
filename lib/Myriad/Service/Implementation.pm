@@ -10,7 +10,7 @@ use Object::Pad;
 use Future;
 use Future::AsyncAwait;
 use Syntax::Keyword::Try;
-use Syntax::Keyword::Dynamically;
+use Syntax::Keyword::Dynamically '-async';
 use OpenTracing::Any qw($tracer);
 
 use Myriad::Subscription;
