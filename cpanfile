@@ -48,7 +48,6 @@ requires 'Log::Any::Adapter::Multiplexor', '>= 0.03';
 requires 'Net::Async::Redis', '>= 3.003';
 requires 'Net::Async::HTTP', '>= 0.47';
 requires 'Net::Async::HTTP::Server', '>= 0.13';
-requires 'Net::Async::SMTP', '>= 0.002';
 requires 'Database::Async', '>= 0.012';
 requires 'Database::Async::Engine::PostgreSQL', '>= 0.008';
 # Introspection
