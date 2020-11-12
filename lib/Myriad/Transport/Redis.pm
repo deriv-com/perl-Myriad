@@ -434,6 +434,13 @@ async method xadd (@args) {
     return await $redis->xadd(@args);
 }
 
+=head2 redis_from_pool
+
+Returns a Redis connection either from a pool of connection or a new one.
+With the possibility of waiting to get one, if all connection were busy and we maxed out our limit.
+
+=cut
+
 async method redis_from_pool {
     $log->tracef('Available Redis pool count: %d', 0 + $redis_pool->@*);
     if (my $available_redis = shift $redis_pool->@*) {
@@ -453,8 +460,23 @@ async method redis_from_pool {
 
 }
 
-method return_redis_to_pool ($instance) {
+=head2 return_redis_to_pool
 
+This puts back a redis connection into Redis pool, so it can be used by other called.
+It should be called at the end of every usage, as on_ready.
+
+It should also be possible with a try/finally combination..
+but that's currently failing with the $redis_pool slot not being defined.
+
+=over 4
+
+=item * C<$instance> - Redis connection, to be returned.
+
+=back
+
+=cut
+
+method return_redis_to_pool ($instance) {
     if( my $waiting_redis = shift $waiting_redis_pool->@*) {
         $waiting_redis->done($instance)
     } else {
