@@ -32,15 +32,14 @@ async method update : RPC (%args) {
 
 async method value_updated : Emitter() ($sink, $api, %args){
     $call_event_handler->each(sub {
-            #my ($v, $reset) = @_;
-            #$count = 0 if $reset;
+        my $emit = shift;
         my $e = {name => "EMITTER-Trigger service", value => $value, count => ++$count};
-        $sink->emit($e);
+        $sink->emit($e) if $emit;
     });
-
 }
 
 }
+
 
 {
 package Example::Service::Holder;
@@ -81,6 +80,7 @@ async method current_sum : RPC {
 
 
 }
+
 no indirect;
 
 use Syntax::Keyword::Try;
