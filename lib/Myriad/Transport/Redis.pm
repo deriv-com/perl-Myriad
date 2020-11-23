@@ -30,13 +30,18 @@ use List::Util qw(pairmap);
 has $redis_uri;
 has $redis;
 has $redis_pool = [ ];
+has $waiting_redis_pool = [];
+has $pending_redis_count = 0;
 has $wait_time = 15_000;
 has $batch_count = 50;
+has $max_pool_count;
 
 has $ryu;
 
 method configure (%args) {
     $redis_uri = delete $args{redis_uri} if exists $args{redis_uri};
+    $max_pool_count = exists $args{max_pool_count} ? delete $args{max_pool_count} : 10;
+
     return $self->next::method(%args);
 }
 
@@ -154,14 +159,12 @@ method iterate(%args) {
     my $stream = $args{stream};
     my $group = $args{group};
     my $client = $args{client};
-    my $instance;
     Future->wait_any(
         $src->completed->without_cancel,
         (async sub {
-            $instance = await $self->redis_from_pool;
             while (1) {
                 await $src->unblocked;
-                my ($batch) = await $instance->xreadgroup(
+                my ($batch) = await $self->xreadgroup(
                     BLOCK   => $self->wait_time,
                     GROUP   => $group, $client,
                     COUNT   => $self->batch_count,
@@ -188,9 +191,7 @@ method iterate(%args) {
                 }
             }
         })->()->without_cancel
-    )->on_ready(sub {
-        $self->return_redis_to_pool($instance) if $instance;
-    })->on_fail(sub {
+    )->on_fail(sub {
         my $error = shift;
         $log->errorf("Failed while iterating on messages due: %s", $error);
     })->retain;
@@ -433,29 +434,70 @@ async method xadd (@args) {
     return await $redis->xadd(@args);
 }
 
+=head2 redis_from_pool
+
+Returns a Redis connection either from a pool of connection or a new one.
+With the possibility of waiting to get one, if all connection were busy and we maxed out our limit.
+
+=cut
+
 async method redis_from_pool {
-    $log->tracef('Redis pool count: %d', 0 + $redis_pool->@*);
-    return shift $redis_pool->@* if $redis_pool->@*;
-    $self->add_child(
-        my $instance = Net::Async::Redis->new(uri => $redis_uri),
-    );
-    await $instance->connected;
-    return $instance;
+    $log->tracef('Available Redis pool count: %d', 0 + $redis_pool->@*);
+    if (my $available_redis = shift $redis_pool->@*) {
+        $pending_redis_count++;
+        return await $self->loop->new_future->done($available_redis);
+    } elsif ($pending_redis_count < $max_pool_count) {
+        ++$pending_redis_count;
+        $self->add_child(
+            my $instance = Net::Async::Redis->new(uri => $redis_uri),
+        );
+        await $instance->connected;
+        return await $self->loop->new_future->done($instance);
+    }
+    push @$waiting_redis_pool, my $f = $self->loop->new_future;
+    $log->warnf('All Redis instances are pending, added to waiting list. Current Redis count: %d/%d | Waiting count: %d', $pending_redis_count, $max_pool_count, 0 + $waiting_redis_pool->@*);
+    return await $f;
+
 }
 
+=head2 return_redis_to_pool
+
+This puts back a redis connection into Redis pool, so it can be used by other called.
+It should be called at the end of every usage, as on_ready.
+
+It should also be possible with a try/finally combination..
+but that's currently failing with the $redis_pool slot not being defined.
+
+=over 4
+
+=item * C<$instance> - Redis connection, to be returned.
+
+=back
+
+=cut
+
 method return_redis_to_pool ($instance) {
-    $log->tracef('Returning instance to pool, count now %d', 0 + $redis_pool->@*);
-    push $redis_pool->@*, $instance
+    if( my $waiting_redis = shift $waiting_redis_pool->@*) {
+        $waiting_redis->done($instance)
+    } else {
+        push $redis_pool->@*, $instance;
+        $log->tracef('Returning instance to pool, Redis used/available now %d/%d', $pending_redis_count, 0 + $redis_pool->@*);
+        $pending_redis_count--;
+    }
 }
 
 async method xreadgroup (@args) {
     my $instance = await $self->redis_from_pool;
-    # This should also be possible with a try/finally combination...
-    # but that's currently failing with the $redis_pool slot not being
-    # defined
-    return await $instance->xreadgroup(@args)->on_ready(sub {
+    my ($batch) =  await $instance->xreadgroup(@args)->on_ready(sub {
         $self->return_redis_to_pool($instance);
     });
+        my %info = pairmap {
+            (
+                ($a =~ tr/-/_/r),
+                $b
+            )
+        } @$batch;
+        return (\%info);
 }
 
 async method xgroup (@args) {

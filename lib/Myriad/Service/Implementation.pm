@@ -256,13 +256,17 @@ async method start {
                 }
             }
             if (my $batches = $registry->batches_for(ref($self))) {
-                for my $k (sort keys $batches->%*) {
-                    $log->tracef('Starting batch process %s for %s', $k, ref($self));
-                    my $code = $batches->{$k};
-                    my $src = $self->ryu->source(label => 'batch:' . $k);
-                    $active_batch{$k} = [
-                        $src,
-                        $self->process_batch($k, $code, $src)
+                for my $method (sort keys $batches->%*) {
+                    $log->tracef('Starting batch process %s for %s', $method, ref($self));
+                    my $code = $batches->{$method};
+                    my $sink = $ryu->sink(label => 'batch:' . $method);
+                    $sub->create_from_source(
+                        source => $sink->source,
+                        channel => $method,
+                    );
+                    $active_batch{$method} = [
+                        $sink,
+                        $self->process_batch($method, $code, $sink)
                     ];
                 }
             }
