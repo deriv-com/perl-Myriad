@@ -9,7 +9,7 @@ package Example::Service::Batch;
 
 # Simple batch method example.
 
-use microservice;
+use Myriad::Service;
 
 has $count = 0;
 
@@ -33,7 +33,8 @@ use Test::More;
 (async sub {
     my $myriad = Myriad->new;
     $myriad->add_service(
-        'Example::Service::Batch'
+        'Example::Service::Batch',
+        name => 'example_service_batch',
     );
     {
         my $srv = $myriad->service_by_name('example_service_batch');
