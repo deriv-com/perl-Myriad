@@ -12,6 +12,7 @@ use Future::AsyncAwait;
 use Syntax::Keyword::Try;
 
 use Myriad::RPC::Implementation::Redis;
+use Myriad::Storage::Implementation::Redis;
 use Myriad::Subscription;
 
 use Myriad::Exception;
@@ -50,6 +51,7 @@ sub MODIFY_CODE_ATTRIBUTES {
 
 has $ryu;
 has $redis;
+has $storage;
 has $myriad;
 has $service_name;
 has $rpc;
@@ -73,11 +75,24 @@ method ryu () { $ryu }
 
 =head2 redis
 
-The L<Myriad::Storage> instance.
+The L<Myriad::Transport::Redis> instance.
 
 =cut
 
 method redis () { $redis }
+
+=head2 storage
+
+The L<Myriad::Storage> instance.
+
+=cut
+
+method storage () {
+    $storage //= Myriad::Storage::Implementation::Redis->new(
+        redis_action => $redis,
+        redis_subscription => $redis
+    );
+}
 
 =head2 myriad
 

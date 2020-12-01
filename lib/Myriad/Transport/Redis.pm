@@ -173,8 +173,8 @@ method iterate(%args) {
                     )
                 );
                 $log->tracef('Read group %s', $batch);
-                for my $stream (sort keys $batch->%*) {
-                    my  $data = $batch->{$stream};
+                for my $delivery ($batch->@*) {
+                    my  ($stream, $data) = $delivery->@*;
                     for my $item ($data->@*) {
                         my ($id, $args) = $item->@*;
                         $log->tracef(
@@ -491,18 +491,66 @@ async method xreadgroup (@args) {
     my ($batch) =  await $instance->xreadgroup(@args)->on_ready(sub {
         $self->return_redis_to_pool($instance);
     });
-        my %info = pairmap {
-            (
-                ($a =~ tr/-/_/r),
-                $b
-            )
-        } @$batch;
-        return (\%info);
+    return ($batch);
 }
 
 async method xgroup (@args) {
     return await $redis->xgroup(@args);
 }
+
+=head2 set
+
+Set a scalar value in Redis.
+
+=over 4
+
+=item * C<$k> - The name of the key.
+
+=item * C<$v> - The scalar value to set.
+
+=back
+
+=cut
+
+async method set ($k, $v) {
+    return await $redis->set($k, $v);
+}
+
+=head2 get
+
+Get a scalar value from Redis.
+
+=over 4
+
+=item * C<$k> - The name of the key.
+
+=back
+
+=cut
+
+async method get ($k) {
+    return await $redis->get($k);
+}
+
+=head2 push
+
+Push an element to an array (or a queue).
+
+=over 4
+
+=item * C<$k> - The name of the key.
+
+=item * C<$v> - The value to add.
+
+=back
+
+=cut
+
+async method push ($k, $v) {
+    await $redis->rpush($k, $v);
+}
+
+
 
 1;
 
