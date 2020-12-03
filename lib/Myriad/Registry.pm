@@ -30,6 +30,7 @@ declare_exception UnknownClass => (
 );
 
 use Myriad::Exception::Registry;
+use Myriad::API;
 
 has $myriad;
 
