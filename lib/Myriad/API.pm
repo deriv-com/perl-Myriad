@@ -1,6 +1,6 @@
 package Myriad::API;
 
-use Myriad::Class extends => 'IO::Async::Notifier';
+use Myriad::Class;
 
 # VERSION
 # AUTHORITY
