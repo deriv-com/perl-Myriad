@@ -303,7 +303,7 @@ method pending(%args) {
     Future->wait_any(
         $src->completed->without_cancel,
         (async sub {
-            $instance = await $self->redis_from_pool;
+            $instance = await $self->borrow_instance_from_pool;
             my $start = '-';
             while (1) {
                 await $src->unblocked;
@@ -329,7 +329,7 @@ method pending(%args) {
             }
         })->(),
     )->on_ready(sub {
-        $self->return_redis_to_pool($instance) if $instance;
+        $self->return_instance_to_pool($instance) if $instance;
     })->on_fail(sub  {
         my $error = shift;
         $log->errorf("Failed while looking for pending messages due: %s", $error);
@@ -434,14 +434,25 @@ async method xadd (@args) {
     return await $redis->xadd(@args);
 }
 
-=head2 redis_from_pool
+=head2 borrow_instance
+
+Returns a redis instance to be used by the L<Myriad::Storage::Implementation::Redis>
+as an action instance.
+
+=cut
+
+method borrow_instance () {
+    return $redis;
+}
+
+=head2 borrow_instance_from_pool
 
 Returns a Redis connection either from a pool of connection or a new one.
 With the possibility of waiting to get one, if all connection were busy and we maxed out our limit.
 
 =cut
 
-async method redis_from_pool {
+async method borrow_instance_from_pool {
     $log->tracef('Available Redis pool count: %d', 0 + $redis_pool->@*);
     if (my $available_redis = shift $redis_pool->@*) {
         $pending_redis_count++;
@@ -460,7 +471,7 @@ async method redis_from_pool {
 
 }
 
-=head2 return_redis_to_pool
+=head2 return_instance_to_pool
 
 This puts back a redis connection into Redis pool, so it can be used by other called.
 It should be called at the end of every usage, as on_ready.
@@ -476,7 +487,7 @@ but that's currently failing with the $redis_pool slot not being defined.
 
 =cut
 
-method return_redis_to_pool ($instance) {
+method return_instance_to_pool ($instance) {
     if( my $waiting_redis = shift $waiting_redis_pool->@*) {
         $waiting_redis->done($instance)
     } else {
@@ -487,9 +498,9 @@ method return_redis_to_pool ($instance) {
 }
 
 async method xreadgroup (@args) {
-    my $instance = await $self->redis_from_pool;
+    my $instance = await $self->borrow_instance_from_pool;
     my ($batch) =  await $instance->xreadgroup(@args)->on_ready(sub {
-        $self->return_redis_to_pool($instance);
+        $self->return_instance_to_pool($instance);
     });
     return ($batch);
 }
@@ -497,60 +508,6 @@ async method xreadgroup (@args) {
 async method xgroup (@args) {
     return await $redis->xgroup(@args);
 }
-
-=head2 set
-
-Set a scalar value in Redis.
-
-=over 4
-
-=item * C<$k> - The name of the key.
-
-=item * C<$v> - The scalar value to set.
-
-=back
-
-=cut
-
-async method set ($k, $v) {
-    return await $redis->set($k, $v);
-}
-
-=head2 get
-
-Get a scalar value from Redis.
-
-=over 4
-
-=item * C<$k> - The name of the key.
-
-=back
-
-=cut
-
-async method get ($k) {
-    return await $redis->get($k);
-}
-
-=head2 push
-
-Push an element to an array (or a queue).
-
-=over 4
-
-=item * C<$k> - The name of the key.
-
-=item * C<$v> - The value to add.
-
-=back
-
-=cut
-
-async method push ($k, $v) {
-    await $redis->rpush($k, $v);
-}
-
-
 
 1;
 

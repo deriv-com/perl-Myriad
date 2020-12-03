@@ -88,10 +88,7 @@ The L<Myriad::Storage> instance.
 =cut
 
 method storage () {
-    $storage //= Myriad::Storage::Implementation::Redis->new(
-        redis_action => $redis,
-        redis_subscription => $redis
-    );
+    $storage //= Myriad::Storage::Implementation::Redis->new(redis => $redis);
 }
 
 =head2 myriad
