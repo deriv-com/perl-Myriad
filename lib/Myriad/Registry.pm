@@ -29,7 +29,7 @@ declare_exception UnknownClass => (
     message => 'Unable to locate the given class for component lookup',
 );
 
-use Myriad::Exception::Registry;
+use Myriad::API;
 
 has $myriad;
 
@@ -58,7 +58,16 @@ async method add_service (%args) {
     $srv = $srv->new(
         %args
     ) unless blessed($srv) and $srv->isa('Myriad::Service');
+
     my $pkg = ref $srv;
+
+    # Inject an `$api` instance so that this service can talk
+    # to storage and the outside world
+    $Myriad::Service::SLOT{$pkg}{api}->value($srv) = Myriad::API->new(
+        myriad => $myriad,
+        # TODO Need the storage instance here:
+        storage => undef,
+    );
 
     my $name = $args{name} || $srv->service_name;
     $rpc->{$pkg} ||= {};
@@ -140,7 +149,7 @@ Returns a hashref of stream methods for the given class.
 =cut
 
 method streams_for ($pkg) {
-    return $stream->{$pkg} // Myriad::Exception::Registry->throw(reason => 'unknown package ' . $pkg);
+    return $stream->{$pkg} // Myriad::Exception::Registry::UnknownPackage->throw(reason => 'unknown package ' . $pkg);
 }
 
 =head2 add_batch

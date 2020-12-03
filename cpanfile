@@ -3,12 +3,12 @@ requires 'mro';
 requires 'indirect';
 requires 'multidimensional';
 requires 'bareword::filehandles';
-requires 'Syntax::Keyword::Dynamically', '>= 0.05';
-requires 'Syntax::Keyword::Try', '>= 0.18';
-requires 'Future', '>= 0.45';
+requires 'Syntax::Keyword::Dynamically', '>= 0.06';
+requires 'Syntax::Keyword::Try', '>= 0.20';
+requires 'Future', '>= 0.46';
 requires 'Future::Queue';
-requires 'Future::AsyncAwait', '>= 0.45';
-requires 'Object::Pad', '>= 0.33';
+requires 'Future::AsyncAwait', '>= 0.47';
+requires 'Object::Pad', '>= 0.34';
 requires 'Role::Tiny', '>= 2.000';
 # Streams
 requires 'Ryu', '>= 2.003';
@@ -45,12 +45,12 @@ requires 'Net::Async::OpenTracing', '>= 1.000';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
 requires 'Log::Any::Adapter::Multiplexor', '>= 0.03';
 # Transport
-requires 'Net::Async::Redis', '>= 3.004';
+requires 'Net::Async::Redis', '>= 3.005';
 requires 'Net::Async::HTTP', '>= 0.47';
 requires 'Net::Async::HTTP::Server', '>= 0.13';
 requires 'Net::Async::SMTP', '>= 0.002';
-requires 'Database::Async', '>= 0.012';
-requires 'Database::Async::Engine::PostgreSQL', '>= 0.008';
+requires 'Database::Async', '>= 0.013';
+requires 'Database::Async::Engine::PostgreSQL', '>= 0.009';
 # Introspection
 requires 'Devel::MAT::Dumper';
 
