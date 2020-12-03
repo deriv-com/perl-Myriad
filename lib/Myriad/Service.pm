@@ -205,13 +205,12 @@ sub import {
         Object::Pad->import_into($pkg);
         my $meta = Object::Pad->begin_class($pkg, extends => 'Myriad::Service::Implementation');
 
-        # Now we populate various slots, to be filled in when instantiating
+        # Now we populate various slots, to be filled in when instantiating.
+        # Currently we have `api`, but might be helpful to provide `$storage`
+        # and others directly here.
         $SLOT{$pkg} = {
             map { $_ => $meta->add_slot('$' . $_) } qw(
                 api
-                storage
-                rpc
-                subscription
             )
         };
 
