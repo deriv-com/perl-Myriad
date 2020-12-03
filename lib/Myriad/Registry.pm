@@ -60,6 +60,10 @@ async method add_service (%args) {
     ) unless blessed($srv) and $srv->isa('Myriad::Service');
     my $pkg = ref $srv;
 
+    $Myriad::Service::SLOT{$pkg}{api}->value($srv) = Myriad::API->new(
+        $myriad
+    );
+
     my $name = $args{name} || $srv->service_name;
     $rpc->{$pkg} ||= {};
     $stream->{$pkg} ||= {};
