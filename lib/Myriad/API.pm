@@ -20,16 +20,32 @@ storage, subscription and RPC behaviour.
 
 =cut
 
-method rpc {
-    ...
+has $myriad;
+has $storage;
+
+BUILD (%args) {
+    weaken($myriad = delete $args{myriad});
+    $storage = delete $args{storage};
 }
 
-method subscription {
-    ...
-}
+=head2 rpc
 
-method storage {
-    ...
+Returns a L<Myriad::Role::Storage>-compatible instance for interacting with storage.
+
+=cut
+
+method storage { $storage }
+
+=head2 service_by_name
+
+Returns a service proxy instance for the given service name.
+
+This can be used to call RPC methods and act on subscriptions.
+
+=cut
+
+method service_by_name ($name) {
+    return $myriad->service_by_name($name);
 }
 
 1;
