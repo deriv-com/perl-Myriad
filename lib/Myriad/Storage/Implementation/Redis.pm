@@ -1,4 +1,4 @@
-package Myriad::Storage::Redis;
+package Myriad::Storage::Implementation::Redis;
 
 use strict;
 use warnings;
@@ -9,7 +9,7 @@ use warnings;
 use Future::AsyncAwait;
 use Object::Pad;
 
-class Myriad::Storage::Redis;
+class Myriad::Storage::Implementation::Redis;
 
 use experimental qw(signatures);
 
