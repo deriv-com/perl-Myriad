@@ -141,6 +141,8 @@ use Myriad::Service::Implementation;
 use Log::Any qw($log);
 use OpenTracing::Any qw($tracer);
 
+our %SLOT;
+
 sub import {
     my ($called_on, @args) = @_;
     my $class = __PACKAGE__;
@@ -197,11 +199,20 @@ sub import {
 
         # For history here, see this:
         # https://rt.cpan.org/Ticket/Display.html?id=132337
-        # At the time of writing, ->begin_class is undocumented
-        # but can be seen in action in this test:
-        # https://metacpan.org/source/PEVANS/Object-Pad-0.21/t/70mop-create-class.t#L30
+        # At the time of writing, ->begin_class is documented but experimental,
+        # and can be seen in action in this test:
+        # https://metacpan.org/source/PEVANS/Object-Pad-0.34/t/70mop-create-class.t#L30
         Object::Pad->import_into($pkg);
-        Object::Pad->begin_class($pkg, extends => 'Myriad::Service::Implementation');
+        my $meta = Object::Pad->begin_class($pkg, extends => 'Myriad::Service::Implementation');
+
+        # Now we populate various slots, to be filled in when instantiating.
+        # Currently we have `api`, but might be helpful to provide `$storage`
+        # and others directly here.
+        $SLOT{$pkg} = {
+            map { $_ => $meta->add_slot('$' . $_) } qw(
+                api
+            )
+        };
 
         {
             no strict 'refs';
