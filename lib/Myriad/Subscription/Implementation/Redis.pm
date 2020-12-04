@@ -90,8 +90,8 @@ async method start {
                 )
             );
             $log->tracef('Read group %s', $streams);
-            for my $stream (sort keys %$streams) {
-                my $data = $streams->{$stream};
+            for my $delivery ($streams->@*) {
+                my ($stream, $data) = $delivery->@*;
                 for my $item ($data->@*) {
                     my ($id, $args) = $item->@*;
                     $log->tracef(

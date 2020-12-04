@@ -173,8 +173,8 @@ method iterate(%args) {
                     )
                 );
                 $log->tracef('Read group %s', $batch);
-                for my $stream (sort keys $batch->%*) {
-                    my  $data = $batch->{$stream};
+                for my $delivery ($batch->@*) {
+                    my  ($stream, $data) = $delivery->@*;
                     for my $item ($data->@*) {
                         my ($id, $args) = $item->@*;
                         $log->tracef(
@@ -491,13 +491,7 @@ async method xreadgroup (@args) {
     my ($batch) =  await $instance->xreadgroup(@args)->on_ready(sub {
         $self->return_redis_to_pool($instance);
     });
-        my %info = pairmap {
-            (
-                ($a =~ tr/-/_/r),
-                $b
-            )
-        } @$batch;
-        return (\%info);
+    return ($batch);
 }
 
 async method xgroup (@args) {
