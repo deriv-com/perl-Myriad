@@ -158,7 +158,8 @@ use Myriad::Exception::InternalError;
 
 use Myriad::Registry;
 use Myriad::RPC;
-use Myriad::Role::RPC;
+use Myriad::Subscription;
+use Myriad::Storage;
 
 use Myriad::Transport::Redis;
 use Myriad::Transport::HTTP;
@@ -188,9 +189,18 @@ has $commands;
 # really be abstracted away by the ::Transport and
 # storage/rpc/subscription abstractions
 has $redis;
+# The Myriad::RPC instance to serve RPC requests for
+# the services in this process
+has $rpc;
 # The Net::Async::HTTP::Server instance for endpoint
 # requests
 has $http;
+# The Myriad::Subscription instance to emit
+# and listen for events
+has $subscription;
+# The Myriad::Storage instance to manage data
+# stored by the service or access other services data.
+has $storage;
 # Future representing shutdown
 has $shutdown;
 # Future for passing to things that want to react to
@@ -274,11 +284,33 @@ method redis () {
     unless($redis) {
         $loop->add(
             $redis = Myriad::Transport::Redis->new(
-                redis_uri => $config->redis_uri->as_string
+                redis_uri => $config ? $config->redis_uri->as_string : '',
             )
         );
     }
     $redis
+}
+
+=head2 rpc
+
+The L<Myriad::RPC> instance to serve RPC requests
+
+=cut
+
+method rpc () {
+    unless($rpc) {
+        $loop->add(
+            $rpc = Myriad::RPC->new(
+                transport => $config ? $config->rpc_transport->as_string : '',
+                redis => $self->redis,
+            )
+        );
+
+        $self->on_shutdown(async sub {
+            await $rpc->stop;
+        });
+    }
+    $rpc
 }
 
 =head2 http
@@ -295,6 +327,43 @@ method http () {
         );
     }
     $http
+}
+
+=head2 subscription
+
+The L<Myriad::Subscription> instance to manage events
+
+=cut
+
+method subscription () {
+    unless ($subscription) {
+        $loop->add(
+            $subscription = Myriad::Subscription->new(
+                transport => $config ? $config->subscription_transport->as_string : '' ,
+                redis => $self->redis,
+            )
+        );
+
+        $self->on_shutdown(async sub {
+            await $subscription->stop;
+        });
+    }
+    $subscription;
+}
+
+=head2 storage
+
+The L<Myriad::Storage> instance to manage data
+
+=cut
+
+method storage () {
+    unless($storage) {
+        $storage = Myriad::Storage->new(
+            transport => $config ? $config->storage_transport->as_string : '',
+            redis => $self->redis,
+        );
+    }
 }
 
 =head2 registry
@@ -315,10 +384,10 @@ Returns the service instance.
 
 async method add_service ($srv, %args) {
     return await $self->registry->add_service(
-        service => $srv,
-        redis => $redis,
-        subscription_transport => $config ? $config->rpc_transport->as_string : '',
-        rpc_transport => $config ? $config->rpc_transport->as_string : '',
+        service      => $srv,
+        rpc          => $self->rpc,
+        subscription => $self->subscription,
+        storage      => $self->storage,
         %args
     );
 }
@@ -447,7 +516,13 @@ method run () {
             $self->shutdown->await;
         }))
     } qw(TERM INT QUIT);
-
+    map {
+        my $component = $_;
+        $self->$component->start->on_fail(sub {
+            my $error = shift;
+            $log->warnf("%s failed due %s", $component, $error);
+        })->retain();
+    } qw(rpc subscription);
     $self->shutdown_future->await;
 }
 

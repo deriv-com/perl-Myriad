@@ -14,8 +14,6 @@ use Role::Tiny::With;
 with 'Myriad::Role::Subscription';
 
 has $redis;
-has $ryu;
-has $service;
 
 has $uuid;
 
@@ -33,13 +31,13 @@ BUILD {
 
 method configure (%args) {
     $redis = delete $args{redis} if exists $args{redis};
-    $ryu = delete $args{ryu} if exists $args{ryu};
-    $service = delete $args{service} if exists $args{service};
     $self->next::method(%args);
 }
 
 method create_from_source (%args) {
     my $src = delete $args{source} or die 'need a source';
+    my $service = delete $args{service} or die 'need a service';
+
     my $stream = $service . '/' . $args{channel};
     $src->each(sub {
         $log->tracef('sub has an event! %s', $_);
@@ -52,7 +50,7 @@ method create_from_source (%args) {
 
 method create_from_sink (%args) {
     my $sink = delete $args{sink} or die 'need a sink';
-    my $remote_service = $args{service} || $service;
+    my $remote_service = $args{from} || $args{service};
     my $stream = $remote_service . '/' . $args{channel};
     $log->tracef('created sub thing from sink');
     push $queues->@*, {
@@ -65,7 +63,6 @@ method create_from_sink (%args) {
 async method start {
     $stopped = $self->loop->new_future(label => 'subscription::redis::stopped');
     while (1) {
-        # await $src->unblocked;
         if($queues->@*) {
             my $item = shift $queues->@*;
             push $queues->@*, $item;

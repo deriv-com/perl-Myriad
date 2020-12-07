@@ -1,4 +1,4 @@
-package Myriad::Subscription;
+package Myriad::Storage;
 
 use strict;
 use warnings;
@@ -13,18 +13,18 @@ use utf8;
 
 =head1 NAME
 
-Myriad::Subscription - microservice Subscription abstraction
+Myriad::Storage - microservice Storage abstraction
 
 =head1 SYNOPSIS
 
- my $sub = Myriad::Subscription->new();
+ my $storage = Myriad::Storage->new();
 
 =head1 DESCRIPTION
 
 =cut
 
-use Myriad::Subscription::Implementation::Redis;
-use Myriad::Subscription::Implementation::Perl;
+use Myriad::Storage::Implementation::Redis;
+use Myriad::Storage::Implementation::Perl;
 
 sub new {
     my ($class, %args) = @_;
@@ -34,11 +34,11 @@ sub new {
     # L<IO::Async::Notifier> exception when it doesn't recognize the key.
 
     if ($transport eq 'redis') {
-        return Myriad::Subscription::Implementation::Redis->new(
+        return Myriad::Storage::Implementation::Redis->new(
             redis   => $args{redis},
         );
     } else {
-        return Myriad::Subscription::Implementation::Perl->new();
+        return Myriad::Storage::Implementation::Perl->new();
     }
 }
 

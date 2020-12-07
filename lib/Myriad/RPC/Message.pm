@@ -33,8 +33,6 @@ use Scalar::Util qw(blessed);
 use Syntax::Keyword::Try;
 use JSON::MaybeUTF8 qw(:v1);
 
-use Myriad::RPC;
-
 has $rpc;
 has $id;
 has $who;

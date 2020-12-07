@@ -47,6 +47,7 @@ our %DEFAULTS = (
     opentracing_port       => 6832,
     subscription_transport => 'redis',
     rpc_transport          => 'redis',
+    storage_transport      => 'redis',
 );
 
 =head2 SHORTCUTS_FOR

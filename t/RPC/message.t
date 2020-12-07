@@ -6,6 +6,8 @@ use Test::Fatal;
 use Test::MemoryGrowth;
 
 use Storable qw(dclone);
+# Myriad::RPC should be included to load exceptions.
+use Myriad::RPC;
 use Myriad::RPC::Message;
 
 my $message_args = {

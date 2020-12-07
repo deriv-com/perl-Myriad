@@ -11,6 +11,10 @@ with 'Myriad::Role::RPC';
 
 use Myriad::Class extends => qw(IO::Async::Notifier);
 
+use Future::Utils qw(fmap0);
+
+use constant RPC_SUFFIX => '/rpc';
+
 =head1 NAME
 
 Myriad::RPC::Implementation::Redis - microservice RPC Redis implementation.
@@ -28,12 +32,6 @@ use Myriad::RPC::Message;
 has $redis;
 method redis { $redis }
 
-has $service;
-method service { $service }
-
-has $stream;
-method stream { $stream //= $service . '/rpc'}
-
 has $group_name;
 method group_name { $group_name }
 
@@ -42,99 +40,122 @@ method whoami { $whoami }
 
 has $rpc_methods;
 
+method service_name_from_stream ($stream) {
+    my $pattern = RPC_SUFFIX . '$';
+    $stream =~ s/$pattern//;
+    return $stream;
+}
+
+method stream_name_from_service ($service) {
+    return $service . RPC_SUFFIX;
+}
+
 method configure (%args) {
     $redis = delete $args{redis} if exists $args{redis};
-    $service = delete $args{service} if exists $args{service};
     $whoami = hostname();
     $group_name = 'processors';
 }
 
 async method start () {
-    await $self->redis->create_group(
-        $self->stream,
-        $self->group_name
-    );
+    await fmap0 {
+            my $stream = $self->stream_name_from_service(shift);
+            $self->redis->create_group($stream,$self->group_name);
+    } foreach => [keys $rpc_methods->%*], concurrent => 8;
+
     await $self->listener;
 }
 
 method create_from_sink (%args) {
     my $sink   = $args{sink} // die 'need a sink';
     my $method = $args{method} // die 'need a method name';
+    my $service = $args{service} // die 'need a service name';
 
-    $rpc_methods->{$method} = $sink;
+    $rpc_methods->{$service}->{$method} = $sink;
 }
 
 
 async method stop () {
     $self->listener->cancel;
-    return;
 }
 
 async method listener () {
+    # ordering is not important
+    my @streams = map {$self->stream_name_from_service($_)} keys $rpc_methods->%*;
     my %stream_config = (
-        stream => $self->stream,
         group  => $self->group_name,
         client => $self->whoami
     );
-    my $pending_requests = $self->redis->pending(%stream_config);
-    my $incoming_request = $self->redis->iterate(%stream_config);
+
+    my $incoming_request = $self->redis->iterate(streams => @streams, %stream_config);
+
+    # xpending doesn't accept multiple streams like xreadgroup
+    for my $stream (@streams) {
+        $incoming_request->merge(
+            $self->redis->pending(stream => $stream, %stream_config)
+        );
+    }
+
     try {
-        await $incoming_request->merge($pending_requests)
+        await $incoming_request
             ->map(sub {
                 my $data = $_;
+                my $service = $self->service_name_from_stream($data->{stream});
                 try {
-                    { message => Myriad::RPC::Message->new(@$data) };
+                    return { service => $service, message => Myriad::RPC::Message->new($data->{args}->@*) };
                 } catch ($error) {
                     $error = Myriad::Exception::InternalError->new($error) unless blessed($error) and $error->isa('Myriad::Exception');
-                    return { error => $error, id => $data->{message_id} }
+                    return { service => $service, error => $error, id => $data->{args}->{message_id} }
                 }
             })->map(async sub {
                 if(my $error = $_->{error}) {
-                    $log->warnf("error while parsing the incoming messages: %s", $error->message);
-                    await $self->drop($_->{id});
+                    $log->tracef("error while parsing the incoming messages: %s", $error->message);
+                    await $self->drop($_->{service}, $_->{id});
                 } else {
                     my $message = $_->{message};
-                    if (my $sink = $rpc_methods->{$message->rpc}) {
+                    my $service  = $_->{service};
+                    if (my $sink = $rpc_methods->{$service}->{$message->rpc}) {
                         $sink->emit($message);
                     } else {
                         my $error = Myriad::Exception::RPC::MethodNotFound->new(reason => "No such method: " . $message->rpc);
-                        await $self->reply_error($message, $error);
+                        await $self->reply_error($service, $message, $error);
                     }
                 }
             })->resolve->completed;
     } catch ($e) {
-        warn $e;
         $log->errorf("RPC listener stopped due to: %s", $e);
     }
 }
 
-async method reply ($message) {
+async method reply ($service, $message) {
+    my $stream = $self->stream_name_from_service($service);
     try {
         await $self->redis->publish($message->who, $message->encode);
-        await $self->redis->ack($self->stream, $self->group_name, $message->id);
+        await $self->redis->ack($stream, $self->group_name, $message->id);
     } catch ($e) {
         $log->warnf("Failed to reply to client due: %s", $e);
         return;
     }
 }
 
-async method reply_success ($message, $response) {
+async method reply_success ($service, $message, $response) {
     $message->response = { response => $response };
-    await $self->reply($message);
+    await $self->reply($service, $message);
 }
 
-async method reply_error ($message, $error) {
+async method reply_error ($service, $message, $error) {
     $message->response = { error => { category => $error->category, message => $error->message, reason => $error->reason } };
-    await $self->reply($message);
+    await $self->reply($service, $message);
 }
 
-async method drop ($id) {
-    $log->debugf("Going to drop message: %s", $id);
-    await $self->redis->ack($self->stream, $self->group_name, $id);
+async method drop ($service, $id) {
+    $log->tracef("Going to drop message: %s", $id);
+    my $stream = $self->stream_name_from_service($service);
+    await $self->redis->ack($stream, $self->group_name, $id);
 }
 
-async method has_pending_requests () {
-    my $stream_info = await $self->redis->pending_messages_info($self->stream, $self->group_name);
+async method has_pending_requests ($service) {
+    my $stream = $self->stream_name_from_service($service);
+    my $stream_info = await $self->redis->pending_messages_info($stream, $self->group_name);
     if($stream_info->[0]) {
         for my $consumer ($stream_info->[3]->@*) {
             return $consumer->[1] if $consumer->[0] eq $self->whoami;

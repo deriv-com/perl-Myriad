@@ -156,7 +156,7 @@ Returns a L<Ryu::Source> which emits L<Myriad::Redis::Pending> items.
 
 method iterate(%args) {
     my $src = $self->source;
-    my $stream = $args{stream};
+    my @streams = $args{streams};
     my $group = $args{group};
     my $client = $args{client};
     Future->wait_any(
@@ -168,9 +168,7 @@ method iterate(%args) {
                     BLOCK   => $self->wait_time,
                     GROUP   => $group, $client,
                     COUNT   => $self->batch_count,
-                    STREAMS => (
-                        $stream, '>'
-                    )
+                    STREAMS => map {$_ => '>'} @streams,
                 );
                 $log->tracef('Read group %s', $batch);
                 for my $delivery ($batch->@*) {
@@ -185,7 +183,7 @@ method iterate(%args) {
                         );
                         if($args) {
                             push @$args, ("message_id", $id);
-                            $src->emit($args);
+                            $src->emit({stream => $stream, args => $args});
                         }
                     }
                 }
