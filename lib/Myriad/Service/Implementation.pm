@@ -190,7 +190,6 @@ async method start {
                 my $code = $spec->{code};
                 $spec->{current} = $self->$code(
                     $sink,
-                    $self,
                 )->retain;
             }
         }
@@ -213,7 +212,6 @@ async method start {
                 my $code = $spec->{code};
                 $spec->{current} = $self->$code(
                     $sink->source,
-                    $self,
                 )->retain;
             }
         }
