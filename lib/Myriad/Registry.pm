@@ -55,6 +55,8 @@ Returns the service instance.
 
 async method add_service (%args) {
     my $srv = delete $args{service};
+    my $storage = delete $args{storage};
+
     $srv = $srv->new(
         %args
     ) unless blessed($srv) and $srv->isa('Myriad::Service');
@@ -65,8 +67,7 @@ async method add_service (%args) {
     # to storage and the outside world
     $Myriad::Service::SLOT{$pkg}{api}->value($srv) = Myriad::API->new(
         myriad => $myriad,
-        # TODO Need the storage instance here:
-        storage => undef,
+        storage => $storage,
     );
 
     my $name = $args{name} || $srv->service_name;

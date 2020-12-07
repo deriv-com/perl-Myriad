@@ -12,6 +12,8 @@ use Syntax::Keyword::Try;
 use Log::Any qw($log);
 use Log::Any::Adapter qw(Stderr), log_level => 'info';
 
+# Myriad::RPC should be included to load exceptions
+use Myriad::RPC;
 use Myriad::RPC::Implementation::Perl;
 
 my $loop = IO::Async::Loop->new;
@@ -33,7 +35,7 @@ isa_ok($rpc, 'IO::Async::Notifier');
 
 my $sink = $ryu->sink(label=> 'rpc::test');
 
-$rpc->create_from_sink(method => 'test', sink => $sink);
+$rpc->create_from_sink(method => 'test', sink => $sink, service => 'test::service');
 $rpc->start()->retain;
 
 subtest 'it should return method not found' => sub {
@@ -61,7 +63,6 @@ subtest 'it should propagate the message correctly' => sub {
 
         $message_args->{rpc} = 'test';
         $rpc->request($message_args, $response);
-
         $sink->source->take(1)->each(sub {
             my $message = shift;
             $rpc->reply_success($message, {success => 1});
