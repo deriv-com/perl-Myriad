@@ -9,8 +9,6 @@ use warnings;
 no indirect qw(fatal);
 use utf8;
 
-use constant ERROR_CATEGORY => 'rpc';
-
 =encoding utf8
 
 =head1 NAME
@@ -28,7 +26,7 @@ Myriad::RPC - microservice RPC abstraction
 use Myriad::RPC::Implementation::Redis;
 use Myriad::RPC::Implementation::Perl;
 
-use Myriad::Exception::Builder;
+use Myriad::Exception::Builder category => 'rpc';
 
 sub new {
     my ($class, %args) = @_;
@@ -60,7 +58,6 @@ Returned when there is issue parsing the request, or if the request parameters a
 =cut
 
 declare_exception InvalidRequest => (
-    category => ERROR_CATEGORY,
     message => 'Invalid request'
 );
 
@@ -71,7 +68,6 @@ Returned if the requested method is not recognized by the service.
 =cut
 
 declare_exception MethodNotFound => (
-    category => ERROR_CATEGORY,
     message => 'Method not found'
 );
 
@@ -82,7 +78,6 @@ Returned when there is an external timeout or the request deadline is already pa
 =cut
 
 declare_exception Timeout => (
-    category => ERROR_CATEGORY,
     message => 'Timeout'
 );
 
@@ -93,7 +88,6 @@ Returned when the service is unable to decode/encode the request correctly.
 =cut
 
 declare_exception BadEncoding => (
-    category => ERROR_CATEGORY,
     message => 'Bad encoding'
 );
 
