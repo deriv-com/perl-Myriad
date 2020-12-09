@@ -102,7 +102,7 @@ sub new {
             service => $args{service},
         );
     } else {
-        Myriad::Exception::UnknownTransport->throw;
+        Myriad::Exception::RPC::UnknownTransport->throw;
     }
 }
 
