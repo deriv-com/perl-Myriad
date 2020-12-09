@@ -28,7 +28,7 @@ BUILD (%args) {
     $storage = delete $args{storage};
 }
 
-=head2 rpc
+=head2 storage
 
 Returns a L<Myriad::Role::Storage>-compatible instance for interacting with storage.
 

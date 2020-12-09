@@ -9,10 +9,10 @@ requires 'Future', '>= 0.46';
 requires 'Future::Queue';
 requires 'Future::AsyncAwait', '>= 0.47';
 requires 'Object::Pad', '>= 0.34';
-requires 'Role::Tiny', '>= 2.000';
+requires 'Role::Tiny', '>= 2.001004';
 # Streams
-requires 'Ryu', '>= 2.003';
-requires 'Ryu::Async', '>= 0.016';
+requires 'Ryu', '>= 2.004';
+requires 'Ryu::Async', '>= 0.017';
 # IO::Async
 requires 'Heap', '>= 0.80';
 requires 'IO::Async::Notifier', '>= 0.77';
@@ -23,8 +23,8 @@ requires 'curry', '>= 1.001';
 requires 'Log::Any', '>= 1.708';
 requires 'Log::Any::Adapter', '>= 1.708';
 requires 'Config::Any', '>= 0.32';
-requires 'YAML::XS', '>= 0.81';
-requires 'Metrics::Any', '>= 0.05';
+requires 'YAML::XS', '>= 0.82';
+requires 'Metrics::Any', '>= 0.06';
 requires 'OpenTracing::Any', '>= 1.003';
 requires 'JSON::MaybeUTF8', '>= 1.002';
 requires 'Unicode::UTF8';
@@ -45,12 +45,12 @@ requires 'Net::Async::OpenTracing', '>= 1.000';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
 requires 'Log::Any::Adapter::Multiplexor', '>= 0.03';
 # Transport
-requires 'Net::Async::Redis', '>= 3.005';
+requires 'Net::Async::Redis', '>= 3.006';
 requires 'Net::Async::HTTP', '>= 0.47';
 requires 'Net::Async::HTTP::Server', '>= 0.13';
 requires 'Net::Async::SMTP', '>= 0.002';
 requires 'Database::Async', '>= 0.013';
-requires 'Database::Async::Engine::PostgreSQL', '>= 0.009';
+requires 'Database::Async::Engine::PostgreSQL', '>= 0.010';
 # Introspection
 requires 'Devel::MAT::Dumper';
 

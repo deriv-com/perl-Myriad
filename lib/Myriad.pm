@@ -50,7 +50,7 @@ For a smaller system with a handful of users, it's I<probably> overkill!
 
 =back
 
-Each of the three abstractions has various implementations, you'd set one on startup
+Each of the three abstractions has various implementations. You'd set one on startup
 and that would provide functionality through the top-level abstraction layer. Service code
 generally shouldn't need to care which implementation is applied. There may however be cases
 where transactional behaviour differs between implementations, so there is some basic
@@ -73,6 +73,8 @@ For storage implementations, we have:
 
 =back
 
+Additional transport mechanisms may be available, see CPAN for details.
+
 =head2 RPC
 
 Simple request/response patterns are handled with the L<Myriad::RPC> layer ("remote procedure call").
@@ -89,6 +91,8 @@ Details on the request are in L<Myriad::RPC::Request> and the response to be sen
 
 =back
 
+Additional transport mechanisms may be available, see CPAN for details.
+
 =head2 Subscriptions
 
 The L<Myriad::Subscription> abstraction layer defines the available API here.
@@ -104,6 +108,8 @@ Subscription implementations include:
 =item * L<Myriad::Subscription::Perl>
 
 =back
+
+Additional transport mechanisms may be available, see CPAN for details.
 
 =head2 Transports
 
