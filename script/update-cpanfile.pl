@@ -17,7 +17,7 @@ path('cpanfile')->edit_lines_utf8(sub {
         };
         if($version and $target and $version < $target) {
             say "Update $module => $version ($target)";
-            s{['"]>=\s*\K(?:[^'"]+)(['"]);}{$target$1};
+            s{['"]>=\s*\K(?:[^'"]+)(?=\s*['"].*;)}{$target};
         }
     }
 });
