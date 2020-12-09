@@ -23,29 +23,7 @@ Myriad::RPC - microservice RPC abstraction
 
 =cut
 
-use Myriad::RPC::Implementation::Redis;
-use Myriad::RPC::Implementation::Perl;
-
 use Myriad::Exception::Builder category => 'rpc';
-
-sub new {
-    my ($class, %args) = @_;
-    my $transport = delete $args{transport};
-
-    # Passing args individually looks tedious but this is to avoid
-    # L<IO::Async::Notifier> exception when it doesn't recognize the key.
-
-    if ($transport eq 'redis') {
-        return Myriad::RPC::Implementation::Redis->new(
-            redis   => $args{redis},
-            service => $args{service},
-        );
-    } else {
-        return Myriad::RPC::Implementation::Perl->new(
-            service => $args{service},
-        );
-    }
-}
 
 =head1 Exceptions
 
@@ -90,6 +68,43 @@ Returned when the service is unable to decode/encode the request correctly.
 declare_exception BadEncoding => (
     message => 'Bad encoding'
 );
+
+=head2 UnknownTransport
+
+RPC transport does not exist.
+
+=cut
+
+declare_exception UnknownTransport => (
+    message => 'Unknown transport'
+);
+
+=head1 METHODS
+
+=cut
+
+sub new {
+    my ($class, %args) = @_;
+    my $transport = delete $args{transport};
+
+    # Passing args individually looks tedious but this is to avoid
+    # L<IO::Async::Notifier> exception when it doesn't recognize the key.
+
+    if ($transport eq 'redis') {
+        require Myriad::RPC::Implementation::Redis;
+        return Myriad::RPC::Implementation::Redis->new(
+            redis   => $args{redis},
+            service => $args{service},
+        );
+    } elsif($transport eq 'perl') {
+        require Myriad::RPC::Implementation::Perl;
+        return Myriad::RPC::Implementation::Perl->new(
+            service => $args{service},
+        );
+    } else {
+        Myriad::Exception::UnknownTransport->throw;
+    }
+}
 
 1;
 
