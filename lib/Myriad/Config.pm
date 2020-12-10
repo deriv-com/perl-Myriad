@@ -48,6 +48,7 @@ our %DEFAULTS = (
     subscription_transport => 'redis',
     rpc_transport          => 'redis',
     storage_transport      => 'redis',
+    service_name           => '',
 );
 
 =head2 SHORTCUTS_FOR
@@ -61,6 +62,7 @@ our %SHORTCUTS_FOR = (
     log_level     => [qw(l)],
     library_path  => [qw(lib)],
     rpc_transport => [qw(t)],
+    service_name  => [qw(s)],
 );
 
 # Our configuration so far. Populated via L</BUILD>,

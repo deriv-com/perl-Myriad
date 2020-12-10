@@ -182,8 +182,7 @@ method iterate(%args) {
                             $args
                         );
                         if($args) {
-                            push @$args, ("message_id", $id);
-                            $src->emit({stream => $stream, args => $args});
+                            $src->emit({stream => $stream, id => $id, data => $args});
                         }
                     }
                 }
@@ -505,6 +504,11 @@ async method xreadgroup (@args) {
 
 async method xgroup (@args) {
     return await $redis->xgroup(@args);
+}
+
+async method subscribe ($channel) {
+    my $instance = await $self->borrow_instance_from_pool;
+    await $instance->subscribe($channel);
 }
 
 1;
