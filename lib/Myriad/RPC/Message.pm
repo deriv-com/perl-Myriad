@@ -68,7 +68,7 @@ The name of the procedure we are going to execute.
 
 method rpc { $rpc }
 
-=head2 who 
+=head2 who
 
 A string that should identify the sender of the message for the transport.
 
@@ -158,7 +158,7 @@ method as_hash () {
 
 =head2 from_hash
 
-a static method (can't be done with Object::Pad currently) that tries to 
+a static method (can't be done with Object::Pad currently) that tries to
 parse a hash and return a L<Myriad::RPC::Message>.
 
 the hash should comply with the format returned by C<as_hash>.
@@ -185,7 +185,7 @@ method as_json () {
             who        => $who,
             deadline   => $deadline,
         };
-        
+
         # This step is not necessary but I'm too lazy to repeat the keys names.
         $self->apply_encoding($data, 'text');
         return encode_json_utf8($data);

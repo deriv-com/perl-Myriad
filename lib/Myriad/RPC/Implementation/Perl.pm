@@ -52,7 +52,7 @@ async method start () {
     while (my $request = await $requests_queue->shift) {
         try {
             $id++;
-            $message = Myriad::RPC::Message->new($request->%*);
+            $message = Myriad::RPC::Message::from_hash($request->%*);
             if (my $sink = $rpc_methods->{$message->rpc}) {
                 $sink->source->emit($message);
             } else {
@@ -105,7 +105,7 @@ In this implementation it's done by resolving the L<Future> calling C<done>.
 async method reply_success ($message, $response) {
     my $future = shift @pending_requests;
     $message->response = { response => $response };
-    $future->done($message->encode);
+    $future->done($message->as_json);
 }
 
 =head2 reply_error
@@ -119,7 +119,7 @@ In this implementation it's done by resolving the L<Future> calling C<fail>.
 async method reply_error ($message, $error) {
     my $future = shift @pending_requests;
     $message->response = { error => { category => $error->category, message => $error->message, reason => $error->reason } };
-    $future->fail($message->encode);
+    $future->fail($message->as_json);
 }
 
 =head2 drop

@@ -12,7 +12,10 @@ use Myriad::Util::UUID;
 use Myriad::RPC::Implementation::Redis qw(stream_name_from_service);
 use Myriad::RPC::Message;
 
+use constant DEFAULT_RPC_TIMEOUT_SECONDS => 30;
+
 has $redis;
+has $subscription;
 has $pending_requests;
 has $whoami;
 has $current_id;
@@ -33,36 +36,54 @@ method _add_to_loop ($loop) {
 
 async method start() {
     my $sub = await $redis->subscribe($whoami);
-    $sub->events->map('payload')->map(sub{
+    await $sub->events->map('payload')->map(sub{
         try {
-            my $message = Myriad::RPC::Message::from_json($_);
+            my $payload = $_;
+            $log->tracef('Received RPC response as %s', $payload);
+
+            my $message = Myriad::RPC::Message::from_json($payload);
+
             if(my $pending = delete $pending_requests->{$message->message_id}) {
-                $pending->done($message);
+                return $pending->done($message);
             }
+            $log->tracef('No pending future for message %s', $message->message_id);
         } catch ($e) {
-            $log->warnf("failed to parse rpc response due %s", $e);
+            $log->warnf('failed to parse rpc response due %s', $e);
         }
     })->completed;
 }
 
 async method call_rpc($service, $method, %args) {
+    $service = stream_name_from_service($service);
     my $pending = $self->loop->new_future(label => "rpc::request::${service}::${method}");
+
     my $message_id = $self->next_id;
+    my $timeout = delete $args{timeout} || DEFAULT_RPC_TIMEOUT_SECONDS;
+    my $deadline = time + $timeout;
 
     my $request = Myriad::RPC::Message->new(
         rpc        => $method,
         who        => $whoami,
-        deadline   => 30,
+        deadline   => $deadline,
         message_id => $message_id,
         args       => \%args,
     );
+
     try {
-        await $redis->xadd(stream_name_from_service($service) => '*', $request->as_hash->%*);
+        await $redis->xadd($service => '*', $request->as_hash->%*);
+        $log->tracef('Sent RPC request %s', $request->as_hash);
         $pending_requests->{$message_id} = $pending;
-        my $message = await Future->wait_any($self->loop->timeout_future(after => 3), $pending);
+
+        # The subscription loop will parse the message for us
+        my $message = await Future->wait_any($self->loop->timeout_future(after => $timeout), $pending);
+
         return $message->response;
     } catch ($e) {
-    warn $e;
+        $log->tracef('RPC request failed due: %s', $e);
+        if ($e eq 'Timeout') {
+            $e  = Myriad::Exception::RPC::Timeout->new(reason => 'deadline is due');
+        }
+        $e = Myriad::Exception::InternalError->new(reason => $e) unless blessed $e && $e->isa('Myriad::Exception');
         $pending->fail($e);
         delete $pending_requests->{$message_id};
     }
