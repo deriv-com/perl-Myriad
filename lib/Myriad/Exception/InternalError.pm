@@ -14,7 +14,7 @@ use utf8;
 
 =head1 NAME
 
-Myriad::Exception::Base - common class for all exceptions
+Myriad::Exception::InternalError - common exception when the error is not relevant to the client.
 
 =head1 DESCRIPTION
 
@@ -22,7 +22,11 @@ See L<Myriad::Exception> for the rôle that defines the exception API.
 
 =cut
 
-use Myriad::Exception::Builder;
+use base qw(Myriad::Exception::Base);
+
+use Role::Tiny::With;
+
+with 'Myriad::Exception';
 
 sub category { 'internal' }
 sub message { shift->{message} //= 'Internal error' }

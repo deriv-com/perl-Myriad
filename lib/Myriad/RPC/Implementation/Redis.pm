@@ -14,6 +14,8 @@ use Myriad::Class extends => qw(IO::Async::Notifier);
 use Future::Utils qw(fmap0);
 
 use constant RPC_SUFFIX => '/rpc';
+use Exporter qw(import);
+our @EXPORT_OK = qw(stream_name_from_service);
 
 =head1 NAME
 
@@ -40,13 +42,13 @@ method whoami { $whoami }
 
 has $rpc_methods;
 
-method service_name_from_stream ($stream) {
+sub service_name_from_stream ($stream) {
     my $pattern = RPC_SUFFIX . '$';
     $stream =~ s/$pattern//;
     return $stream;
 }
 
-method stream_name_from_service ($service) {
+sub stream_name_from_service ($service) {
     return $service . RPC_SUFFIX;
 }
 
@@ -57,8 +59,9 @@ method configure (%args) {
 }
 
 async method start () {
+    return unless $rpc_methods;
     await fmap0 {
-            my $stream = $self->stream_name_from_service(shift);
+            my $stream = stream_name_from_service(shift);
             $self->redis->create_group($stream,$self->group_name);
     } foreach => [keys $rpc_methods->%*], concurrent => 8;
 
@@ -80,7 +83,7 @@ async method stop () {
 
 async method listener () {
     # ordering is not important
-    my @streams = map {$self->stream_name_from_service($_)} keys $rpc_methods->%*;
+    my @streams = map {stream_name_from_service($_)} keys $rpc_methods->%*;
     my %stream_config = (
         group  => $self->group_name,
         client => $self->whoami
@@ -98,13 +101,16 @@ async method listener () {
     try {
         await $incoming_request
             ->map(sub {
-                my $data = $_;
-                my $service = $self->service_name_from_stream($data->{stream});
+                my $item = $_;
+                push $item->{data}->@*, ('transport_id', $item->{id});
+                my $service = service_name_from_stream($item->{stream});
                 try {
-                    return { service => $service, message => Myriad::RPC::Message->new($data->{args}->@*) };
+                    return { service => $service, message => Myriad::RPC::Message::from_hash($item->{data}->@*)};
                 } catch ($error) {
+                    use Data::Dumper;
+                    warn Dumper($error);
                     $error = Myriad::Exception::InternalError->new($error) unless blessed($error) and $error->isa('Myriad::Exception');
-                    return { service => $service, error => $error, id => $data->{args}->{message_id} }
+                    return { service => $service, error => $error, id => $item->{id} }
                 }
             })->map(async sub {
                 if(my $error = $_->{error}) {
@@ -127,10 +133,10 @@ async method listener () {
 }
 
 async method reply ($service, $message) {
-    my $stream = $self->stream_name_from_service($service);
+    my $stream = stream_name_from_service($service);
     try {
-        await $self->redis->publish($message->who, $message->encode);
-        await $self->redis->ack($stream, $self->group_name, $message->id);
+        await $self->redis->publish($message->who, $message->as_json);
+        await $self->redis->ack($stream, $self->group_name, $message->transport_id);
     } catch ($e) {
         $log->warnf("Failed to reply to client due: %s", $e);
         return;
@@ -149,12 +155,12 @@ async method reply_error ($service, $message, $error) {
 
 async method drop ($service, $id) {
     $log->tracef("Going to drop message: %s", $id);
-    my $stream = $self->stream_name_from_service($service);
+    my $stream = stream_name_from_service($service);
     await $self->redis->ack($stream, $self->group_name, $id);
 }
 
 async method has_pending_requests ($service) {
-    my $stream = $self->stream_name_from_service($service);
+    my $stream = stream_name_from_service($service);
     my $stream_info = await $self->redis->pending_messages_info($stream, $self->group_name);
     if($stream_info->[0]) {
         for my $consumer ($stream_info->[3]->@*) {

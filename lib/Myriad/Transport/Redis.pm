@@ -182,8 +182,7 @@ method iterate(%args) {
                             $args
                         );
                         if($args) {
-                            push @$args, ("message_id", $id);
-                            $src->emit({stream => $stream, args => $args});
+                            $src->emit({stream => $stream, id => $id, data => $args});
                         }
                     }
                 }
@@ -505,6 +504,19 @@ async method xreadgroup (@args) {
 
 async method xgroup (@args) {
     return await $redis->xgroup(@args);
+}
+
+=head2 subscribe
+
+Subscribe to a redis channel.
+
+=cut
+
+async method subscribe ($channel) {
+    my $instance = await $self->borrow_instance_from_pool;
+    await $instance->subscribe($channel)->on_ready(sub {
+        $self->return_instance_to_pool($instance);
+    });
 }
 
 1;
