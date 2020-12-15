@@ -223,6 +223,8 @@ has $tracing;
 # Any service definitions wait what why is this here,
 # can we not use the registry instead?
 has $services = {};
+# Ryu::Source that can be used to recieve commands events
+has $ryu;
 
 # Note that we don't use Object::Pad as heavily within the core framework as we
 # would expect in microservices - this is mainly due to complications regarding
@@ -436,6 +438,21 @@ method service_by_name ($srv) {
     return $self->registry->service_by_name(
         $srv,
     );
+}
+
+=head2 ryu
+
+a source to corresponde to any high level events.
+
+=cut
+
+method ryu () {
+    unless($ryu) {
+        $loop->add(
+            $ryu = Ryu::Async->new
+        );
+    }
+    $ryu;
 }
 
 =head2 shutdown
