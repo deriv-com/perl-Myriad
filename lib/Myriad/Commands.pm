@@ -60,6 +60,10 @@ async method service (@args) {
     }, foreach => \@modules, concurrent => 4);
 }
 
+async method subscription ($service_name, $stream, @args) {
+    await $myriad->subscribe($service_name, $stream, @args);
+}
+
 1;
 
 =head1 AUTHOR

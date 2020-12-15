@@ -219,6 +219,8 @@ has $tracing;
 # can we not use the registry instead?
 has $services = {};
 
+has $ryu;
+
 # Note that we don't use Object::Pad as heavily within the core framework as we
 # would expect in microservices - this is mainly due to complications regarding
 # rôle/inheritance behaviour, and at some future point we expect to refactor code
@@ -271,6 +273,8 @@ async method configure_from_argv (@args) {
         my $arg = shift @args;
         if($commands->can($arg)) {
             $method = $arg;
+            await $commands->$method(shift @args, @args);
+            last;
         } else {
             await $commands->$method($arg, @args);
             last;
@@ -529,7 +533,41 @@ method run () {
             $log->warnf("%s failed due %s", $component, $error);
         })->retain();
     } qw(rpc subscription);
+
     $self->shutdown_future->await;
+}
+
+=head2 subscribe
+
+Run service in subscription mode only.
+corresponding for subscription command.
+
+=cut
+
+async method subscribe ($service_name, $stream, @args) {
+
+    $log->warnf('Subscribe: %s | %s | %s', $service_name, $stream, \@args);
+    unless($ryu) {
+        $loop->add(
+            $ryu = Ryu::Async->new
+        );
+    }
+    my $sink = $ryu->sink(
+        label => "receiver:$stream",
+    );
+    $self->subscription->create_from_sink(
+        sink    => $sink,
+        channel => $stream,
+        client  => ref($self) . '/' . 'SUB_COMMAND',
+        from    => $service_name,
+    );
+    my $subscribe_return = $sink->source->each(sub {
+        my $e = shift;
+        my %info = ($e->@*);
+               $log->warnf('INFO %s', \%info);
+    })->completed;
+
+    await Future->wait_all($self->subscription->start, $subscribe_return);
 }
 
 1;
