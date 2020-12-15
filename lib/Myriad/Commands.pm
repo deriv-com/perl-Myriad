@@ -62,7 +62,7 @@ async method service (@args) {
 }
 
 async method subscription ($service_name, $stream, @args) {
-    $log->warnf('Subscribing to: %s | %s | %s', $service_name, $stream, \@args);
+    $log->infof('Subscribing to: %s | %s | %s', $service_name, $stream, \@args);
     my $sink = $myriad->ryu->sink(
         label => "receiver:$stream",
     );
@@ -76,8 +76,7 @@ async method subscription ($service_name, $stream, @args) {
     $sink->source->each(sub {
         my $e = shift;
         my %info = ($e->@*);
-        my $data = decode_utf8($info{data});
-        $log->warnf('DATA: %s', $data);
+        $log->infof('DATA: %s', decode_utf8($info{data}));
     })->completed->retain;
 }
 

@@ -548,10 +548,8 @@ method run () {
             $log->warnf("%s failed due %s", $component, $error);
         })->retain();
     } qw(rpc subscription);
-
     $self->shutdown_future->await;
 }
-
 
 1;
 
