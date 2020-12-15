@@ -167,6 +167,8 @@ use Myriad::RPC;
 use Myriad::Subscription;
 use Myriad::Storage;
 
+
+use Myriad::RPC::Client;
 use Myriad::Transport::Redis;
 use Myriad::Transport::HTTP;
 
@@ -198,6 +200,9 @@ has $redis;
 # The Myriad::RPC instance to serve RPC requests for
 # the services in this process
 has $rpc;
+# The Myriad::RPC::Client instance to send requests
+# to other services.
+has $rpc_client;
 # The Net::Async::HTTP::Server instance for endpoint
 # requests
 has $http;
@@ -321,6 +326,25 @@ method rpc () {
         });
     }
     $rpc
+}
+
+=head2 rpc_client
+
+The L<Myriad::RPC::Client> instance to request other services RPC.
+
+=cut
+
+method rpc_client () {
+    unless($rpc_client) {
+        $loop->add(
+            $rpc_client = Myriad::RPC::Client->new(
+                # We should use same transport as $rpc.
+                transport => $config ? $config->rpc_transport->as_string : '',
+                redis => $self->redis,
+            )
+        );
+    }
+    $rpc_client
 }
 
 =head2 http

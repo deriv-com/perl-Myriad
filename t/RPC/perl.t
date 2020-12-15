@@ -41,15 +41,15 @@ $rpc->start()->retain;
 subtest 'it should return method not found' => sub {
     (async sub {
 
-    my $response = $loop->new_future;
-    $message_args->{rpc} = 'not_found';
-    $rpc->request($message_args, $response);
+        my $response = $loop->new_future;
+        $message_args->{rpc} = 'not_found';
+        $rpc->request($message_args, $response);
 
-    try {
-        await $response;
-    } catch ($e) {
-        like($e, qr{Method not found}, '');
-    }
+        try {
+            await $response;
+        } catch ($e) {
+            like($e, qr{Method not found}, '');
+        }
 
 
     })->()->get();

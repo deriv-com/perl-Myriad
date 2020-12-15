@@ -80,6 +80,10 @@ async method subscription ($service_name, $stream, @args) {
     })->completed->retain;
 }
 
+async method rpc ($rpc, @args) {
+    await $myriad->rpc_client->call_rpc($myriad->config->service_name->as_string, $rpc, @args);
+}
+
 1;
 
 =head1 AUTHOR

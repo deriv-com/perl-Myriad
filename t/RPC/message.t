@@ -1,6 +1,8 @@
 use strict;
 use warnings;
 
+use JSON::MaybeUTF8 qw(encode_json_utf8);
+
 use Test::More;
 use Test::Fatal;
 use Test::MemoryGrowth;
@@ -22,24 +24,26 @@ my $message_args = {
 
 is(exception {
     Myriad::RPC::Message->new(%$message_args)
-}, undef, "->new with correct params should succeed");
+}, undef, "->from_hash with correct params should succeed");
 
 for my $key (qw/rpc message_id who deadline args/) {
     like(exception {
         my $args = dclone $message_args;
         delete $args->{$key};
-        Myriad::RPC::Message->new(%$args);
-    }, qr{^Invalid request.*}, "->new without $key should not succeed");
+        Myriad::RPC::Message::from_hash(%$args);
+        my $json = encode_json_utf8($message_args);
+        Myriad::RPC::Message::from_json($json)
+    }, qr{^Invalid request.*}, "->from_* without $key should not succeed");
 }
 
-my $message = Myriad::RPC::Message->new(%$message_args);
+my $message = Myriad::RPC::Message::from_hash(%$message_args);
 is(exception {
-    $message->encode
-}, undef, '->encode should succeed');
+    $message->as_json();
+    $message->as_hash();
+}, undef, '->as_* should succeed');
 
 no_growth {
-    my $message = Myriad::RPC::Message->new(%$message_args);
-    $message->encode;
+    my $message = Myriad::RPC::Message::from_hash(%$message_args);
 } 'no memory leak detected';
 
 done_testing;
