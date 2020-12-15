@@ -61,6 +61,15 @@ async method service (@args) {
     }, foreach => \@modules, concurrent => 4);
 }
 
+async method rpc ($rpc, @args) {
+    try {
+        my $response = await $myriad->rpc_client->call_rpc($myriad->config->service_name->as_string, $rpc, @args);
+        $log->infof('RPC response is %s', $response);
+    } catch ($e) {
+        $log->warnf('RPC command failed due: %s', $e);
+    }
+}
+
 async method subscription ($service_name, $stream, @args) {
     $log->infof('Subscribing to: %s | %s | %s', $service_name, $stream, \@args);
     my $sink = $myriad->ryu->sink(
@@ -80,9 +89,12 @@ async method subscription ($service_name, $stream, @args) {
     })->completed->retain;
 }
 
-async method rpc ($rpc, @args) {
-    await $myriad->rpc_client->call_rpc($myriad->config->service_name->as_string, $rpc, @args);
+async method storage($command, $key) {
+    # TODO use a method from the storage module to make the key name.
+    my $response = await $myriad->storage->$command($myriad->config->service_name->as_string . '/' . $key);
+    $log->infof('Storage resposne is: %s', $response);
 }
+
 
 1;
 

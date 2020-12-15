@@ -80,12 +80,14 @@ async method call_rpc($service, $method, %args) {
         return $message->response;
     } catch ($e) {
         $log->tracef('RPC request failed due: %s', $e);
-        if ($e eq 'Timeout') {
+        if ($e =~ /Timeout/) {
             $e  = Myriad::Exception::RPC::Timeout->new(reason => 'deadline is due');
+        } else {
+            $e = Myriad::Exception::InternalError->new(reason => $e) unless blessed $e && $e->isa('Myriad::Exception');
         }
-        $e = Myriad::Exception::InternalError->new(reason => $e) unless blessed $e && $e->isa('Myriad::Exception');
         $pending->fail($e);
         delete $pending_requests->{$message_id};
+        $e->throw();
     }
 }
 
