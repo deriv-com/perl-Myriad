@@ -539,7 +539,7 @@ method run () {
 
 =head2 subscribe
 
-Run service in subscription mode only.
+Run service in subscription mode.
 corresponding for subscription command.
 
 =cut
@@ -561,13 +561,15 @@ async method subscribe ($service_name, $stream, @args) {
         client  => ref($self) . '/' . 'SUB_COMMAND',
         from    => $service_name,
     );
+    use Unicode::UTF8 qw(decode_utf8 encode_utf8);
     my $subscribe_return = $sink->source->each(sub {
         my $e = shift;
         my %info = ($e->@*);
-               $log->warnf('INFO %s', \%info);
-    })->completed;
+        my $data = decode_utf8($info{data});
+        $log->warnf('INFO %s', $data);
 
-    await Future->wait_all($self->subscription->start, $subscribe_return);
+
+    })->completed->retain;
 }
 
 1;
