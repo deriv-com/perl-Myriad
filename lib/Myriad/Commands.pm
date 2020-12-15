@@ -1,6 +1,7 @@
 package Myriad::Commands;
 
 use Myriad::Class;
+use Unicode::UTF8 qw(decode_utf8);
 
 # VERSION
 # AUTHORITY
@@ -64,10 +65,30 @@ async method rpc ($rpc, @args) {
     await $myriad->rpc_client->call_rpc($myriad->config->service_name->as_string, $rpc, @args);
 }
 
+async method subscription ($service_name, $stream, @args) {
+    $log->infof('Subscribing to: %s | %s | %s', $service_name, $stream, \@args);
+    my $sink = $myriad->ryu->sink(
+        label => "receiver:$stream",
+    );
+    $myriad->subscription->create_from_sink(
+        sink    => $sink,
+        channel => $stream,
+        client  => ref($self) . '/' . 'SUB_COMMAND',
+        from    => $service_name,
+    );
+
+    $sink->source->each(sub {
+        my $e = shift;
+        my %info = ($e->@*);
+        $log->infof('DATA: %s', decode_utf8($info{data}));
+    })->completed->retain;
+}
+
 async method storage($command, $key) {
     # TODO use a method from the storage module to make the key name.
     await $myriad->storage->$command($myriad->config->service_name->as_string . '/' . $key);
 }
+
 
 1;
 
