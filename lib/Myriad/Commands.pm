@@ -70,8 +70,9 @@ async method rpc ($rpc, @args) {
     }
 }
 
-async method subscription ($service_name, $stream, @args) {
-    $log->infof('Subscribing to: %s | %s | %s', $service_name, $stream, \@args);
+async method subscription ($stream, @args) {
+    my $service_name = $myriad->config->service_name->as_string;
+    $log->infof('Subscribing to: %s | %s | %s', $service_name, $stream);
     my $sink = $myriad->ryu->sink(
         label => "receiver:$stream",
     );
