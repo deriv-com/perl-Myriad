@@ -1,6 +1,7 @@
 package Myriad::Commands;
 
 use Myriad::Class;
+use Unicode::UTF8 qw(decode_utf8);
 
 # VERSION
 # AUTHORITY
@@ -61,7 +62,23 @@ async method service (@args) {
 }
 
 async method subscription ($service_name, $stream, @args) {
-    await $myriad->subscribe($service_name, $stream, @args);
+    $log->warnf('Subscribing to: %s | %s | %s', $service_name, $stream, \@args);
+    my $sink = $myriad->ryu->sink(
+        label => "receiver:$stream",
+    );
+    $myriad->subscription->create_from_sink(
+        sink    => $sink,
+        channel => $stream,
+        client  => ref($self) . '/' . 'SUB_COMMAND',
+        from    => $service_name,
+    );
+
+    $sink->source->each(sub {
+        my $e = shift;
+        my %info = ($e->@*);
+        my $data = decode_utf8($info{data});
+        $log->warnf('DATA: %s', $data);
+    })->completed->retain;
 }
 
 1;

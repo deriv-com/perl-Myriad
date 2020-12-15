@@ -218,7 +218,7 @@ has $tracing;
 # Any service definitions wait what why is this here,
 # can we not use the registry instead?
 has $services = {};
-
+# Ryu::Source that can be used to recieve commands events
 has $ryu;
 
 # Note that we don't use Object::Pad as heavily within the core framework as we
@@ -416,6 +416,21 @@ method service_by_name ($srv) {
     );
 }
 
+=head2 ryu
+
+a source to corresponde to any high level events.
+
+=cut
+
+method ryu () {
+    unless($ryu) {
+        $loop->add(
+            $ryu = Ryu::Async->new
+        );
+    }
+    $ryu;
+}
+
 =head2 shutdown
 
 Requests shutdown.
@@ -537,40 +552,6 @@ method run () {
     $self->shutdown_future->await;
 }
 
-=head2 subscribe
-
-Run service in subscription mode.
-corresponding for subscription command.
-
-=cut
-
-async method subscribe ($service_name, $stream, @args) {
-
-    $log->warnf('Subscribe: %s | %s | %s', $service_name, $stream, \@args);
-    unless($ryu) {
-        $loop->add(
-            $ryu = Ryu::Async->new
-        );
-    }
-    my $sink = $ryu->sink(
-        label => "receiver:$stream",
-    );
-    $self->subscription->create_from_sink(
-        sink    => $sink,
-        channel => $stream,
-        client  => ref($self) . '/' . 'SUB_COMMAND',
-        from    => $service_name,
-    );
-    use Unicode::UTF8 qw(decode_utf8 encode_utf8);
-    my $subscribe_return = $sink->source->each(sub {
-        my $e = shift;
-        my %info = ($e->@*);
-        my $data = decode_utf8($info{data});
-        $log->warnf('INFO %s', $data);
-
-
-    })->completed->retain;
-}
 
 1;
 
