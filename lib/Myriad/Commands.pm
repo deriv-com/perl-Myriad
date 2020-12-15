@@ -64,6 +64,11 @@ async method rpc ($rpc, @args) {
     await $myriad->rpc_client->call_rpc($myriad->config->service_name->as_string, $rpc, @args);
 }
 
+async method storage($command, $key) {
+    # TODO use a method from the storage module to make the key name.
+    await $myriad->storage->$command($myriad->config->service_name->as_string . '/' . $key);
+}
+
 1;
 
 =head1 AUTHOR
