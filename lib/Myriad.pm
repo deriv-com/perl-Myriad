@@ -271,17 +271,14 @@ async method configure_from_argv (@args) {
         myriad => $self
     );
     # At this point, we expect `@args` to contain only the plain
-    # parameters such as the service name or a request to run an RPC
-    # method.
-    my $method = 'service';
-    while(@args) {
-        my $arg = shift @args;
-        if($commands->can($arg)) {
-            $method = $arg;
-            await $commands->$method(shift @args, @args);
-            last;
+    # method along with parameters such as the service name or a request to run an RPC
+    # and its own param.
+    while((my $method = shift @args) && (my $params = shift @args)) {
+        if($commands->can($method)) {
+            $log->tracef('Calling Command: %s | params: %s', $method, $params);
+            await $commands->$method($params);
         } else {
-            await $commands->$method($arg, @args);
+            $log->warnf('Unrecoginsed command: %s | params: %s', $method, $params);
             last;
         }
     }
