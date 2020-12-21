@@ -419,9 +419,7 @@ Returns the service instance.
 async method add_service ($srv, %args) {
     return await $self->registry->add_service(
         service      => $srv,
-        rpc          => $self->rpc,
-        subscription => $self->subscription,
-        storage      => $self->storage,
+        myriad       => $self,
         %args
     );
 }

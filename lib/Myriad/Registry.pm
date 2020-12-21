@@ -31,8 +31,6 @@ declare_exception UnknownClass => (
 
 use Myriad::API;
 
-has $myriad;
-
 has $rpc = {};
 has $service_by_name = {};
 has $batch = {};
@@ -40,10 +38,6 @@ has $sink = {};
 has $stream = {};
 has $emitter = {};
 has $receiver = {};
-
-BUILD (%args) {
-    weaken($myriad = $args{myriad});
-}
 
 =head2 add_service
 
@@ -55,10 +49,11 @@ Returns the service instance.
 
 async method add_service (%args) {
     my $srv = delete $args{service};
-    my $storage = delete $args{storage};
-
+    weaken(my $myriad = delete $args{myriad});
     $srv = $srv->new(
-        %args
+        %args,
+        rpc => $myriad->rpc,
+        subscription => $myriad->subscription,
     ) unless blessed($srv) and $srv->isa('Myriad::Service');
 
     my $pkg = ref $srv;
@@ -67,7 +62,7 @@ async method add_service (%args) {
     # to storage and the outside world
     $Myriad::Service::SLOT{$pkg}{api}->value($srv) = Myriad::API->new(
         myriad => $myriad,
-        storage => $storage,
+        service_name => $srv->service_name,
     );
 
     my $name = $args{name} || $srv->service_name;

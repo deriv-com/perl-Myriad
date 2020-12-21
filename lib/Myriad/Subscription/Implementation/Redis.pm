@@ -98,8 +98,9 @@ async method start {
                         $args
                     );
                     if($args) {
-                        push @$args, ("message_id", $id);
+                        push @$args, ("transport_id", $id);
                         $sink->source->emit($args);
+                        await $redis->ack($stream, $item->{client}, $id);
                     }
                 }
             }
