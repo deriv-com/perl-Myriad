@@ -31,6 +31,8 @@ BUILD(%args) {
     $storage = Myriad::Service::Storage::Remote->new(prefix => $service_name, storage => $myriad->storage);
 }
 
+method service_name { $service_name }
+
 =head2 storage
 
 Returns a L<Myriad::Service::Storage::Remote> instance to access
@@ -72,9 +74,14 @@ it subscribes to a channel in the remote service.
 
 =cut
 
-async method subscribe ($channel) {
+method subscribe ($channel, $client = "remote_service") {
    my $sink = $myriad->ryu->sink;
-   $myriad->subscription->from_sink(sink => $sink, service => $service_name, channel => $channel);
+   $myriad->subscription->create_from_sink(
+        sink => $sink,
+        service => $service_name,
+        client => $client,
+        channel => $channel,
+    );
    return $sink->source;
 }
 
