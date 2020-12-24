@@ -50,41 +50,43 @@ Returns the service instance.
 async method add_service (%args) {
     my $srv = delete $args{service};
     weaken(my $myriad = delete $args{myriad});
+
+    my $pkg = blessed($srv) ? ref $srv : $srv;
+    my $service_name = delete $args{name} // $self->make_service_name($pkg);
+
     $srv = $srv->new(
         %args,
+        name => $service_name,
         rpc => $myriad->rpc,
         subscription => $myriad->subscription,
     ) unless blessed($srv) and $srv->isa('Myriad::Service');
-
-    my $pkg = ref $srv;
 
     # Inject an `$api` instance so that this service can talk
     # to storage and the outside world
     $Myriad::Service::SLOT{$pkg}{api}->value($srv) = Myriad::API->new(
         myriad => $myriad,
-        service_name => $srv->service_name,
+        service_name => $service_name,
     );
 
-    my $name = $args{name} || $srv->service_name;
     $rpc->{$pkg} ||= {};
     $stream->{$pkg} ||= {};
     $batch->{$pkg} ||= {};
     $sink->{$pkg} ||= {};
     $emitter->{$pkg} ||= {};
     $receiver->{$pkg} ||= {};
-    $log->tracef('Going to add service %s', $name);
+    $log->tracef('Going to add service %s', $service_name);
     $self->loop->add(
         $srv
     );
     my $k = refaddr($srv);
-    weaken($service_by_name->{$name} = $srv);
+    weaken($service_by_name->{$service_name} = $srv);
     $self->{services}{$k} = $srv;
 
     try {
         await $srv->start;
-        $log->infof('Added service [%s]', $name);
+        $log->infof('Added service [%s]', $service_name);
     } catch ($e) {
-        $log->errorf('Failed to add service [%s] due: %s', $name, $e);
+        $log->errorf('Failed to add service [%s] due: %s', $service_name, $e);
     }
     return;
 }
@@ -234,6 +236,17 @@ Returns a hashref of receiver methods for the given class.
 
 method receivers_for ($pkg) {
     return $receiver->{$pkg};
+}
+
+=head2 make_service_name
+
+Reformat a given string to make it combatible with our services
+naming strategy
+
+=cut
+
+method make_service_name ($name) {
+    return lc($name) =~ s{::}{.}gr
 }
 
 1;

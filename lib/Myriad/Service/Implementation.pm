@@ -82,7 +82,7 @@ The name of the service, defaults to the package name.
 
 =cut
 
-method service_name () { $service_name //= lc(ref($self) =~ s{::}{.}gr) }
+method service_name () { $service_name }
 
 =head1 METHODS
 
@@ -93,7 +93,7 @@ Populate internal configuration.
 =cut
 
 method configure (%args) {
-    $service_name = delete $args{name} if exists $args{name};
+    $service_name = delete $args{name} // die 'need a name';
     Scalar::Util::weaken($myriad = delete $args{myriad}) if exists $args{myriad};
     $rpc = delete $args{rpc} if exists $args{rpc};
     $subscription = delete $args{subscription} if exists $args{subscription};
@@ -171,7 +171,6 @@ async method start {
         if (!$diagnostics_ok) {
             $log->errorf("can't start %s diagnostics failed", $self->service_name);
             return;
-
         }
 
         if(my $emitters = $registry->emitters_for(ref($self))) {
