@@ -32,14 +32,14 @@ BUILD (%args) {
 
 Maps the requested key into the service's keyspace
 so we can pass it over to the generic storage layer.
-    
+
 Takes the following parameters:
 
 =over 4
 
 =item * C<$k> - the key
 
-=back 
+=back
 
 Returns the modified key.
 
