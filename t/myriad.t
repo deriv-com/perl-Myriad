@@ -7,10 +7,7 @@ use Test::More;
 use Test::Fatal;
 use Test::MockModule;
 use Future::AsyncAwait;
-
 use Scalar::Util qw(refaddr);
-
-use Data::Dumper;
 
 sub loop_notifiers {
     my $loop = shift;
