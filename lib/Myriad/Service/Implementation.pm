@@ -93,7 +93,7 @@ Populate internal configuration.
 =cut
 
 method configure (%args) {
-    $service_name = delete $args{name} // die 'need a name';
+    $service_name //= (delete $args{name} || die 'need a service name');
     Scalar::Util::weaken($myriad = delete $args{myriad}) if exists $args{myriad};
     $rpc = delete $args{rpc} if exists $args{rpc};
     $subscription = delete $args{subscription} if exists $args{subscription};

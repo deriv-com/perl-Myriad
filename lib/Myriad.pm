@@ -568,7 +568,7 @@ method run () {
         $self->$component->start->on_fail(sub {
             my $error = shift;
             $log->warnf("%s failed due %s", $component, $error);
-            $self->shutdown_future->done();
+            $self->shutdown_future->fail($error);
         })->retain();
     } qw(rpc subscription);
     $self->shutdown_future->await;
