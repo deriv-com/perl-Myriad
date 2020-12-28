@@ -21,11 +21,21 @@ Myriad::Service:Storage - microservice storage abstraction
 
 =cut
 
-use Role::Tiny::With;
+use Myriad::Role::Storage qw(@read_methods @write_methods);
 
-with qw(Myriad::Role::Storage);
+BEGIN {
+    my $meta = Myriad::Service::Storage->META;
+    for my $method (@write_methods, @read_methods) {
+        $meta->add_method($method, sub {
+            my ($self, $key, @rest) = @_;
+            return $self->storage->$method($self->apply_prefix($key), @rest);
+        });
+    }
+}
 
 has $storage;
+method storage { $storage }
+
 has $prefix;
 
 BUILD (%args) {
@@ -53,22 +63,6 @@ Returns the modified key.
 method apply_prefix ($k) {
     return $prefix . '.' . $k;
 }
-
-async method get ($k, %args) { return await $storage->get($self->apply_prefix($k)) }
-async method set ($k, $v, %args) { return await $storage->set($self->apply_prefix($k), $v) }
-async method observe ($k, %args) { return await $storage->observe($self->apply_prefix($k)) }
-async method push ($k, $v, %args) { return await $storage->push($self->apply_prefix($k), $v) }
-async method unshift ($k, %args) { return await $storage->unshift($self->apply_prefix($k)) }
-async method pop ($k, %args) { return await $storage->pop($self->apply_prefix($k)) }
-async method shift ($k, %args) { return await $storage->shift($self->apply_prefix($k)) }
-async method hash_set ($k, %args) { return await $storage->hash_set($self->apply_prefix($k), %args) }
-async method hash_get ($k, %args) { return await $storage->hash_get($self->apply_prefix($k)) }
-async method hash_add ($k, %args) { return await $storage->hash_add($self->apply_prefix($k), %args) }
-async method hash_keys ($k, %args) { return await $storage->hash_keys($self->apply_prefix($k)) }
-async method hash_values ($k, %args) { return await $storage->hash_values($self->apply_prefix($k)) }
-async method hash_exists ($k, %args) { return await $storage->hash_exists($self->apply_prefix($k)) }
-async method hash_count ($k, %args) { return await $storage->hash_count($self->apply_prefix($k)) }
-async method hash_as_list ($k, %args) { return await $storage->hash_as_list($self->apply_prefix($k)) }
 
 1;
 

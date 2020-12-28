@@ -20,8 +20,23 @@ Myriad::Service::Storage::Remote - abstraction to access other services storage.
 
 =cut
 
+use Myriad::Role::Storage qw(@read_methods);
+
+BEGIN {
+    my $meta = Myriad::Service::Storage::Remote->META;
+
+    for my $method (@read_methods) {
+        $meta->add_method($method, sub {
+            my ($self, $key, @rest) = @_;
+            return $self->storage->$method($self->apply_prefix($key), @rest);
+        });
+    }
+}
+
+
 has $prefix;
 has $storage;
+method storage { $storage };
 
 BUILD (%args) {
     $prefix = delete $args{prefix} // die 'need a prefix';
@@ -48,15 +63,6 @@ Returns the modified key.
 method apply_prefix ($k) {
     return $prefix . '.' . $k;
 }
-
-async method get ($k, %args) { return await $storage->get($self->apply_prefix($k)) }
-async method observe ($k, %args) { return await $storage->observe($self->apply_prefix($k)) }
-async method hash_get ($k, %args) { return await $storage->hash_get($self->apply_prefix($k)) }
-async method hash_keys ($k, %args) { return await $storage->hash_keys($self->apply_prefix($k)) }
-async method hash_values ($k, %args) { return await $storage->hash_values($self->apply_prefix($k)) }
-async method hash_exists ($k, %args) { return await $storage->hash_exists($self->apply_prefix($k)) }
-async method hash_count ($k, %args) { return await $storage->hash_count($self->apply_prefix($k)) }
-async method hash_as_list ($k, %args) { return await $storage->hash_as_list($self->apply_prefix($k)) }
 
 1;
 
