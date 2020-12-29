@@ -14,7 +14,6 @@ use curry;
 
 use Net::Async::HTTP;
 use Net::Async::HTTP::Server;
-use Scalar::Util qw(weaken);
 
 has $client;
 has $server;
