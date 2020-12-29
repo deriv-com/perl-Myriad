@@ -66,4 +66,6 @@ on 'test' => sub {
     requires 'Log::Any::Test';
     requires 'Test::CheckDeps';
     requires 'Test::NoTabs';
+    requires 'Test::MockModule';
+    requires 'Test::MockObject';
 };

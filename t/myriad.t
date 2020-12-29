@@ -6,8 +6,9 @@ use Myriad::Commands;
 use Test::More;
 use Test::Fatal;
 use Test::MockModule;
+use Test::MockObject;
 use Future::AsyncAwait;
-use Scalar::Util qw(refaddr);
+use IO::Async::Test;
 
 sub loop_notifiers {
     my $loop = shift;
@@ -17,18 +18,14 @@ sub loop_notifiers {
     return \%loaded_in_loop;
 }
 
-sub class_slot {
-    my $class = shift;
-
-    my %slots_classes = map { ref($_)  => 1} @$class;
-    return \%slots_classes;
-}
 my $command_module = Test::MockModule->new('Myriad::Commands');
 my $command = 'test';
 my $command_is_called = 0;
 $command_module->mock($command, async sub { my ($self, $param) = @_; $command_is_called = $param; });
 
 my $myriad = new_ok('Myriad');
+my $metaclass = $myriad->META;
+
 subtest "class methods and proper initialization" => sub {
     can_ok($myriad, $_) for qw(configure_from_argv loop registry redis rpc_client rpc http subscription storage add_service service_by_name ryu shutdown run);
 
@@ -36,9 +33,9 @@ subtest "class methods and proper initialization" => sub {
     my $command_param = 'Testing';
     $myriad->configure_from_argv(('-l', 'debug', '--subscription_transport', 'perl', '--rpc_transport', 'perl', '--storage_transport', 'perl', $command, $command_param));
 
-    my $myriad_slots = class_slot($myriad);
     # Check configure_from_argv init objects
-    ok($myriad_slots->{'IO::Async::Loop::Poll'}, 'Loop is set');
+    my $loop = $metaclass->get_slot('$loop')->value($myriad);
+    isa_ok($loop, 'IO::Async::Loop::Poll', 'Loop is set');
     isa_ok($myriad->config, 'Myriad::Config', 'Config is set');
 
     # Logging setup
@@ -46,17 +43,20 @@ subtest "class methods and proper initialization" => sub {
     isa_ok(@{$myriad->config->log_level->{subscriptions}}[0], 'CODE', 'Logging has been setup');
 
     # Tracing setup
-    ok($myriad_slots->{'Net::Async::OpenTracing'}, 'Tracing is set');
-    #    isa_ok($myriad->[1]->[-1], 'CODE', 'Added to shutdown tasks');
+    isa_ok($metaclass->get_slot('$tracing')->value($myriad), 'Net::Async::OpenTracing', 'Tracing is set');
+    my $shutdown_tasks = $metaclass->get_slot('$shutdown_tasks')->value($myriad);
+    isa_ok($shutdown_tasks->[-1], 'CODE', 'Added to shutdown tasks');
+    is(@$shutdown_tasks, 1, 'One added shutdown task');
+
     my $current_notifiers = loop_notifiers($myriad->loop);
     ok($current_notifiers->{'Net::Async::OpenTracing'}, 'Tracing is added to  loop');
 
     # Redis setup
-    ok($myriad_slots->{'Myriad::Transport::Redis'}, 'Redis is set');
+    isa_ok($metaclass->get_slot('$redis')->value($myriad), 'Myriad::Transport::Redis', 'Redis is set');
     ok($current_notifiers->{'Myriad::Transport::Redis'}, 'Redis is added to  loop');
 
     # Command
-    ok($myriad_slots->{'Myriad::Commands'}, 'Command is set');
+    isa_ok($metaclass->get_slot('$commands')->value($myriad), 'Myriad::Commands', 'Command is set');
     like($command_is_called, qr/$command_param/, 'Test Command has been found and called');
 
 };
@@ -65,9 +65,12 @@ subtest "Myriad attributes setting tests" => sub {
 
     # RPC
     my $rpc = $myriad->rpc;
-    isa_ok($rpc, 'Myriad::RPC::Implementation::Perl', 'Myriad RPC is set');
+    isa_ok($metaclass->get_slot('$rpc')->value($myriad), 'Myriad::RPC::Implementation::Perl', 'Myriad RPC is set');
     my $current_notifiers = loop_notifiers($myriad->loop);
     ok($current_notifiers->{'Myriad::RPC::Implementation::Perl'}, 'RPC is added to loop');
+    my $shutdown_tasks = $metaclass->get_slot('$shutdown_tasks')->value($myriad);
+    isa_ok($shutdown_tasks->[-1], 'CODE', 'Added to shutdown tasks');
+    is(@$shutdown_tasks, 2, 'Two added shutdown tasks');
 
     # RPC Client
     TODO: {
@@ -81,25 +84,25 @@ subtest "Myriad attributes setting tests" => sub {
 
     # HTTP
     my $http = $myriad->http;
-    isa_ok($http, 'Myriad::Transport::HTTP', 'Myriad HTTP is set');
-    my $current_notifiers = loop_notifiers($myriad->loop);
+    isa_ok($metaclass->get_slot('$http')->value($myriad), 'Myriad::Transport::HTTP', 'Myriad HTTP is set');
+    $current_notifiers = loop_notifiers($myriad->loop);
     ok($current_notifiers->{'Myriad::Transport::HTTP'}, 'HTTP is added to loop');
 
     # Subscription
     my $subscription = $myriad->subscription;
-    isa_ok($subscription, 'Myriad::Subscription::Implementation::Perl', 'Myriad Subscription is set');
-    my $current_notifiers = loop_notifiers($myriad->loop);
+    isa_ok($metaclass->get_slot('$subscription')->value($myriad), 'Myriad::Subscription::Implementation::Perl', 'Myriad Subscription is set');
+    $current_notifiers = loop_notifiers($myriad->loop);
     ok($current_notifiers->{'Myriad::Subscription::Implementation::Perl'}, 'Subscription is added to loop');
 
     # Storage
     my $storage = $myriad->storage;
-    isa_ok($storage, 'Myriad::Storage::Implementation::Perl', 'Myriad Storage is set');
+    isa_ok($metaclass->get_slot('$storage')->value($myriad), 'Myriad::Storage::Implementation::Perl', 'Myriad Storage is set');
 
     # Registry and ryu
     isa_ok($myriad->registry, 'Myriad::Registry', 'Myriad::Registry is set');
     my $ryu = $myriad->ryu;
-    isa_ok($ryu, 'Ryu::Async', 'Myriad Ryu is set');
-    my $current_notifiers = loop_notifiers($myriad->loop);
+    isa_ok($metaclass->get_slot('$ryu')->value($myriad), 'Ryu::Async', 'Myriad Ryu is set');
+    $current_notifiers = loop_notifiers($myriad->loop);
     ok($current_notifiers->{'Ryu::Async'}, 'Ryu is added to loop');
 
 };
@@ -109,12 +112,27 @@ subtest  "Run and shutdown behaviour" => sub {
     like(exception {
         $myriad->shutdown->get
     }, qr/attempting to shut down before we have started,/, 'can not shutdown as nothing started yet.');
-    isa_ok(my $f = $myriad->shutdown_future, 'Future');
-    is(refaddr($f), refaddr($myriad->shutdown_future), 'same Future on multiple calls');
-    is(exception {
-        $myriad->shutdown->get
-    }, undef, 'can shut down without exceptions arising');
-    is($f->state, 'done', 'shutdown future marked as done');
+
+    my $shutdown_task_called = 0;
+    my $shutdown_test = async sub {pass('Shutdown task has been called'); $shutdown_task_called++; return;};
+    my $service_mock = Test::MockObject->new();
+    $service_mock->mock( 'shutdown', $shutdown_test );
+
+    $metaclass->get_slot('$shutdown_tasks')->value($myriad) = [$shutdown_test];
+    $metaclass->get_slot('$services')->value($myriad) = { testing_service => $service_mock};
+
+    my $loop = $metaclass->get_slot('$loop')->value($myriad);
+    testing_loop($loop);
+    wait_for_future(Future->needs_all(
+        $loop->delay_future(after => 0)->on_ready(sub {
+            is(exception {
+                $myriad->shutdown->get
+            }, undef, 'can shut down without exceptions arising');
+        }),
+        $myriad->run,
+    ))->get;
+
+    is($shutdown_task_called, 2, 'both shutdown operations has been called successfully');
 
 };
 done_testing;

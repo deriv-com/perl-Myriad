@@ -59,6 +59,7 @@ async method start {
             # Give other things a space
             await $self->loop->delay_future(after => 0.3);
         }
+        await $self->loop->delay_future(after => 0);
         if($should_shutdown) {
             $stopped->done;
             last;
