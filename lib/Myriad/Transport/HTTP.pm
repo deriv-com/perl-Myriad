@@ -20,14 +20,7 @@ has $client;
 has $server;
 has $listener;
 has $requests;
-
-has $myriad;
-
-BUILD (%args) {
-    weaken(
-        $myriad = $args{myriad} // die 'needs a Myriad parent object'
-    );
-}
+has $ryu;
 
 method configure (%args) {
 
@@ -41,7 +34,11 @@ method listen_port () { 80 }
 
 method _add_to_loop ($) {
     $self->next::method;
-    $requests = $myriad->ryu->source;
+
+    $self->add_child(
+        $ryu = Ryu::Async->new
+    );
+    $requests = $ryu->source;
 
     $self->add_child(
         $client = Net::Async::HTTP->new(
