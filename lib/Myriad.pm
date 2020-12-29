@@ -357,7 +357,7 @@ and metrics.
 method http () {
     unless($http) {
         $loop->add(
-            $http = Myriad::Transport::HTTP->new(myriad => $self)
+            $http = Myriad::Transport::HTTP->new()
         );
     }
     $http
