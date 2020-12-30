@@ -48,15 +48,12 @@ a concrete implementation - instead, see classes such as:
 =cut
 
 use Role::Tiny;
-use Exporter qw(import);
 
-our @write_methods = qw(set push unshift pop shift hash_set hash_add);
-our @read_methods = qw(get observe hash_get hash_keys hash_values hash_exists hash_count hash_as_list);
+our @WRITE_METHODS = qw(set push unshift pop shift hash_set hash_add);
+our @READ_METHODS = qw(get observe hash_get hash_keys hash_values hash_exists hash_count hash_as_list);
 
-our @EXPORT_OK = qw(@write_methods @read_methods);
-
-requires $_ for @write_methods;
-requires $_ for @read_methods;
+requires $_ for @WRITE_METHODS;
+requires $_ for @READ_METHODS;
 
 =head2 get
 

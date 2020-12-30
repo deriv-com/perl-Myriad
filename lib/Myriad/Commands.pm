@@ -1,5 +1,7 @@
 package Myriad::Commands;
 
+use Myriad::Util::UUID;
+
 use Myriad::Class;
 use Unicode::UTF8 qw(decode_utf8);
 
@@ -75,9 +77,9 @@ async method rpc ($rpc, @args) {
 
 async method subscription ($stream, @args) {
     my $service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
-    $log->infof('Subscribing to: %s | %s | %s', $service->service_name, $stream);
-
-    $service->subscribe($stream, 'SUB_COMMAND')->each(sub {
+    $log->infof('Subscribing to: %s | %s', $service->service_name, $stream);
+    my $uuid = Myriad::Util::UUID::uuid();
+    $service->subscribe($stream, "$0/$uuid")->each(sub {
         my $e = shift;
         my %info = ($e->@*);
         $log->infof('DATA: %s', decode_utf8($info{data}));

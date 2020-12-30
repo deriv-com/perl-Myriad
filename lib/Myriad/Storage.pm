@@ -23,6 +23,8 @@ Myriad::Storage - microservice Storage abstraction
 
 =cut
 
+use Myriad::Role::Storage;
+
 use Myriad::Storage::Implementation::Redis;
 use Myriad::Storage::Implementation::Perl;
 

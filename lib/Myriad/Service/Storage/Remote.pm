@@ -20,12 +20,10 @@ Myriad::Service::Storage::Remote - abstraction to access other services storage.
 
 =cut
 
-use Myriad::Role::Storage qw(@read_methods);
-
 BEGIN {
     my $meta = Myriad::Service::Storage::Remote->META;
 
-    for my $method (@read_methods) {
+    for my $method (@Myriad::Role::Storage::READ_METHODS) {
         $meta->add_method($method, sub {
             my ($self, $key, @rest) = @_;
             return $self->storage->$method($self->apply_prefix($key), @rest);

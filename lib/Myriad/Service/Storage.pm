@@ -21,11 +21,9 @@ Myriad::Service:Storage - microservice storage abstraction
 
 =cut
 
-use Myriad::Role::Storage qw(@read_methods @write_methods);
-
 BEGIN {
     my $meta = Myriad::Service::Storage->META;
-    for my $method (@write_methods, @read_methods) {
+    for my $method (@Myriad::Role::Storage::WRITE_METHODS, @Myriad::Role::Storage::READ_METHODS) {
         $meta->add_method($method, sub {
             my ($self, $key, @rest) = @_;
             return $self->storage->$method($self->apply_prefix($key), @rest);
