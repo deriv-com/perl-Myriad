@@ -8,7 +8,7 @@ requires 'Syntax::Keyword::Try', '>= 0.20';
 requires 'Future', '>= 0.46';
 requires 'Future::Queue';
 requires 'Future::AsyncAwait', '>= 0.47';
-requires 'Object::Pad', '>= 0.34';
+requires 'Object::Pad', '>= 0.35';
 requires 'Role::Tiny', '>= 2.001004';
 # Streams
 requires 'Ryu', '>= 2.004';
