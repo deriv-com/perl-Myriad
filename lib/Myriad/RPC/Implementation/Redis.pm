@@ -89,7 +89,7 @@ async method listener () {
         client => $self->whoami
     );
 
-    my $incoming_request = $self->redis->iterate(streams => @streams, %stream_config);
+    my $incoming_request = $self->redis->iterate(streams => \@streams, %stream_config);
 
     # xpending doesn't accept multiple streams like xreadgroup
     for my $stream (@streams) {
