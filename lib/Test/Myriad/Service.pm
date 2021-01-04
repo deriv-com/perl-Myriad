@@ -3,12 +3,28 @@ package Test::Myriad::Service;
 use strict;
 use warnings;
 
+# VERSION
+# AUTHORITY
+
 use Scalar::Util qw(weaken);
 use Sub::Util;
 
 use Myriad::Service::Implementation;
 use Myriad::Class;
 use Myriad::Service::Attributes;
+
+=head1 NAME
+
+Test::Myriad::Service - an abstraction to mock microservices.
+
+=head1 SYNOPSIS
+
+ my $service = Myriad::Test::Service->new(..);
+ $service->add_rpc('rpc_name', %default_response);
+
+=head1 DESCRIPTION
+
+=cut
 
 has $name;
 has $pkg;
@@ -18,7 +34,7 @@ has $myriad;
 has $default_rpc;
 has $mocked_rpc;
 
-BUILD (%args) { 
+BUILD (%args) {
     $meta_service = delete $args{meta};
     $pkg = delete $args{pkg};
     weaken($myriad = delete $args{myriad});
@@ -48,7 +64,7 @@ BUILD (%args) {
 
 method add_rpc ($name, %response) {
     my $faker = async sub {
-        if ($mocked_rpc->{$name}) { 
+        if ($mocked_rpc->{$name}) {
             return delete $mocked_rpc->{$name};
         } elsif (my %default_response = $default_rpc->{$name}) {
             return \%default_response;
@@ -82,7 +98,7 @@ async method call_rpc ($method, %args) {
 }
 
 method add_subscription ($channel, @data) {
-    my $batch = async sub { 
+    my $batch = async sub {
         while (my @next = splice(@data, 0, 5)) {
             return \@next;
         }
@@ -117,4 +133,16 @@ method add_receiver ($from, $channel, $handler) {
 }
 
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Deriv Group Services Ltd. C<< DERIV@cpan.org >>.
+
+See L<Myriad/CONTRIBUTORS> for full details.
+
+=head1 LICENSE
+
+Copyright Deriv Group Services Ltd 2020. Licensed under the same terms as Perl itself.
 
