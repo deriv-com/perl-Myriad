@@ -20,6 +20,8 @@ Myriad::Service::Storage::Remote - abstraction to access other services storage.
 
 =cut
 
+use Myriad::Role::Storage;
+
 BEGIN {
     my $meta = Myriad::Service::Storage::Remote->META;
 
