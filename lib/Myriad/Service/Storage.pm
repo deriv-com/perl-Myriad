@@ -25,9 +25,7 @@ use Myriad::Role::Storage;
 
 BEGIN {
     my $meta = Myriad::Service::Storage->META;
-    warn @Myriad::Role::Storage::READ_METHOD;
     for my $method (@Myriad::Role::Storage::WRITE_METHODS, @Myriad::Role::Storage::READ_METHODS) {
-        warn $method;
         $meta->add_method($method, sub {
             my ($self, $key, @rest) = @_;
             return $self->storage->$method($self->apply_prefix($key), @rest);
