@@ -17,6 +17,8 @@ async method diagnostics ($level) {
 async method check :RPC (%args) {
     my ($id, $value) = map { $args{$_} } qw(id value);
     $ids->{$id} = 1;
+    # If it was not set by ENV
+    $secret = int(rand(100)) unless $secret;
 
     # Get Factor of difference that will be allowed.
     my $factor_storage = $api->service_by_name('example.service.factor')->storage;
