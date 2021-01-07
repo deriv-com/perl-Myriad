@@ -110,7 +110,7 @@ subtest 'Object::Pad' => sub {
         __PACKAGE__
     }), 'IO::Async::Notifier') or diag $@;
     isa_ok('local::pad', 'Myriad::Service::Implementation');
-    my $obj = new_ok('local::pad');
+    my $obj = new_ok('local::pad' => [name => 'test']);
     can_ok($obj, 'test');
     is($obj->test, 'ok', 'we find our own methods');
     is(exception {
@@ -125,7 +125,7 @@ subtest 'attributes' => sub {
         method test:RPC { $self->can('test') ? 'ok' : 'not ok' }
         __PACKAGE__
     }), 'IO::Async::Notifier') or diag $@;
-    my $obj = new_ok('local::attributes');
+    my $obj = new_ok('local::attributes' => [name => 'test_attributes']);
     can_ok($obj, 'test');
     is($obj->test, 'ok', 'we find our own methods');
 };

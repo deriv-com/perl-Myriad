@@ -17,11 +17,25 @@ Myriad::RPC::Client - microservice RPC client abstraction
 
 =head1 SYNOPSIS
 
- my $rpc = $myriad->rpc;
+ my $client = $myriad->rpc_client;
 
 =head1 DESCRIPTION
 
 =cut
+
+use Myriad::Exception::Builder category => 'rpc_client';
+
+=head2 Exceptions
+
+=cut
+
+=head2 RPCFailed
+
+The RPC call has been performed correctly but the results are an error.
+
+=cut
+
+declare_exception RPCFailed => (message => 'Your operation failed');
 
 use Myriad::RPC::Client::Implementation::Redis;
 

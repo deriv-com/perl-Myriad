@@ -419,9 +419,7 @@ Returns the service instance.
 async method add_service ($srv, %args) {
     return await $self->registry->add_service(
         service      => $srv,
-        rpc          => $self->rpc,
-        subscription => $self->subscription,
-        storage      => $self->storage,
+        myriad       => $self,
         %args
     );
 }
@@ -570,6 +568,7 @@ method run () {
         $self->$component->start->on_fail(sub {
             my $error = shift;
             $log->warnf("%s failed due %s", $component, $error);
+            $self->shutdown_future->fail($error);
         })->retain();
     } qw(rpc subscription);
     $self->shutdown_future->await;
