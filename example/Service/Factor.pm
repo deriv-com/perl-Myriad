@@ -1,7 +1,6 @@
 package example::Service::Factor;
 
 use Myriad::Service;
-use JSON::MaybeUTF8 qw(:v1);
 
 has $factor = 0;
 has $players_id = {};
@@ -16,7 +15,7 @@ async method secret_checks :Receiver(service => 'example.service.secret') ($sink
             my $e = shift;
             my %info = ($e->@*);
             $log->tracef('INFO %s', \%info);
-            my $data = decode_json_utf8($info{'data'});
+            my $data = $info{'data'};
             my $secret_service = $api->service_by_name('example.service.secret');
             my $secret_storage = $secret_service->storage;
 
