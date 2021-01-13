@@ -24,7 +24,7 @@ subtest 'In-Memory streams tests' => sub {
 
 subtest 'In-Memory streams read' => sub {
     $transport->add_to_stream('stream_read', key => $_)->get() for (0..9);
-    my %messages = $transport->read_from_stream('stream_read')->get(); 
+    my %messages = $transport->read_from_stream('stream_read')->get();
     is(keys %messages, 10, 'messages has been received correctly');
 
     %messages = $transport->read_from_stream('stream_read', 5, 1)->get();
@@ -37,15 +37,15 @@ subtest 'In-Memory streams read' => sub {
 
 subtest 'In-Memory strams consumer groups' => sub {
     like(exception {
-            $transport->create_consumer_group('stream does not exist', 'group_name')->get(); 
+            $transport->create_consumer_group('stream does not exist', 'group_name')->get();
     }, qr{^The given stream does not exist.*}, 'it should throw an exception if stream does not exist');
-    
-    $transport->create_consumer_group('consumer_stream', 'test_group', 0, 1)->get(); 
+
+    $transport->create_consumer_group('consumer_stream', 'test_group', 0, 1)->get();
 
     like(exception {
         $transport->create_consumer_group('consumer_stream', 'test_group', 0)->get();
     }, qr{^The given group name already.*}, 'it should throw an exception if group already exists');
-    
+
     $transport->add_to_stream('consumer_stream', key => $_)->get() for (0..99);
 
     my %first_consumer_message  = $transport->read_from_stream_by_consumer('consumer_stream', 'test_group', 'consumer_1', 0, 1)->get();

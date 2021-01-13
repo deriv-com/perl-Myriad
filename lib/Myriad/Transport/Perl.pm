@@ -1,5 +1,8 @@
 package Myriad::Transport::Perl;
 
+# VERSION
+# AUTHORTIY
+
 use strict;
 use warnings;
 
@@ -73,7 +76,7 @@ async method read_from_stream_by_consumer ($stream_name, $group_name, $consumer_
         $messages{$i} =  $stream->{data}->{$i}->{data};
         $group->{pendings}->{$i} = {since => time, consumer => $consumer_name, delivery_count => 0};
     }
- 
+
     $group->{cursor} += $group_offset + $count;
 
     return %messages;
