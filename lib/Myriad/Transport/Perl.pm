@@ -72,12 +72,16 @@ async method read_from_stream_by_consumer ($stream_name, $group_name, $consumer_
     my ($stream, $group) = $self->get_stream_group($stream_name, $group_name);
     my $group_offset = $offset + $group->{cursor};
     my %messages;
+    my $read_count = 0;
     for my $i ($group_offset..$group_offset+$count - 1) {
-        $messages{$i} =  $stream->{data}->{$i}->{data};
-        $group->{pendings}->{$i} = {since => time, consumer => $consumer_name, delivery_count => 0};
+        if (my $message = $stream->{data}->{$i}) {
+            $messages{$i} = $message->{data};
+            $group->{pendings}->{$i} = {since => time, consumer => $consumer_name, delivery_count => 0};
+            $read_count++;
+        }
     }
 
-    $group->{cursor} += $group_offset + $count;
+    $group->{cursor} += $group_offset + $read_count;
 
     return %messages;
 }
@@ -111,6 +115,7 @@ async method subscribe ($channel_name) {
     $channels->{$channel_name} = [] unless exists $channels->{$channel_name};
     my $sink = $ryu->sink;
     push $channels->{$channel_name}->@*, $sink;
+    $sink->{source} = $ryu->source;
     return $sink->source;
 }
 

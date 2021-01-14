@@ -6,15 +6,15 @@ use warnings;
 # VERSION
 # AUTHORITY
 
+use Sys::Hostname qw(hostname);
 use Syntax::Keyword::Try qw( try :experimental(typed) );
 
 use Role::Tiny::With;
 with 'Myriad::Role::RPC';
 
-use Future::Queue;
-
 use Myriad::Exception::General;
 use Myriad::RPC::Message;
+
 use Myriad::Class extends => qw(IO::Async::Notifier);
 
 =head1 NAME
@@ -25,14 +25,18 @@ Myriad::RPC::Implementation::Perl - microservice RPC in-memory implementation.
 
 =cut
 
-has $service;
+has $transport;
+
+has $group_name;
+method group_name { $group_name //= 'processors' }
+
+
 has $should_shutdown;
-has $requests_queue = Future::Queue->new;
 has $rpc_methods = {};
-has @pending_requests;
+has $services_list;
 
 method configure(%args) {
-    $service = delete $args{service} if exists $args{service};
+    $transport = delete $args{transport} if exists $args{transport};
 
     $self->next::method(%args);
 }
@@ -47,26 +51,32 @@ Start waiting for new requests to fill in the internal requests queue.
 
 async method start () {
     $should_shutdown //= $self->loop->new_future(label => 'rpc::perl::shutdown_future')->without_cancel;
-    my $id = 0;
-    my $message;
-    while (my $request = await $requests_queue->shift) {
-        try {
-            $id++;
-            $message = Myriad::RPC::Message::from_hash($request->%*);
-            if (my $sink = $rpc_methods->{$message->rpc}) {
-                $sink->source->emit($message);
-            } else {
-                Myriad::Exception::RPC::MethodNotFound->throw(reason => $message->rpc);
-            }
-        } catch ($e isa Myriad::Exception::RPC::BadEncoding) {
-            $log->warnf('Recived a dead message that we cannot parse, going to drop it.');
-            $log->tracef("message was: %s", $request);
-            await $self->drop($id);
-        } catch ($e) {
-            await $self->reply_error($message, $e);
-        }
+    for my $service ($services_list->@*) {
+        await $transport->create_consumer_group($service, $self->group_name, 0, 1);
+    }
 
-        $message = undef;
+    while (1) {
+        my $service = shift $services_list->@*;
+        push $services_list->@*, $service;
+
+        my %messages = await $transport->read_from_stream_by_consumer($service, $self->group_name, hostname());
+        for my $id (sort keys %messages) {
+            my $message;
+            try {
+                $message = Myriad::RPC::Message::from_hash($messages{$id}->%*);
+                if (my $sink = $rpc_methods->{$service}->{$message->rpc}) {
+                    $sink->emit($message);
+                } else {
+                    Myriad::Exception::RPC::MethodNotFound->throw(reason => $message->rpc);
+                }
+            } catch ($e isa Myriad::Exception::RPC::BadEncoding) {
+                $log->warnf('Recived a dead message that we cannot parse, going to drop it.');
+                $log->tracef("message was: %s", $messages{$id});
+                await $self->drop($service, $id);
+            } catch ($e) {
+                await $self->reply_error($message, $e);
+            }
+        }
         await Future::wait_any($should_shutdown, $self->loop->delay_future(after => 0.01));
     }
 }
@@ -80,8 +90,11 @@ Register and RPC call and save a reference to its L<RYU::Sink>.
 method create_from_sink (%args) {
     my $sink   = $args{sink} // die 'need a sink';
     my $method = $args{method} // die 'need a method name';
+    my $service = $args{service} // die 'need a service';
 
-    $rpc_methods->{$method} = $sink;
+    push $services_list->@*, $service unless $rpc_methods->{$service};
+
+    $rpc_methods->{$service}->{$method} = $sink;
 }
 
 =head2 stop
@@ -103,9 +116,8 @@ In this implementation it's done by resolving the L<Future> calling C<done>.
 =cut
 
 async method reply_success ($message, $response) {
-    my $future = shift @pending_requests;
     $message->response = { response => $response };
-    $future->done($message->as_json);
+    await $transport->publish($message->who, $message->as_json);
 }
 
 =head2 reply_error
@@ -117,9 +129,8 @@ In this implementation it's done by resolving the L<Future> calling C<fail>.
 =cut
 
 async method reply_error ($message, $error) {
-    my $future = shift @pending_requests;
     $message->response = { error => { category => $error->category, message => $error->message, reason => $error->reason } };
-    $future->fail($message->as_json);
+    await $transport->publish($message->who, $message->as_json);
 }
 
 =head2 drop
@@ -128,27 +139,8 @@ Drop the request because we can't reply to the requester.
 
 =cut
 
-async method drop ($id) {
-    shift @pending_requests;
-}
-
-=head2 request
-
-Create a new request.
-
-=over 4
-
-=item * C<message> - A string that typically should contain JSON encoded message.
-
-=item * C<reply_future> - A L<Future> that is going to be resolved once the request is processed.
-
-=back
-
-=cut
-
-method request ($message, $reply_future) {
-    push @pending_requests, $reply_future;
-    $requests_queue->push($message);
+async method drop ($service, $id) {
+    await $transport->ack_message($service, $self->group_name, $id);
 }
 
 1;
