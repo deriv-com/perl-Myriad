@@ -28,7 +28,6 @@ use Myriad::Exception::Builder category => 'perl_transport';
 has $ryu;
 has $streams;
 has $channels;
-has $data;
 
 =head2 Exceptions
 
@@ -79,7 +78,6 @@ declare_exception 'GroupNotFound' => (
 BUILD {
     $streams = {};
     $channels = {};
-    $data = {};
 }
 
 =head2 create_stream
@@ -317,24 +315,6 @@ async method subscribe ($channel_name) {
     # So it should be replaced with a correct instance.
     $sink->{source} = $ryu->source;
     return $sink->source;
-}
-
-=head1 Storage Methods
-
-This methods are direct mock the same named Redis commands
-and are required by L<Myriad::Role::Storage>
-
-=head2 set
-=head2 get
-
-=cut
-
-async method set ($key, $value) {
-    $data->{$key} = $value;
-}
-
-async method get ($key) {
-    return $data->{$key};
 }
 
 method get_stream_group ($stream_name, $group_name) {

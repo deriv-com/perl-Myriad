@@ -50,6 +50,11 @@ Start waiting for new requests to fill in the internal requests queue.
 =cut
 
 async method start () {
+    if(!$services_list) {
+        $should_shutdown = Future->done();
+        return;
+    }
+
     $should_shutdown //= $self->loop->new_future(label => 'rpc::perl::shutdown_future')->without_cancel;
     for my $service ($services_list->@*) {
         await $transport->create_consumer_group($service, $self->group_name, 0, 1);
@@ -104,7 +109,7 @@ Gracefully stop the RPC processing.
 =cut
 
 async method stop () {
-    $should_shutdown->done();
+    $should_shutdown->done() unless $should_shutdown->is_ready;
 }
 
 =head2 reply_success

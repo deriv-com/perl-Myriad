@@ -169,6 +169,7 @@ use Myriad::Storage;
 
 
 use Myriad::RPC::Client;
+use Myriad::Transport::Perl;
 use Myriad::Transport::Redis;
 use Myriad::Transport::HTTP;
 
@@ -197,6 +198,8 @@ has $commands;
 # really be abstracted away by the ::Transport and
 # storage/rpc/subscription abstractions
 has $redis;
+# The Perl transport instance
+has $perl_transport;
 # The Myriad::RPC instance to serve RPC requests for
 # the services in this process
 has $rpc;
@@ -265,7 +268,6 @@ async method configure_from_argv (@args) {
     );
     $self->setup_logging;
     $self->setup_tracing;
-    $self->redis;
 
     $commands = Myriad::Commands->new(
         myriad => $self
@@ -306,6 +308,22 @@ method redis () {
     $redis
 }
 
+=head2 perl_transport
+
+The L<Myriad::Transport::Perl> instance.
+
+=cut
+
+method perl_transport () {
+    unless ($perl_transport) {
+        $loop->add(
+            $perl_transport = Myriad::Transport::Perl->new()
+        );
+    }
+
+    $perl_transport;
+}
+
 =head2 rpc
 
 The L<Myriad::RPC> instance to serve RPC requests
@@ -317,7 +335,7 @@ method rpc () {
         $loop->add(
             $rpc = Myriad::RPC->new(
                 transport => $config ? $config->rpc_transport->as_string : '',
-                redis => $self->redis,
+                myriad => $self,
             )
         );
 
@@ -340,7 +358,7 @@ method rpc_client () {
             $rpc_client = Myriad::RPC::Client->new(
                 # We should use same transport as $rpc.
                 transport => $config ? $config->rpc_transport->as_string : '',
-                redis => $self->redis,
+                myriad => $self,
             )
         );
     }
@@ -374,7 +392,7 @@ method subscription () {
         $loop->add(
             $subscription = Myriad::Subscription->new(
                 transport => $config ? $config->subscription_transport->as_string : '' ,
-                redis => $self->redis,
+                myriad    => $self,
             )
         );
 
@@ -395,7 +413,7 @@ method storage () {
     unless($storage) {
         $storage = Myriad::Storage->new(
             transport => $config ? $config->storage_transport->as_string : '',
-            redis => $self->redis,
+            myriad => $self,
         );
     }
 }

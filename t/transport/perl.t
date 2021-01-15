@@ -75,12 +75,4 @@ subtest 'In-Memory pub/sub' => sub {
     $transport->publish('sub', 'message')->get();
 };
 
-
-subtest 'In-Memory storage' => sub {
-    $transport->set('test_key', 'value')->get();
-    my $value = $transport->get('test_key')->get();
-
-    is($value, 'value', 'it should simulate Redis set/get correctly');
-};
-
 done_testing();
