@@ -24,6 +24,8 @@ Test::Myriad::Service - an abstraction to mock microservices.
 
 =head1 DESCRIPTION
 
+=head1 Methods
+
 =cut
 
 has $name;
@@ -62,6 +64,20 @@ BUILD (%args) {
     }
 }
 
+=head2 add_rpc
+
+Attaches a new RPC to the service with a defaultt response.
+
+=over 4
+
+=item * C<name> - The name of the RPC.
+
+=item * C<response> - A hash that will be sent as the response.
+
+=back
+
+=cut
+
 method add_rpc ($name, %response) {
     my $faker = async sub {
         if ($mocked_rpc->{$name}) {
@@ -85,6 +101,20 @@ method add_rpc ($name, %response) {
     $self;
 }
 
+=head2 mock_rpc
+
+Override the original RPC response for a single call.
+
+=over 4
+
+=item * C<name> - The name of the RPC to be mocked.
+
+=item * C<response> - A hash that will be sent as the response.
+
+=back
+
+=cut
+
 method mock_rpc ($name, %response) {
      die 'You should define rpc methdos using "add_rpc" first' unless $default_rpc->{$name};
      die 'You cannot mock RPC call twice' if $mocked_rpc->{$name};
@@ -93,27 +123,81 @@ method mock_rpc ($name, %response) {
      $self;
 }
 
+=head2 call_rpc
+
+A shortcut to call an RPC in the current service.
+
+The call will be conducted over Myriad RPC and not
+as a method invocation.
+
+=over 4
+
+=item * C<method> - The RPC method name.
+
+=item * C<args> - A hash of the method arguments.
+
+=back
+
+=cut
+
 async method call_rpc ($method, %args) {
     await $myriad->rpc_client->call_rpc($pkg, $method, %args);
 }
 
-method add_subscription ($channel, @data) {
-    my $batch = async sub {
-        while (my @next = splice(@data, 0, 5)) {
-            return \@next;
-        }
-    };
+=head2 add_subscription
 
-    Myriad::Service::Attributes->apply_attributes(
-        class => $meta_service->name,
-        code => Sub::Util::set_subname($channel, $batch),
-        attributes => ['Batch'],
-    );
+Creats a new subscription in the service.
 
-    $meta_service->add_method("batch_$channel", $batch);
+This sub takes the source of the data in multiple ways
+described in the parameters section, only one of them required.
 
-    $self
+=over 4
+
+=item * C<channel> - The channel name that the events will be emitted to.
+
+=item * C<array> - A perl arrayref that its content is going to be emitted as events.
+
+=back
+
+=cut
+
+method add_subscription ($channel, %args) {
+    if (my $data = $args{array}) {
+        my $batch = async sub {
+            while (my @next = splice($data->@*, 0, 5)) {
+                return \@next;
+            }
+        };
+
+        Myriad::Service::Attributes->apply_attributes(
+            class => $meta_service->name,
+            code => Sub::Util::set_subname($channel, $batch),
+            attributes => ['Batch'],
+        );
+
+        $meta_service->add_method("batch_$channel", $batch);
+
+        $self
+    } else {
+        die 'only simple arrays are supported at the moment';
+    }
 }
+
+=head2 add_receiver
+
+Adds a new receiver in the given service.
+
+=over 4
+
+=item * C<from> - The source service name.
+
+=item * C<channel> - The source of the events channel name.
+
+=item * C<handler> - A coderef that will handle the events.
+
+=back
+
+=cut
 
 method add_receiver ($from, $channel, $handler) {
     my $receiver = async sub {

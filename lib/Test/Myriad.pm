@@ -26,11 +26,28 @@ Myriad::Test - a collection of helpers to test microservices.
 
 =head1 SYNOPSIS
 
- import Test::Myriad;
+ use Test::Myriad;
 
  my $mock_service = add_service(name => 'mocked_service');
 
 =head1 DESCRIPTION
+
+=head1 Methods
+
+=head2 add_service
+
+Adds a service to the test environment the service can be
+an already existing service or totally a new mocked one.
+
+it takes one of the following params:
+
+=over 4
+
+=item * C<service> - A package name for an existing service.
+
+=item * C<name> - A Perl package name that will hold the new mocked service.
+
+=back
 
 =cut
 
@@ -41,7 +58,8 @@ sub add_service {
         $pkg = $service;
         $meta = $service->META;
     } elsif ($service = delete $args{name}) {
-        $pkg  = "Test::Service::$service";
+        die 'The name should look like a Perl package name' unless $service =~ /::/;
+        $pkg  = $service;
         $meta = Object::Pad->begin_class($pkg, extends => 'Myriad::Service::Implementation');
 
         {
