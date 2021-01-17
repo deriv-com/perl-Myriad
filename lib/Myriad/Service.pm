@@ -144,8 +144,7 @@ use OpenTracing::Any qw($tracer);
 
 our %SLOT;
 
-sub import {
-    my ($called_on, @args) = @_;
+sub import ($called_on, @args) {
     my $class = __PACKAGE__;
     my $pkg = caller(0);
     $INC{($pkg =~ s{::}{/}gr) . '.pm'} //= 1;
