@@ -11,6 +11,7 @@ myriad.pl
 =cut
 
 use Myriad;
+use Future::AsyncAwait;
 use Time::Moment;
 use Syntax::Keyword::Try;
 use Sys::Hostname qw(hostname);
@@ -25,7 +26,7 @@ try {
         hostname => hostname(),
         pid      => $$,
     );
-    $myriad->configure_from_argv(@ARGV)->get;
+    await $myriad->configure_from_argv(@ARGV);
     $myriad->run;
 } catch {
     $log->errorf('Failed at top level due to %s', $@);

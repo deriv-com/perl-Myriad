@@ -247,9 +247,10 @@ Expects a list of parameters and applies the following logic for each one:
 
 =over 4
 
-=item * if it contains :: and a wildcard C<*>, it's treated as a service module base name, and all modules under that namespace will be loaded
+=item * if it contains C<::> and a wildcard C<*>, it's treated as a service module base name, and all
+modules under that immediate namespace will be loaded
 
-=item * if it contains ::, it's treated as a comma-separated list of service module names to load
+=item * if it contains C<::>, it's treated as a comma-separated list of service module names to load
 
 =item * a C<-> prefix is a standard getopt parameter
 
@@ -259,7 +260,6 @@ Expects a list of parameters and applies the following logic for each one:
 
 async method configure_from_argv (@args) {
     # Allow config parsing to extract the information
-    $self->loop;
     $config = Myriad::Config->new(
         commandline => \@args
     );
