@@ -34,7 +34,7 @@ method configure (%args) {
     $self->next::method(%args);
 }
 
-method create_from_source (%args) {
+async method create_from_source (%args) {
     my $src = delete $args{source} or die 'need a source';
     my $service = delete $args{service} or die 'need a service';
 
@@ -46,6 +46,7 @@ method create_from_source (%args) {
             data => encode_json_utf8($_),
         )->retain;
     });
+    return;
 }
 
 method create_from_sink (%args) {
