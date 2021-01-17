@@ -5,7 +5,7 @@ requires 'multidimensional';
 requires 'bareword::filehandles';
 requires 'Syntax::Keyword::Dynamically', '>= 0.06';
 requires 'Syntax::Keyword::Try', '>= 0.20';
-requires 'Future', '>= 0.46';
+requires 'Future', '>= 0.47';
 requires 'Future::Queue';
 requires 'Future::AsyncAwait', '>= 0.47';
 requires 'Object::Pad', '>= 0.35';
@@ -45,7 +45,7 @@ requires 'Net::Async::OpenTracing', '>= 1.000';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
 requires 'Log::Any::Adapter::Multiplexor', '>= 0.03';
 # Transport
-requires 'Net::Async::Redis', '>= 3.006';
+requires 'Net::Async::Redis', '>= 3.007';
 requires 'Net::Async::HTTP', '>= 0.47';
 requires 'Net::Async::HTTP::Server', '>= 0.13';
 requires 'Net::Async::SMTP', '>= 0.002';
