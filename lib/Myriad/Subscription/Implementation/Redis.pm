@@ -73,7 +73,7 @@ async method start {
             unless(exists $group->{$stream}{$item->{client}}) {
                 try {
                     $log->tracef('Creating new group for stream %s client %s', $stream, $item->{client});
-                    await $redis->xgroup(create => $stream, $item->{client}, '0');
+                    await $redis->create_group($stream, $item->{client}, '0');
                 } catch {
                     die $@ unless $@ =~ /^BUSYGROUP/;
                 }
