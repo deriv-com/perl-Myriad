@@ -19,6 +19,10 @@ use Sys::Hostname qw(hostname);
 use Log::Any::Adapter qw(Stderr), log_level => 'info';
 use Log::Any qw($log);
 
+binmode STDIN, ':encoding(UTF-8)';
+binmode STDOUT, ':encoding(UTF-8)';
+binmode STDERR, ':encoding(UTF-8)';
+
 try {
     my $hostname = hostname();
     $log->infof('Starting Myriad on %s pid %d at %s', $hostname, $$, Time::Moment->now->to_string);
