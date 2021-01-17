@@ -180,7 +180,7 @@ async method start {
                 my $sink = $ryu->sink(
                     label => "emitter:$chan",
                 );
-                $subscription->create_from_source(
+                await $subscription->create_from_source(
                     source  => $sink->source,
                     channel => $chan,
                     service => $service_name,
@@ -188,7 +188,9 @@ async method start {
                 my $code = $spec->{code};
                 push @pending, $spec->{current} = $self->$code(
                     $sink,
-                )->retain;
+                )->on_fail(sub {
+                    $log->errorf('Emitter for %s failed - %s', $method, shift);
+                })->retain;
             }
         }
 
@@ -200,7 +202,7 @@ async method start {
                 my $sink = $ryu->sink(
                     label => "receiver:$chan",
                 );
-                $subscription->create_from_sink(
+                await $subscription->create_from_sink(
                     sink    => $sink,
                     channel => $chan,
                     client  => ref($self) . '/' . $method,
@@ -219,7 +221,7 @@ async method start {
                 $log->tracef('Starting batch process %s for %s', $method, ref($self));
                 my $code = $batches->{$method};
                 my $sink = $ryu->sink(label => 'batch:' . $method);
-                $subscription->create_from_source(
+                await $subscription->create_from_source(
                     source  => $sink->source,
                     channel => $method,
                     service => $service_name,
