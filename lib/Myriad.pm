@@ -54,7 +54,7 @@ Each of the three abstractions has various implementations. You'd set one on sta
 and that would provide functionality through the top-level abstraction layer. Service code
 generally shouldn't need to care which implementation is applied. There may however be cases
 where transactional behaviour differs between implementations, so there is some basic
-functionality for checking whether RPC/storage/subscription use the same underlying
+functionality planned for checking whether RPC/storage/subscription use the same underlying
 mechanism for transactional safety.
 
 =head2 Storage
@@ -308,7 +308,7 @@ method redis () {
 
 =head2 rpc
 
-The L<Myriad::RPC> instance to serve RPC requests
+The L<Myriad::RPC> instance to serve RPC requests.
 
 =cut
 
