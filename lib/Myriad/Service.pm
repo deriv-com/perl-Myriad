@@ -150,9 +150,10 @@ sub import ($called_on, @args) {
     $INC{($pkg =~ s{::}{/}gr) . '.pm'} //= 1;
 
     if(grep { $_ eq ':custom' } @args) {
-        push @{$pkg . '::ISA' }, 'Myriad::Service::Implementation';
+        push @{$pkg . '::ISA' }, 'Myriad::Service::Implementation', 'Myriad::Service';
         return;
     }
+
     # Apply core syntax and rules
     strict->import;
     warnings->import;
