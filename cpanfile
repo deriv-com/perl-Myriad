@@ -11,8 +11,8 @@ requires 'Future::AsyncAwait', '>= 0.47';
 requires 'Object::Pad', '>= 0.35';
 requires 'Role::Tiny', '>= 2.002003';
 # Streams
-requires 'Ryu', '>= 2.005';
-requires 'Ryu::Async', '>= 0.017';
+requires 'Ryu', '>= 2.006';
+requires 'Ryu::Async', '>= 0.018';
 # IO::Async
 requires 'Heap', '>= 0.80';
 requires 'IO::Async::Notifier', '>= 0.77';
