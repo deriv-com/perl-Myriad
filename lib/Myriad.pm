@@ -297,7 +297,7 @@ The L<Net::Async::Redis> (or compatible) instance used for service coördination
 
 method redis () {
     unless($redis) {
-        $loop->add(
+        $self->loop->add(
             $redis = Myriad::Transport::Redis->new(
                 redis_uri => $config ? $config->redis_uri->as_string : '',
             )
@@ -314,7 +314,7 @@ The L<Myriad::RPC> instance to serve RPC requests.
 
 method rpc () {
     unless($rpc) {
-        $loop->add(
+        $self->loop->add(
             $rpc = Myriad::RPC->new(
                 transport => $config ? $config->rpc_transport->as_string : '',
                 redis => $self->redis,
@@ -336,7 +336,7 @@ The L<Myriad::RPC::Client> instance to request other services RPC.
 
 method rpc_client () {
     unless($rpc_client) {
-        $loop->add(
+        $self->loop->add(
             $rpc_client = Myriad::RPC::Client->new(
                 # We should use same transport as $rpc.
                 transport => $config ? $config->rpc_transport->as_string : '',
@@ -356,7 +356,7 @@ and metrics.
 
 method http () {
     unless($http) {
-        $loop->add(
+        $self->loop->add(
             $http = Myriad::Transport::HTTP->new
         );
     }
@@ -371,7 +371,7 @@ The L<Myriad::Subscription> instance to manage events
 
 method subscription () {
     unless ($subscription) {
-        $loop->add(
+        $self->loop->add(
             $subscription = Myriad::Subscription->new(
                 transport => $config ? $config->subscription_transport->as_string : '' ,
                 redis => $self->redis,
@@ -446,7 +446,7 @@ a source to corresponde to any high level events.
 
 method ryu () {
     unless($ryu) {
-        $loop->add(
+        $self->loop->add(
             $ryu = Ryu::Async->new
         );
     }
@@ -534,7 +534,7 @@ Prepare L<OpenTracing> collection.
 =cut
 
 method setup_tracing () {
-    $loop->add(
+    $self->loop->add(
         $tracing = Net::Async::OpenTracing->new(
             host => $config->opentracing_host,
             port => $config->opentracing_port,
@@ -558,7 +558,7 @@ Applies signal handlers for TERM and QUIT, then starts the loop.
 method run () {
     map {
         my $signal = $_;
-        $loop->attach_signal($signal => $self->$curry::weak(method {
+        $self->loop->attach_signal($signal => $self->$curry::weak(method {
             $log->infof("%s received, exit", $signal);
             $self->shutdown->await;
         }))
