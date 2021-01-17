@@ -162,13 +162,12 @@ Perform the diagnostics check and start the service components (RPC, Batches, Su
 async method start {
     my $registry = $Myriad::REGISTRY;
     await $self->startup;
+    my @pending;
     try {
-        my $diagnostics_ok = await Future->wait_any(
+        unless(await Future->wait_any(
             $self->loop->timeout_future(after => 10),
             $self->diagnostics(1),
-        );
-
-        if (!$diagnostics_ok) {
+        )) {
             $log->errorf("can't start %s diagnostics failed", $self->service_name);
             return;
         }
@@ -187,7 +186,7 @@ async method start {
                     service => $service_name,
                 );
                 my $code = $spec->{code};
-                $spec->{current} = $self->$code(
+                push @pending, $spec->{current} = $self->$code(
                     $sink,
                 )->retain;
             }
@@ -209,7 +208,7 @@ async method start {
                     service => $service_name,
                 );
                 my $code = $spec->{code};
-                $spec->{current} = $self->$code(
+                push @pending, $spec->{current} = $self->$code(
                     $sink->source,
                 )->retain;
             }
@@ -250,6 +249,9 @@ async method start {
                 })->resolve->completed;
             }
         }
+        $log->infof('Wait for %d startup tasks to complete', 0 + @pending);
+        # await Future->needs_all(@pending);
+        $log->infof('Done');
     } catch ($e) {
         $log->errorf('Could not finish diagnostics for service %s in time.', $self->service_name);
         die $e;
