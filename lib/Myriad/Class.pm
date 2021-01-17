@@ -91,6 +91,7 @@ no indirect qw(fatal);
 no multidimensional;
 no bareword::filehandles;
 use mro;
+use experimental qw(signatures);
 use Future::AsyncAwait;
 use Syntax::Keyword::Try;
 use Syntax::Keyword::Dynamically;
@@ -146,7 +147,19 @@ sub import {
     mro::set_mro($pkg => 'c3');
 
     # Helper functions which are used often enough to be valuable as a default
-    Scalar::Util->export_to_level(1, $pkg, qw(refaddr blessed weaken));
+    Scalar::Util->export($pkg => qw(refaddr blessed weaken));
+    {
+        no strict 'refs';
+        # trim() might appear in core perl at some point, so let's reserve the
+        # word and include a basic implementation first. Avoiding Text::Trim
+        # here because it sometimes returns an empty list, which would be
+        # dangerous - my %hash = (key => trim($value)) for example.
+        *{$pkg . '::trim'} = sub ($txt) {
+            $txt =~ s{^\s+}{};
+            $txt =~ s{\s+$}{};
+            return $txt;
+        };
+    }
 
     # Some well-designed modules provide direct support for import target
     Syntax::Keyword::Try->import_into($pkg);
@@ -159,7 +172,7 @@ sub import {
     # but can be seen in action in this test:
     # https://metacpan.org/source/PEVANS/Object-Pad-0.21/t/70mop-create-class.t#L30
     Object::Pad->import_into($pkg);
-    Object::Pad->begin_class($pkg, ($args{extends} ? (extends => $args{extends}) : ()));
+    my $meta = Object::Pad->begin_class($pkg, ($args{extends} ? (extends => $args{extends}) : ()));
 
     {
         no strict 'refs';
@@ -172,6 +185,7 @@ sub import {
         );
         *{$pkg . '::tracer'} = \(OpenTracing->global_tracer);
     }
+    return $meta;
 }
 
 1;
