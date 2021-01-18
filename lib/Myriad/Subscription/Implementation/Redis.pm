@@ -101,6 +101,7 @@ async method start {
                     );
                     if($args) {
                         push @$args, ("transport_id", $id);
+                        $args->[1] = decode_json_utf8($args->[1]);
                         $sink->source->emit($args);
                         await $redis->ack($stream, $client, $id);
                     }
