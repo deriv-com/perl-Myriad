@@ -12,6 +12,10 @@ package Test::Service::Real {
     use Myriad::Service;
     use Test::More;
 
+    async method say_hi : RPC {
+        return {mocked => 0};
+    }
+
     async method get_event : Receiver(service => 'Test::Service::Mocked', channel => 'weekends') ($source) {
         await $source->each(sub {
             my $event = shift;
@@ -35,6 +39,14 @@ subtest 'it should respond to RPC' => sub {
         ok($response->{response}->{hello}, 'rpc message has been received');
     })->()->get();
 }; 
+
+subtest 'it can mock developer rpc' => sub {
+    (async sub {
+        $developer_service->mock_rpc('say_hi', mocked => 1);
+        my $response = await $developer_service->call_rpc('say_hi');
+        ok($response->{response}->{mocked}, 'it can mock rpc provided by other services');
+    })->()->get();
+};
 
 done_testing();
 
