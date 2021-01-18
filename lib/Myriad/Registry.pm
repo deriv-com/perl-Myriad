@@ -222,6 +222,7 @@ Registers a new receiver method for the given class.
 
 method add_receiver ($pkg, $method, $code, $args) {
     $args->{channel} //= $method;
+    $args->{service} = $self->make_service_name($args->{service}) if $args->{service};
     $receiver->{$pkg}{$method} = {
         code => $code,
         args => $args,

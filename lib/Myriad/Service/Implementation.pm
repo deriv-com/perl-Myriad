@@ -205,7 +205,7 @@ async method start {
                 await $subscription->create_from_sink(
                     sink    => $sink,
                     channel => $chan,
-                    client  => ref($self) . '/' . $method,
+                    client  => $service_name . '/' . $method,
                     from    => $spec->{args}{service},
                     service => $service_name,
                 );

@@ -31,7 +31,7 @@ try {
         pid      => $$,
     );
     await $myriad->configure_from_argv(@ARGV);
-    $myriad->run;
+    await $myriad->run;
 } catch {
     $log->errorf('Failed at top level due to %s', $@);
 }
