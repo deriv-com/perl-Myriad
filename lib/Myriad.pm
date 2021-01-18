@@ -54,7 +54,7 @@ Each of the three abstractions has various implementations. You'd set one on sta
 and that would provide functionality through the top-level abstraction layer. Service code
 generally shouldn't need to care which implementation is applied. There may however be cases
 where transactional behaviour differs between implementations, so there is some basic
-functionality for checking whether RPC/storage/subscription use the same underlying
+functionality planned for checking whether RPC/storage/subscription use the same underlying
 mechanism for transactional safety.
 
 =head2 Storage
@@ -247,9 +247,10 @@ Expects a list of parameters and applies the following logic for each one:
 
 =over 4
 
-=item * if it contains :: and a wildcard C<*>, it's treated as a service module base name, and all modules under that namespace will be loaded
+=item * if it contains C<::> and a wildcard C<*>, it's treated as a service module base name, and all
+modules under that immediate namespace will be loaded
 
-=item * if it contains ::, it's treated as a comma-separated list of service module names to load
+=item * if it contains C<::>, it's treated as a comma-separated list of service module names to load
 
 =item * a C<-> prefix is a standard getopt parameter
 
@@ -259,7 +260,6 @@ Expects a list of parameters and applies the following logic for each one:
 
 async method configure_from_argv (@args) {
     # Allow config parsing to extract the information
-    $self->loop;
     $config = Myriad::Config->new(
         commandline => \@args
     );
@@ -297,7 +297,7 @@ The L<Net::Async::Redis> (or compatible) instance used for service coördination
 
 method redis () {
     unless($redis) {
-        $loop->add(
+        $self->loop->add(
             $redis = Myriad::Transport::Redis->new(
                 redis_uri => $config ? $config->redis_uri->as_string : '',
             )
@@ -308,13 +308,13 @@ method redis () {
 
 =head2 rpc
 
-The L<Myriad::RPC> instance to serve RPC requests
+The L<Myriad::RPC> instance to serve RPC requests.
 
 =cut
 
 method rpc () {
     unless($rpc) {
-        $loop->add(
+        $self->loop->add(
             $rpc = Myriad::RPC->new(
                 transport => $config ? $config->rpc_transport->as_string : '',
                 redis => $self->redis,
@@ -336,7 +336,7 @@ The L<Myriad::RPC::Client> instance to request other services RPC.
 
 method rpc_client () {
     unless($rpc_client) {
-        $loop->add(
+        $self->loop->add(
             $rpc_client = Myriad::RPC::Client->new(
                 # We should use same transport as $rpc.
                 transport => $config ? $config->rpc_transport->as_string : '',
@@ -356,7 +356,7 @@ and metrics.
 
 method http () {
     unless($http) {
-        $loop->add(
+        $self->loop->add(
             $http = Myriad::Transport::HTTP->new
         );
     }
@@ -371,7 +371,7 @@ The L<Myriad::Subscription> instance to manage events
 
 method subscription () {
     unless ($subscription) {
-        $loop->add(
+        $self->loop->add(
             $subscription = Myriad::Subscription->new(
                 transport => $config ? $config->subscription_transport->as_string : '' ,
                 redis => $self->redis,
@@ -446,7 +446,7 @@ a source to corresponde to any high level events.
 
 method ryu () {
     unless($ryu) {
-        $loop->add(
+        $self->loop->add(
             $ryu = Ryu::Async->new
         );
     }
@@ -534,7 +534,7 @@ Prepare L<OpenTracing> collection.
 =cut
 
 method setup_tracing () {
-    $loop->add(
+    $self->loop->add(
         $tracing = Net::Async::OpenTracing->new(
             host => $config->opentracing_host,
             port => $config->opentracing_port,
@@ -558,7 +558,7 @@ Applies signal handlers for TERM and QUIT, then starts the loop.
 method run () {
     map {
         my $signal = $_;
-        $loop->attach_signal($signal => $self->$curry::weak(method {
+        $self->loop->attach_signal($signal => $self->$curry::weak(method {
             $log->infof("%s received, exit", $signal);
             $self->shutdown->await;
         }))
@@ -714,5 +714,5 @@ Deriv Group Services Ltd. C<< DERIV@cpan.org >>
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
 

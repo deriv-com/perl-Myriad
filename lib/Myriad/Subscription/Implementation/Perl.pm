@@ -26,7 +26,7 @@ method configure (%args) {
     $self->next::method(%args);
 }
 
-method create_from_source (%args) {
+async method create_from_source (%args) {
     my $src          = delete $args{source} or die 'need a source';
     my $channel_name = $service . '.' . $args{channel};
     $channels->{$channel_name} = [];
@@ -35,14 +35,16 @@ method create_from_source (%args) {
         my $message = shift;
         push $channels->{$channel_name}->@*, $message;
     })->retain;
+    return;
 }
 
-method create_from_sink (%args) {
+async method create_from_sink (%args) {
     my $sink = delete $args{sink} or die 'need a sink';
     my $channel_name = $service . '.' . $args{channel};
     $receivers->{$channel_name} = [] unless exists $receivers->{$channel_name};
 
     push $receivers->{$channel_name}->@*, $sink;
+    return;
 }
 
 async method start {

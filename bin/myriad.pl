@@ -11,12 +11,17 @@ myriad.pl
 =cut
 
 use Myriad;
+use Future::AsyncAwait;
 use Time::Moment;
 use Syntax::Keyword::Try;
 use Sys::Hostname qw(hostname);
 
 use Log::Any::Adapter qw(Stderr), log_level => 'info';
 use Log::Any qw($log);
+
+binmode STDIN, ':encoding(UTF-8)';
+binmode STDOUT, ':encoding(UTF-8)';
+binmode STDERR, ':encoding(UTF-8)';
 
 try {
     my $hostname = hostname();
@@ -25,7 +30,7 @@ try {
         hostname => hostname(),
         pid      => $$,
     );
-    $myriad->configure_from_argv(@ARGV)->get;
+    await $myriad->configure_from_argv(@ARGV);
     $myriad->run;
 } catch {
     $log->errorf('Failed at top level due to %s', $@);
