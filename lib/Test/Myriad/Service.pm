@@ -82,8 +82,8 @@ method add_rpc ($name, %response) {
     my $faker = async sub {
         if ($mocked_rpc->{$name}) {
             return delete $mocked_rpc->{$name};
-        } elsif (my %default_response = $default_rpc->{$name}) {
-            return \%default_response;
+        } elsif (my $default_response = $default_rpc->{$name}) {
+            return $default_response;
         }
     };
 
@@ -95,7 +95,7 @@ method add_rpc ($name, %response) {
         attributes => ['RPC'],
     );
 
-    $default_rpc->{$name} = %response;
+    $default_rpc->{$name} = \%response;
     $meta_service->add_method($name, $faker);
 
     $self;
@@ -127,7 +127,7 @@ method mock_rpc ($name, %response) {
 
 A shortcut to call an RPC in the current service.
 
-The call will be conducted over Myriad RPC and not
+The call will be conducted over Myriad Transport and not
 as a method invocation.
 
 =over 4
@@ -141,7 +141,8 @@ as a method invocation.
 =cut
 
 async method call_rpc ($method, %args) {
-    await $myriad->rpc_client->call_rpc($pkg, $method, %args);
+    my $service_name = $myriad->registry->make_service_name($pkg);
+    await $myriad->rpc_client->call_rpc($service_name, $method, %args);
 }
 
 =head2 add_subscription

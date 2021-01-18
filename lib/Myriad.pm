@@ -573,7 +573,7 @@ Applies signal handlers for TERM and QUIT, then starts the loop.
 
 =cut
 
-method run () {
+async method run () {
     map {
         my $signal = $_;
         $loop->attach_signal($signal => $self->$curry::weak(method {
@@ -589,7 +589,7 @@ method run () {
             $self->shutdown_future->fail($error);
         })->retain();
     } qw(rpc subscription);
-    $self->shutdown_future->await;
+    await $self->shutdown_future;
 }
 
 1;

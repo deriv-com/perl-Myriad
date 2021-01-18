@@ -62,7 +62,6 @@ async method start {
         my $subscription = shift $receivers->@*;
         push  $receivers->@*, $subscription;
         my %messages = await $transport->read_from_stream_by_consumer($subscription->{channel}, 'subscriber', 'consumer');
-
         for my $event_id (keys %messages) {
             $subscription->{sink}->emit($messages{$event_id});
             await $transport->ack_message($subscription->{channel}, 'subscriber', $event_id);
@@ -72,6 +71,8 @@ async method start {
             $stopped->done;
             last;
         }
+
+        await $self->loop->delay_future(after => 0.1);
     }
 }
 

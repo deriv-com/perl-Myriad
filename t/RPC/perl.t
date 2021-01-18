@@ -38,7 +38,7 @@ isa_ok($rpc, 'IO::Async::Notifier');
 my $sink = $ryu->sink(label=> 'rpc::test');
 
 $sink->source->map(async sub {
-    await $rpc->reply_success(shift, {ok => 1});
+    await $rpc->reply_success('test::service', shift, {ok => 1});
 })->resolve()->completed->retain();
 
 $rpc->create_from_sink(method => 'test', sink => $sink, service => 'test::service');

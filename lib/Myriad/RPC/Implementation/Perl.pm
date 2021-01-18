@@ -68,6 +68,7 @@ async method start () {
         for my $id (sort keys %messages) {
             my $message;
             try {
+                $messages{$id}->{transport_id} = $id;
                 $message = Myriad::RPC::Message::from_hash($messages{$id}->%*);
                 if (my $sink = $rpc_methods->{$service}->{$message->rpc}) {
                     $sink->emit($message);
@@ -79,10 +80,10 @@ async method start () {
                 $log->tracef("message was: %s", $messages{$id});
                 await $self->drop($service, $id);
             } catch ($e) {
-                await $self->reply_error($message, $e);
+                await $self->reply_error($service, $message, $e);
             }
         }
-        await Future::wait_any($should_shutdown, $self->loop->delay_future(after => 0.01));
+        await Future::wait_any($should_shutdown, $self->loop->delay_future(after => 0.1));
     }
 }
 
@@ -120,9 +121,10 @@ In this implementation it's done by resolving the L<Future> calling C<done>.
 
 =cut
 
-async method reply_success ($message, $response) {
+async method reply_success ($service, $message, $response) {
     $message->response = { response => $response };
     await $transport->publish($message->who, $message->as_json);
+    await $transport->ack_message($service, $self->group_name, $message->transport_id);
 }
 
 =head2 reply_error
@@ -133,9 +135,10 @@ In this implementation it's done by resolving the L<Future> calling C<fail>.
 
 =cut
 
-async method reply_error ($message, $error) {
+async method reply_error ($service, $message, $error) {
     $message->response = { error => { category => $error->category, message => $error->message, reason => $error->reason } };
     await $transport->publish($message->who, $message->as_json);
+    await $transport->ack_message($service, $self->group_name, $message->transport_id);
 }
 
 =head2 drop

@@ -42,17 +42,6 @@ declare_exception 'StreamNotFound' => (
     message => 'The given stream does not exist'
 );
 
-=head2 StreamExists
-
-Thrown when the user is trying to re-create a stream
-but the operation doesn't allow that.
-
-=cut
-
-declare_exception 'StreamExists' => (
-    message => 'Stream already exists you cannot re-create it'
-);
-
 =head2 GroupExists
 
 Thrown when the user is trying to re-create a group
@@ -93,7 +82,7 @@ Creats an empty stream.
 =cut
 
 async method create_stream ($stream_name) {
-    die Myriad::Exception::Transport::Perl::StreamExists->throw() if $streams->{$stream_name};
+    return if $streams->{$stream_name};
     $streams->{$stream_name} = {current_id => 0, data => {}};
 }
 

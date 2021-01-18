@@ -23,11 +23,11 @@ BUILD {
 }
 
 method configure (%args) {
-    $transport = delete $args{transport} if $args{$transport};
+    $transport = delete $args{transport} if $args{transport};
 }
 
 async method start {
-    my $sub = await $transport->subscribe->($whoami);
+    my $sub = await $transport->subscribe($whoami);
     $subscription = $sub->each(sub {
         try {
             my $payload = $_;
@@ -62,10 +62,10 @@ async method call_rpc ($service, $method, %args) {
     );
 
     $pending_requests->{$message_id} = $pending;
-    await $transport->add_to_stream($service, $request->as_hash);
+    await $transport->add_to_stream($service, $request->as_hash->%*);
 
     try {
-        my $message = await $self->loop->wait_any(
+        my $message = await Future->wait_any(
             $self->loop->timeout_future(at => $deadline),
             $pending
         );

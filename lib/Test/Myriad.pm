@@ -78,12 +78,15 @@ sub add_service {
 
 sub import {
     Check::UnitCheck::unitcheckify(sub {
+        $myriad->configure_from_argv()->get();
         $loop->later(sub {
-            $myriad->configure_from_argv("--redis", "redis://redis");
             (fmap0 {
                 $myriad->add_service($_);
             } foreach => [@REGISTERED_SERVICES])->then(sub {
-                $myriad->run
+                return $myriad->run;
+            })->on_fail(sub {
+                my $error = shift;
+                die "Failed to start the test environment due: $error";
             })->retain;
         });
     });

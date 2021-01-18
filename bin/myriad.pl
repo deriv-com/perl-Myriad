@@ -26,7 +26,7 @@ try {
         pid      => $$,
     );
     $myriad->configure_from_argv(@ARGV)->get;
-    $myriad->run;
+    $myriad->run->get;
 } catch {
     $log->errorf('Failed at top level due to %s', $@);
 }
