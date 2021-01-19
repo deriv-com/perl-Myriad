@@ -119,7 +119,7 @@ subtest  "Run and shutdown behaviour" => sub {
     $service_mock->mock( 'shutdown', $shutdown_test );
 
     $metaclass->get_slot('$shutdown_tasks')->value($myriad) = [$shutdown_test];
-    $metaclass->get_slot('$services')->value($myriad) = { testing_service => $service_mock};
+    $metaclass->get_slot('$services')->value($myriad) = { testing_service => $service_mock };
 
     my $loop = $metaclass->get_slot('$loop')->value($myriad);
     testing_loop($loop);
