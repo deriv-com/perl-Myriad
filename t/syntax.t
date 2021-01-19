@@ -60,6 +60,14 @@ subtest 'try/catch available' => sub {
     }), 'ok', 'try/catch supported') or diag $@;
 };
 
+subtest 'helper methods from Scalar::Util' => sub {
+    is(eval(q{
+        package local::HelperMethods;
+        use Myriad::Service;
+        blessed(bless {}, "Nothing") eq "Nothing" or die 'blessed not found';
+        'ok'
+    }), 'ok', 'try/catch supported') or diag $@;
+};
 subtest 'dynamically available' => sub {
     is(eval(q{
         package local::dynamically;

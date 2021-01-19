@@ -7,6 +7,8 @@ use warnings;
 # AUTHORITY
 
 no indirect qw(fatal);
+use Scalar::Util qw(weaken);
+
 use utf8;
 
 =encoding utf8
@@ -86,20 +88,19 @@ declare_exception UnknownTransport => (
 sub new {
     my ($class, %args) = @_;
     my $transport = delete $args{transport};
-
+    weaken(my $myriad = delete $args{myriad});
     # Passing args individually looks tedious but this is to avoid
     # L<IO::Async::Notifier> exception when it doesn't recognize the key.
 
     if ($transport eq 'redis') {
         require Myriad::RPC::Implementation::Redis;
         return Myriad::RPC::Implementation::Redis->new(
-            redis   => $args{redis},
-            service => $args{service},
+            redis   => $myriad->redis,
         );
     } elsif($transport eq 'perl') {
         require Myriad::RPC::Implementation::Perl;
         return Myriad::RPC::Implementation::Perl->new(
-            service => $args{service},
+            transport => $myriad->perl_transport,
         );
     } else {
         Myriad::Exception::RPC::UnknownTransport->throw;
@@ -118,5 +119,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
 

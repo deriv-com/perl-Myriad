@@ -34,7 +34,7 @@ method configure (%args) {
     $self->next::method(%args);
 }
 
-method create_from_source (%args) {
+async method create_from_source (%args) {
     my $src = delete $args{source} or die 'need a source';
     my $service = delete $args{service} or die 'need a service';
 
@@ -46,6 +46,7 @@ method create_from_source (%args) {
             data => encode_json_utf8($_),
         )->retain;
     });
+    return;
 }
 
 method create_from_sink (%args) {
@@ -73,7 +74,7 @@ async method start {
             unless(exists $group->{$stream}{$item->{client}}) {
                 try {
                     $log->tracef('Creating new group for stream %s client %s', $stream, $item->{client});
-                    await $redis->xgroup(create => $stream, $item->{client}, '0');
+                    await $redis->create_group($stream, $item->{client}, '0');
                 } catch {
                     die $@ unless $@ =~ /^BUSYGROUP/;
                 }
@@ -100,6 +101,7 @@ async method start {
                     );
                     if($args) {
                         push @$args, ("transport_id", $id);
+                        $args->[1] = decode_json_utf8($args->[1]);
                         $sink->source->emit($args);
                         await $redis->ack($stream, $client, $id);
                     }

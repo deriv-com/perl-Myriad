@@ -162,13 +162,12 @@ Perform the diagnostics check and start the service components (RPC, Batches, Su
 async method start {
     my $registry = $Myriad::REGISTRY;
     await $self->startup;
+    my @pending;
     try {
-        my $diagnostics_ok = await Future->wait_any(
+        unless(await Future->wait_any(
             $self->loop->timeout_future(after => 10),
             $self->diagnostics(1),
-        );
-
-        if (!$diagnostics_ok) {
+        )) {
             $log->errorf("can't start %s diagnostics failed", $self->service_name);
             return;
         }
@@ -181,15 +180,17 @@ async method start {
                 my $sink = $ryu->sink(
                     label => "emitter:$chan",
                 );
-                $subscription->create_from_source(
+                await $subscription->create_from_source(
                     source  => $sink->source,
                     channel => $chan,
                     service => $service_name,
                 );
                 my $code = $spec->{code};
-                $spec->{current} = $self->$code(
+                push @pending, $spec->{current} = $self->$code(
                     $sink,
-                )->retain;
+                )->on_fail(sub {
+                    $log->errorf('Emitter for %s failed - %s', $method, shift);
+                })->retain;
             }
         }
 
@@ -201,15 +202,15 @@ async method start {
                 my $sink = $ryu->sink(
                     label => "receiver:$chan",
                 );
-                $subscription->create_from_sink(
+                await $subscription->create_from_sink(
                     sink    => $sink,
                     channel => $chan,
-                    client  => ref($self) . '/' . $method,
+                    client  => $service_name . '/' . $method,
                     from    => $spec->{args}{service},
                     service => $service_name,
                 );
                 my $code = $spec->{code};
-                $spec->{current} = $self->$code(
+                push @pending, $spec->{current} = $self->$code(
                     $sink->source,
                 )->retain;
             }
@@ -220,7 +221,7 @@ async method start {
                 $log->tracef('Starting batch process %s for %s', $method, ref($self));
                 my $code = $batches->{$method};
                 my $sink = $ryu->sink(label => 'batch:' . $method);
-                $subscription->create_from_source(
+                await $subscription->create_from_source(
                     source  => $sink->source,
                     channel => $method,
                     service => $service_name,
@@ -250,6 +251,9 @@ async method start {
                 })->resolve->completed;
             }
         }
+        $log->infof('Wait for %d startup tasks to complete', 0 + @pending);
+        # await Future->needs_all(@pending);
+        $log->infof('Done');
     } catch ($e) {
         $log->errorf('Could not finish diagnostics for service %s in time.', $self->service_name);
         die $e;
@@ -303,5 +307,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
 

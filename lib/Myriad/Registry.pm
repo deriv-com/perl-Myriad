@@ -222,6 +222,7 @@ Registers a new receiver method for the given class.
 
 method add_receiver ($pkg, $method, $code, $args) {
     $args->{channel} //= $method;
+    $args->{service} = $self->make_service_name($args->{service}) if $args->{service};
     $receiver->{$pkg}{$method} = {
         code => $code,
         args => $args,
@@ -259,5 +260,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
 
