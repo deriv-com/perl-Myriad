@@ -31,7 +31,7 @@ subtest "class methods and proper initialization" => sub {
 
 
     my $command_param = 'Testing';
-    $myriad->configure_from_argv(('-l', 'debug', '--subscription_transport', 'perl', '--rpc_transport', 'perl', '--storage_transport', 'perl', $command, $command_param));
+    $myriad->configure_from_argv('-l', 'debug', '--subscription_transport', 'perl', '--rpc_transport', 'perl', '--storage_transport', 'perl', $command, $command_param);
 
     # Check configure_from_argv init objects
     my $loop = $metaclass->get_slot('$loop')->value($myriad);
