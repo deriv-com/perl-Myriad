@@ -14,7 +14,7 @@ sub loop_notifiers {
     my $loop = shift;
 
     my @current_notifiers = $loop->notifiers;
-    my %loaded_in_loop = map { ref($_)  => 1} @current_notifiers;
+    my %loaded_in_loop = map { ref()  => 1 } @current_notifiers;
     return \%loaded_in_loop;
 }
 
@@ -25,13 +25,15 @@ $command_module->mock($command, async sub { my ($self, $param) = @_; $command_is
 
 my $myriad = new_ok('Myriad');
 my $metaclass = $myriad->META;
+my $loop = $myriad->loop;
+testing_loop($loop);
 
 subtest "class methods and proper initialization" => sub {
     can_ok($myriad, qw(configure_from_argv loop registry redis rpc_client rpc http subscription storage add_service service_by_name ryu shutdown run));
 
 
     my $command_param = 'Testing';
-    $myriad->configure_from_argv('-l', 'debug', '--subscription_transport', 'perl', '--rpc_transport', 'perl', '--storage_transport', 'perl', $command, $command_param);
+    wait_for_future($myriad->configure_from_argv('-l', 'debug', '--subscription_transport', 'perl', '--rpc_transport', 'perl', '--storage_transport', 'perl', $command, $command_param))->get;
 
     # Check configure_from_argv init objects
     my $loop = $metaclass->get_slot('$loop')->value($myriad);
@@ -51,9 +53,8 @@ subtest "class methods and proper initialization" => sub {
     my $current_notifiers = loop_notifiers($myriad->loop);
     ok($current_notifiers->{'Net::Async::OpenTracing'}, 'Tracing is added to  loop');
 
-    # Redis setup
-    isa_ok($metaclass->get_slot('$redis')->value($myriad), 'Myriad::Transport::Redis', 'Redis is set');
-    ok($current_notifiers->{'Myriad::Transport::Redis'}, 'Redis is added to  loop');
+    # Since we passing test command
+    # No Service, or plugin is setup.
 
     # Command
     isa_ok($metaclass->get_slot('$commands')->value($myriad), 'Myriad::Commands', 'Command is set');
@@ -73,14 +74,10 @@ subtest "Myriad attributes setting tests" => sub {
     is(@$shutdown_tasks, 2, 'Two added shutdown tasks');
 
     # RPC Client
-    TODO: {
-        local $TODO = "Make perl implementation for RPC Client";
-        #my $rpc_client = $myriad->rpc_client;
-        #isa_ok($rpc_client, 'Myriad::RPC::Client::Implementation::Perl', 'Myriad RPC Client is set');
-        # my $current_notifiers = loop_notifiers($myriad->loop);
-        #ok($current_notifiers->{'Myriad::RPC::Client::Implementation::Perl'}, 'RPC Cleint is added to loop');
-        ok(!1);
-    }
+    my $rpc_client = $myriad->rpc_client;
+    isa_ok($rpc_client, 'Myriad::RPC::Client::Implementation::Perl', 'Myriad RPC Client is set');
+    my $current_notifiers = loop_notifiers($myriad->loop);
+    ok($current_notifiers->{'Myriad::RPC::Client::Implementation::Perl'}, 'RPC Cleint is added to loop');
 
     # HTTP
     my $http = $myriad->http;
@@ -121,8 +118,6 @@ subtest  "Run and shutdown behaviour" => sub {
     $metaclass->get_slot('$shutdown_tasks')->value($myriad) = [$shutdown_test];
     $metaclass->get_slot('$services')->value($myriad) = { testing_service => $service_mock };
 
-    my $loop = $metaclass->get_slot('$loop')->value($myriad);
-    testing_loop($loop);
     wait_for_future(Future->needs_all(
         $loop->delay_future(after => 0)->on_ready(sub {
             is(exception {
