@@ -300,9 +300,6 @@ async method subscribe ($channel_name) {
     $channels->{$channel_name} = [] unless exists $channels->{$channel_name};
     my $sink = $ryu->sink;
     push $channels->{$channel_name}->@*, $sink;
-    # Ryu::Sink#source doesn't link the new source to IO::Async::Loop
-    # So it should be replaced with a correct instance.
-    $sink->{source} = $ryu->source;
     return $sink->source;
 }
 
