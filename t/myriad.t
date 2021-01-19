@@ -35,7 +35,7 @@ subtest "class methods and proper initialization" => sub {
 
     # Check configure_from_argv init objects
     my $loop = $metaclass->get_slot('$loop')->value($myriad);
-    isa_ok($loop, 'IO::Async::Loop::Poll', 'Loop is set');
+    isa_ok($loop, 'IO::Async::Loop', 'Loop is set');
     isa_ok($myriad->config, 'Myriad::Config', 'Config is set');
 
     # Logging setup
