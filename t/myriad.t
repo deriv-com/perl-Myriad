@@ -114,7 +114,7 @@ subtest  "Run and shutdown behaviour" => sub {
     }, qr/attempting to shut down before we have started,/, 'can not shutdown as nothing started yet.');
 
     my $shutdown_task_called = 0;
-    my $shutdown_test = async sub {pass('Shutdown task has been called'); $shutdown_task_called++; return;};
+    my $shutdown_test = async sub { pass('Shutdown task has been called'); $shutdown_task_called++; return; };
     my $service_mock = Test::MockObject->new();
     $service_mock->mock( 'shutdown', $shutdown_test );
 
@@ -136,4 +136,3 @@ subtest  "Run and shutdown behaviour" => sub {
 
 };
 done_testing;
-
