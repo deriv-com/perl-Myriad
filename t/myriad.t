@@ -27,7 +27,7 @@ my $myriad = new_ok('Myriad');
 my $metaclass = $myriad->META;
 
 subtest "class methods and proper initialization" => sub {
-    can_ok($myriad, $_) for qw(configure_from_argv loop registry redis rpc_client rpc http subscription storage add_service service_by_name ryu shutdown run);
+    can_ok($myriad, qw(configure_from_argv loop registry redis rpc_client rpc http subscription storage add_service service_by_name ryu shutdown run));
 
 
     my $command_param = 'Testing';
