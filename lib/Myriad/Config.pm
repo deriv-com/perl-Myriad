@@ -45,9 +45,10 @@ our %DEFAULTS = (
     library_path           => '',
     opentracing_host       => 'localhost',
     opentracing_port       => 6832,
-    subscription_transport => 'perl',
-    rpc_transport          => 'perl',
-    storage_transport      => 'perl',
+    subscription_transport => undef,
+    rpc_transport          => undef,
+    storage_transport      => undef,
+    transport_default      => 'perl',
     service_name           => '',
 );
 
@@ -58,11 +59,11 @@ The C<< %SHORTCUTS_FOR >> hash allows commandline shortcuts for common parameter
 =cut
 
 our %SHORTCUTS_FOR = (
-    config_path   => [qw(c)],
-    log_level     => [qw(l)],
-    library_path  => [qw(lib)],
-    rpc_transport => [qw(t)],
-    service_name  => [qw(s)],
+    config_path       => [qw(c)],
+    log_level         => [qw(l)],
+    library_path      => [qw(lib)],
+    transport_default => [qw(t)],
+    service_name      => [qw(s)],
 );
 
 # Our configuration so far. Populated via L</BUILD>,
@@ -115,6 +116,11 @@ BUILD (%args) {
     }
 
     $config->{$_} //= $DEFAULTS{$_} for keys %DEFAULTS;
+
+    # Populate transports with the default transport if they are not already
+    # configured by the developer
+
+    $config->{$_} //= $config->{transport_default} for qw(rpc_transport subscription_transport storage_transport);
 
     push @INC, split /,:/, $config->{library_path} if $config->{library_path};
     $config->{$_} = Ryu::Observable->new($config->{$_}) for keys %$config;
