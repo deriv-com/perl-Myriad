@@ -45,9 +45,9 @@ our %DEFAULTS = (
     library_path           => '',
     opentracing_host       => 'localhost',
     opentracing_port       => 6832,
-    subscription_transport => 'redis',
-    rpc_transport          => 'redis',
-    storage_transport      => 'redis',
+    subscription_transport => 'perl',
+    rpc_transport          => 'perl',
+    storage_transport      => 'perl',
     service_name           => '',
 );
 
@@ -150,5 +150,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
 

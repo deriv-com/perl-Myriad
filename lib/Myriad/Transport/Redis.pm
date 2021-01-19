@@ -156,7 +156,7 @@ Returns a L<Ryu::Source> which emits L<Myriad::Redis::Pending> items.
 
 method iterate(%args) {
     my $src = $self->source;
-    my @streams = $args{streams};
+    my $streams = $args{streams};
     my $group = $args{group};
     my $client = $args{client};
     Future->wait_any(
@@ -168,7 +168,7 @@ method iterate(%args) {
                     BLOCK   => $self->wait_time,
                     GROUP   => $group, $client,
                     COUNT   => $self->batch_count,
-                    STREAMS => map {$_ => '>'} @streams,
+                    STREAMS => $streams->@*, map {'>'} $streams->@*,
                 );
                 $log->tracef('Read group %s', $batch);
                 for my $delivery ($batch->@*) {
@@ -527,5 +527,5 @@ Deriv Group Services Ltd. C<< DERIV@cpan.org >>
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
 

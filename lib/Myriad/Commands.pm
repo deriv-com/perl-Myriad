@@ -1,5 +1,7 @@
 package Myriad::Commands;
 
+use Myriad::Util::UUID;
+
 use Myriad::Class;
 use Unicode::UTF8 qw(decode_utf8);
 
@@ -19,6 +21,8 @@ Provides top-level commands, such as loading a service or making an RPC call.
 use Future::Utils qw(fmap0);
 
 use Module::Runtime qw(require_module);
+
+use Myriad::Service::Remote;
 
 has $myriad;
 
@@ -63,7 +67,8 @@ async method service (@args) {
 
 async method rpc ($rpc, @args) {
     try {
-        my $response = await $myriad->rpc_client->call_rpc($myriad->config->service_name->as_string, $rpc, @args);
+        my $service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
+        my $response = await $service->call_rpc($rpc, @args);
         $log->infof('RPC response is %s', $response);
     } catch ($e) {
         $log->warnf('RPC command failed due: %s', $e);
@@ -71,28 +76,20 @@ async method rpc ($rpc, @args) {
 }
 
 async method subscription ($stream, @args) {
-    my $service_name = $myriad->config->service_name->as_string;
-    $log->infof('Subscribing to: %s | %s | %s', $service_name, $stream);
-    my $sink = $myriad->ryu->sink(
-        label => "receiver:$stream",
-    );
-    $myriad->subscription->create_from_sink(
-        sink    => $sink,
-        channel => $stream,
-        client  => ref($self) . '/' . 'SUB_COMMAND',
-        from    => $service_name,
-    );
-
-    $sink->source->each(sub {
+    my $service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
+    $log->infof('Subscribing to: %s | %s', $service->service_name, $stream);
+    my $uuid = Myriad::Util::UUID::uuid();
+    $service->subscribe($stream, "$0/$uuid")->each(sub {
         my $e = shift;
         my %info = ($e->@*);
         $log->infof('DATA: %s', decode_utf8($info{data}));
     })->completed->retain;
+
 }
 
 async method storage($command, $key) {
-    # TODO use a method from the storage module to make the key name.
-    my $response = await $myriad->storage->$command($myriad->config->service_name->as_string . '/' . $key);
+    my $service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
+    my $response = await $service->storage->$command($key);
     $log->infof('Storage resposne is: %s', $response);
 }
 
@@ -107,5 +104,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
 

@@ -1,4 +1,4 @@
-package Myriad::Service::Storage;
+package Myriad::Service::Storage::Remote;
 
 use Myriad::Class;
 
@@ -9,13 +9,12 @@ use Myriad::Class;
 
 =head1 NAME
 
-Myriad::Service:Storage - microservice storage abstraction
+Myriad::Service::Storage::Remote - abstraction to access other services storage.
 
 =head1 SYNOPSIS
 
- my $storage = $myriad->storage;
+ my $storage = $api->service_by_name('service')->storage;
  await $storage->get('some_key');
- await $storage->hash_add('some_key', 'hash_key', 13);
 
 =head1 DESCRIPTION
 
@@ -24,8 +23,9 @@ Myriad::Service:Storage - microservice storage abstraction
 use Myriad::Role::Storage;
 
 BEGIN {
-    my $meta = Myriad::Service::Storage->META;
-    for my $method (@Myriad::Role::Storage::WRITE_METHODS, @Myriad::Role::Storage::READ_METHODS) {
+    my $meta = Myriad::Service::Storage::Remote->META;
+
+    for my $method (@Myriad::Role::Storage::READ_METHODS) {
         $meta->add_method($method, sub {
             my ($self, $key, @rest) = @_;
             return $self->storage->$method($self->apply_prefix($key), @rest);
@@ -33,10 +33,10 @@ BEGIN {
     }
 }
 
-has $storage;
-method storage { $storage }
 
 has $prefix;
+has $storage;
+method storage { $storage };
 
 BUILD (%args) {
     $prefix = delete $args{prefix} // die 'need a prefix';
@@ -75,4 +75,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 =head1 LICENSE
 
 Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+
 

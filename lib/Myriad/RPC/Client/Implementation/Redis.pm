@@ -32,11 +32,12 @@ method configure (%args) {
 
 method _add_to_loop ($loop) {
     $self->start->retain();
+    $self->next::method($loop);
 }
 
 async method start() {
     my $sub = await $redis->subscribe($whoami);
-    await $sub->events->map('payload')->map(sub{
+    $subscription = $sub->events->map('payload')->map(sub{
         try {
             my $payload = $_;
             $log->tracef('Received RPC response as %s', $payload);
@@ -51,6 +52,8 @@ async method start() {
             $log->warnf('failed to parse rpc response due %s', $e);
         }
     })->completed;
+
+    await $subscription;
 }
 
 async method call_rpc($service, $method, %args) {
@@ -89,6 +92,10 @@ async method call_rpc($service, $method, %args) {
         delete $pending_requests->{$message_id};
         $e->throw();
     }
+}
+
+async method stop {
+    $subscription->done();
 }
 
 method next_id {

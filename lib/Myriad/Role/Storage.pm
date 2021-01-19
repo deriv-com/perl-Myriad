@@ -49,6 +49,12 @@ a concrete implementation - instead, see classes such as:
 
 use Role::Tiny;
 
+our @WRITE_METHODS = qw(set push unshift pop shift hash_set hash_add);
+our @READ_METHODS = qw(get observe hash_get hash_keys hash_values hash_exists hash_count hash_as_list);
+
+requires $_ for @WRITE_METHODS;
+requires $_ for @READ_METHODS;
+
 =head2 get
 
 Takes the following parameters:
@@ -60,10 +66,6 @@ Takes the following parameters:
 =back
 
 Returns a L<Future> which will resolve to the corresponding value, or C<undef> if none.
-
-=cut
-
-requires 'get';
 
 =head2 set
 
@@ -82,19 +84,11 @@ or object will fail.
 
 Returns a L<Future> which will resolve on completion.
 
-=cut
-
-requires 'set';
-
 =head2 observe
 
 Observe a specific key.
 
 Returns a L<Ryu::Source> which will emit the current and all subsequent values.
-
-=cut
-
-requires 'observe';
 
 =head2 push
 
@@ -110,8 +104,6 @@ Takes the following parameters:
 
 Returns a L<Future> which will resolve to .
 
-=cut
-
 requires 'push';
 
 =head2 unshift
@@ -126,10 +118,6 @@ Takes the following parameters:
 
 Returns a L<Future> which will resolve to .
 
-=cut
-
-requires 'unshift';
-
 =head2 pop
 
 Takes the following parameters:
@@ -141,10 +129,6 @@ Takes the following parameters:
 =back
 
 Returns a L<Future> which will resolve to .
-
-=cut
-
-requires 'pop';
 
 =head2 shift
 
@@ -158,10 +142,6 @@ Takes the following parameters:
 
 Returns a L<Future> which will resolve to .
 
-=cut
-
-requires 'shift';
-
 =head2 hash_set
 
 Takes the following parameters:
@@ -173,10 +153,6 @@ Takes the following parameters:
 =back
 
 Returns a L<Future> which will resolve to .
-
-=cut
-
-requires 'hash_set';
 
 =head2 hash_get
 
@@ -190,10 +166,6 @@ Takes the following parameters:
 
 Returns a L<Future> which will resolve to the scalar value for this key.
 
-=cut
-
-requires 'hash_get';
-
 =head2 hash_add
 
 Takes the following parameters:
@@ -205,10 +177,6 @@ Takes the following parameters:
 =back
 
 Returns a L<Future> indicating success or failure.
-
-=cut
-
-requires 'hash_add';
 
 =head2 hash_keys
 
@@ -222,10 +190,6 @@ Takes the following parameters:
 
 Returns a L<Future> which will resolve to a list of the keys in no defined order.
 
-=cut
-
-requires 'hash_keys';
-
 =head2 hash_values
 
 Takes the following parameters:
@@ -237,10 +201,6 @@ Takes the following parameters:
 =back
 
 Returns a L<Future> which will resolve to a list of the values in no defined order.
-
-=cut
-
-requires 'hash_values';
 
 =head2 hash_exists
 
@@ -254,10 +214,6 @@ Takes the following parameters:
 
 Returns a L<Future> which will resolve to true if the key exists in this hash.
 
-=cut
-
-requires 'hash_exists';
-
 =head2 hash_count
 
 Takes the following parameters:
@@ -269,10 +225,6 @@ Takes the following parameters:
 =back
 
 Returns a L<Future> which will resolve to the count of the keys in this hash.
-
-=cut
-
-requires 'hash_count';
 
 =head2 hash_as_list
 
@@ -289,8 +241,6 @@ suitable for assigning to a hash.
 
 =cut
 
-requires 'hash_as_list';
-
 1;
 
 =head1 AUTHOR
@@ -301,5 +251,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
 

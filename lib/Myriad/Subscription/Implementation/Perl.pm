@@ -9,10 +9,9 @@ use Role::Tiny::With;
 
 with 'Myriad::Role::Subscription';
 
-has $service;
+has $transport;
 
-has $channels = {};
-has $receivers = {};
+has $receivers = [];
 
 has $should_shutdown = 0;
 has $stopped;
@@ -22,48 +21,59 @@ method _add_to_loop ($loop) {
 }
 
 method configure (%args) {
-    $service = delete $args{service} if exists $args{service};
+    $transport = delete $args{transport} if $args{transport};
     $self->next::method(%args);
 }
 
-method create_from_source (%args) {
+async method create_from_source (%args) {
     my $src          = delete $args{source} or die 'need a source';
+    my $service      = delete $args{service} or die 'need a service';
     my $channel_name = $service . '.' . $args{channel};
-    $channels->{$channel_name} = [];
 
-    $src->each(sub {
+    $src->map(async sub {
         my $message = shift;
-        push $channels->{$channel_name}->@*, $message;
-    })->retain;
+        await $transport->add_to_stream($channel_name, $message->%*);
+    })->resolve->completed->retain;
+    return;
 }
 
-method create_from_sink (%args) {
+async method create_from_sink (%args) {
     my $sink = delete $args{sink} or die 'need a sink';
-    my $channel_name = $service . '.' . $args{channel};
-    $receivers->{$channel_name} = [] unless exists $receivers->{$channel_name};
+    my $remote_service = $args{from} || $args{service};
+    my $channel_name = $remote_service . '.' . $args{channel};
 
-    push $receivers->{$channel_name}->@*, $sink;
+    push $receivers->@*, { channel => $channel_name, sink => $sink };
+    return;
 }
 
 async method start {
-    while (1) {
-        for my $channel (keys $channels->%*) {
-            my $clients = $receivers->{$channel};
-            if($clients->@*) {
-                while (my $message = shift $channels->{channel}->@*) {
-                    for my $receiver ($clients->@*) {
-                        $receiver->emit($message);
-                    }
-                }
-            }
-            # Give other things a space
-            await $self->loop->delay_future(after => 0.3);
+    if(!$receivers->@*) {
+        $stopped->done;
+        return;
+    }
+
+    for my $subscription ($receivers->@*) {
+        try {
+            await $transport->create_consumer_group($subscription->{channel}, 'subscriber', 0, 1);
+        } catch ($e) {
+            $log->warnf('Failed to create consumer group due: %s', $e);
         }
-        await $self->loop->delay_future(after => 0);
+    }
+
+    while (1) {
+        my $subscription = shift $receivers->@*;
+        push  $receivers->@*, $subscription;
+        my %messages = await $transport->read_from_stream_by_consumer($subscription->{channel}, 'subscriber', 'consumer');
+        for my $event_id (keys %messages) {
+            $subscription->{sink}->emit($messages{$event_id});
+            await $transport->ack_message($subscription->{channel}, 'subscriber', $event_id);
+        }
         if($should_shutdown) {
             $stopped->done;
             last;
         }
+
+        await $self->loop->delay_future(after => 0.1);
     }
 }
 

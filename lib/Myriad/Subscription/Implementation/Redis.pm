@@ -34,7 +34,7 @@ method configure (%args) {
     $self->next::method(%args);
 }
 
-method create_from_source (%args) {
+async method create_from_source (%args) {
     my $src = delete $args{source} or die 'need a source';
     my $service = delete $args{service} or die 'need a service';
 
@@ -46,6 +46,7 @@ method create_from_source (%args) {
             data => encode_json_utf8($_),
         )->retain;
     });
+    return;
 }
 
 method create_from_sink (%args) {
@@ -69,10 +70,11 @@ async method start {
             $log->tracef('Will readgroup on %s', $item);
             my $stream = $item->{key};
             my $sink = $item->{sink};
+            my $client = $item->{client};
             unless(exists $group->{$stream}{$item->{client}}) {
                 try {
                     $log->tracef('Creating new group for stream %s client %s', $stream, $item->{client});
-                    await $redis->xgroup(create => $stream, $item->{client}, '0');
+                    await $redis->create_group($stream, $item->{client}, '0');
                 } catch {
                     die $@ unless $@ =~ /^BUSYGROUP/;
                 }
@@ -80,7 +82,7 @@ async method start {
             }
             my ($streams) = await $redis->xreadgroup(
                 BLOCK   => 2500,
-                GROUP   => $item->{client}, $uuid,
+                GROUP   => $client, $uuid,
                 COUNT   => 10, # $self->batch_count,
                 STREAMS => (
                     $stream, '>'
@@ -98,8 +100,10 @@ async method start {
                         $args
                     );
                     if($args) {
-                        push @$args, ("message_id", $id);
+                        push @$args, ("transport_id", $id);
+                        $args->[1] = decode_json_utf8($args->[1]);
                         $sink->source->emit($args);
+                        await $redis->ack($stream, $client, $id);
                     }
                 }
             }

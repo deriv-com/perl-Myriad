@@ -7,6 +7,7 @@ use warnings;
 # AUTHORITY
 
 no indirect qw(fatal);
+use Scalar::Util qw(weaken);
 use utf8;
 
 =encoding utf8
@@ -23,22 +24,40 @@ Myriad::Subscription - microservice Subscription abstraction
 
 =cut
 
-use Myriad::Subscription::Implementation::Redis;
-use Myriad::Subscription::Implementation::Perl;
+use Myriad::Exception::Builder category => 'subscription';
+
+=head1 Exceptions
+
+=head2 UnknownTransport
+
+Subscription transport does not exist.
+
+=cut
+
+declare_exception UnknownTransport => (
+    message => 'Unknown transport'
+);
 
 sub new {
     my ($class, %args) = @_;
     my $transport = delete $args{transport};
+    weaken(my $myriad = delete $args{myriad});
 
     # Passing args individually looks tedious but this is to avoid
     # L<IO::Async::Notifier> exception when it doesn't recognize the key.
 
     if ($transport eq 'redis') {
+        require Myriad::Subscription::Implementation::Redis;
         return Myriad::Subscription::Implementation::Redis->new(
-            redis   => $args{redis},
+            redis   => $myriad->redis,
+        );
+    } elsif ($transport eq 'perl') {
+        require Myriad::Subscription::Implementation::Perl;
+        return Myriad::Subscription::Implementation::Perl->new(
+            transport => $myriad->perl_transport
         );
     } else {
-        return Myriad::Subscription::Implementation::Perl->new();
+        Myriad::Exception::Subscription::UnknownTransport->throw();
     }
 }
 
@@ -54,5 +73,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
 
