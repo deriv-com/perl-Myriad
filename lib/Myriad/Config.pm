@@ -136,7 +136,7 @@ method define ($key, $v) {
 
 =head2 fix_env_key_name
 
-Correct the config key name that we need to look for in 
+Correct the config key name that we need to look for in
 the environment variables to avoid naming varaiables such as
 MYRIAD_MYRIAD_TRANSPORT.
 
