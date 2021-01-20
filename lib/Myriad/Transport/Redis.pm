@@ -23,7 +23,7 @@ It should also cover retry for stateless calls.
 
 use Myriad::Redis::Pending;
 
-use Net::Async::Redis;
+use Net::Async::Redis::Cluster;
 
 use List::Util qw(pairmap);
 
@@ -39,13 +39,16 @@ has $max_pool_count;
 has $ryu;
 
 method configure (%args) {
-    $redis_uri = delete $args{redis_uri} if exists $args{redis_uri};
+    if(exists $args{redis_uri}) {
+        my $uri = delete $args{redis_uri};
+        $redis_uri = ref($uri) ? $uri : URI->new($uri);
+    }
     $max_pool_count = exists $args{max_pool_count} ? delete $args{max_pool_count} : 10;
 
     return $self->next::method(%args);
 }
 
-method ryu {$ryu}
+method ryu { $ryu }
 
 =head2 wait_time
 
@@ -62,6 +65,14 @@ Number of items to allow per batch (pending / readgroup calls).
 =cut
 
 method batch_count () { $batch_count }
+
+async method start {
+    await $redis->bootstrap(
+        host => $redis_uri->host,
+        port => $redis_uri->port,
+    );
+    return;
+}
 
 async method oldest_processed_id($stream) {
     my ($v) = await $redis->xinfo(GROUPS => $stream);
@@ -134,7 +145,7 @@ method next_id($id) {
 
 method _add_to_loop(@) {
     $self->add_child(
-        $redis = Net::Async::Redis->new(uri => $redis_uri),
+        $redis = Net::Async::Redis::Cluster->new
     );
 
     $self->add_child(
@@ -142,7 +153,7 @@ method _add_to_loop(@) {
     )
 }
 
-method source(@args) {
+method source (@args) {
     $self->ryu->source(@args)
 }
 
@@ -154,7 +165,7 @@ Returns a L<Ryu::Source> which emits L<Myriad::Redis::Pending> items.
 
 =cut
 
-method iterate(%args) {
+method iterate (%args) {
     my $src = $self->source;
     my $streams = $args{streams};
     my $group = $args{group};
@@ -195,7 +206,7 @@ method iterate(%args) {
     $src;
 }
 
-async method stream_info($stream) {
+async method stream_info ($stream) {
     my ($v) = await $redis->xinfo(
         STREAM => $stream
     );
@@ -216,7 +227,7 @@ Clear up old entries from a stream when it grows too large.
 
 =cut
 
-async method cleanup(%args) {
+async method cleanup (%args) {
     my $stream = $args{stream};
     # Check on our status - can we clean up any old queue items?
     my %info = await $self->stream_info($stream)->%*;
@@ -291,7 +302,7 @@ Returns a L<Ryu::Source> for the pending items in this stream.
 
 =cut
 
-method pending(%args) {
+method pending (%args) {
     my $src = $self->source;
     my $stream = $args{stream};
     my $group = $args{group};
@@ -348,7 +359,7 @@ Publish a message through a Redis channel (pub/sub system)
 
 =cut
 
-async method publish($channel, $message) {
+async method publish ($channel, $message) {
     await $redis->publish($channel, "$message");
 }
 
@@ -393,12 +404,10 @@ by default it's `$` which means the last message.
 
 =cut
 
-
-async method create_group($stream, $group, $start_from = '$') {
+async method create_group ($stream, $group, $start_from = '$') {
     try {
         await $redis->xgroup('CREATE', $stream, $group, $start_from, 'MKSTREAM');
-    }
-    catch ($e) {
+    } catch ($e) {
         if($e =~ /BUSYGROUP/){
             return;
         } else {
@@ -457,9 +466,12 @@ async method borrow_instance_from_pool {
     } elsif ($pending_redis_count < $max_pool_count) {
         ++$pending_redis_count;
         $self->add_child(
-            my $instance = Net::Async::Redis->new(uri => $redis_uri),
+            my $instance = Net::Async::Redis::Cluster->new
         );
-        await $instance->connected;
+        await $instance->bootstrap(
+            host => $redis_uri->host,
+            port => $redis_uri->port,
+        );
         return await $self->loop->new_future->done($instance);
     }
     push @$waiting_redis_pool, my $f = $self->loop->new_future;
