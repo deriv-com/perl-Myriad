@@ -45,9 +45,9 @@ our %DEFAULTS = (
     library_path           => '',
     opentracing_host       => 'localhost',
     opentracing_port       => 6832,
-    subscription_transport => 'perl',
-    rpc_transport          => 'perl',
-    storage_transport      => 'perl',
+    subscription_transport => 'redis',
+    rpc_transport          => 'redis',
+    storage_transport      => 'redis',
     service_name           => '',
 );
 
