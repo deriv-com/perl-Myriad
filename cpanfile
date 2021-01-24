@@ -4,19 +4,19 @@ requires 'indirect';
 requires 'multidimensional';
 requires 'bareword::filehandles';
 requires 'Syntax::Keyword::Dynamically', '>= 0.06';
-requires 'Syntax::Keyword::Try', '>= 0.20';
+requires 'Syntax::Keyword::Try', '>= 0.21';
 requires 'Future', '>= 0.47';
 requires 'Future::Queue';
 requires 'Future::AsyncAwait', '>= 0.47';
 requires 'Object::Pad', '>= 0.35';
-requires 'Role::Tiny', '>= 2.002003';
+requires 'Role::Tiny', '>= 2.002004';
 # Streams
 requires 'Ryu', '>= 2.006';
 requires 'Ryu::Async', '>= 0.019';
 # IO::Async
 requires 'Heap', '>= 0.80';
-requires 'IO::Async::Notifier', '>= 0.77';
-requires 'IO::Async::Test', '>= 0.77';
+requires 'IO::Async::Notifier', '>= 0.78';
+requires 'IO::Async::Test', '>= 0.78';
 requires 'IO::Async::SSL', '>= 0.22';
 # Functionality
 requires 'curry', '>= 1.001';
