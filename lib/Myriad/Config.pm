@@ -48,7 +48,7 @@ our %DEFAULTS = (
     subscription_transport => undef,
     rpc_transport          => undef,
     storage_transport      => undef,
-    myriad_transport       => 'perl',
+    myriad_transport       => 'redis',
     service_name           => '',
 );
 
