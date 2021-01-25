@@ -85,13 +85,13 @@ workflows:
   build-workflow:
     jobs:
       - run_tests
+      - coverage
   merged:
     jobs:
       - run_tests:
           context: perl
           filters: *filter_only_master
       - coverage:
-          context: perl
           filters: *filter_only_master
       - update_docker_image:
           context: perl
