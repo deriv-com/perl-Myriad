@@ -18,15 +18,16 @@ jobs:
           command: |
             apt-get update
             apt-get -y -q --no-install-recommends install $(cat aptfile)
+            perl -MConfig -le'print "$_=$Config{$_}" for sort keys %Config' > /opt/perl.config
       - restore_cache:
           keys:
-            - cpanfile-{{ arch }}-{{ checksum "cpanfile" }}
+            - cpanfile-{{ arch }}-{{ checksum "/opt/perl.config" }}-{{ checksum "cpanfile" }}
       - run:
           name: Install deps
           command: |
             cpanm -l deps --installdeps --with-develop -n .
       - save_cache:
-          key: cpanfile-{{ arch }}-{{ checksum "cpanfile" }}
+          key: cpanfile-{{ arch }}-{{ checksum "/opt/perl.config" }}-{{ checksum "cpanfile" }}
           paths:
             - deps
       - run:
@@ -53,7 +54,7 @@ jobs:
             apt-get -y -q --no-install-recommends install $(cat aptfile)
       - restore_cache:
           keys:
-            - cpanfile-{{ arch }}-{{ checksum "cpanfile" }}
+            - cpanfile-{{ arch }}-{{ checksum "/opt/perl.config" }}-{{ checksum "cpanfile" }}
       - run:
           name: Install deps
           command: |
