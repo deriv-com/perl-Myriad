@@ -57,12 +57,12 @@ jobs:
       - run:
           name: Install deps
           command: |
-            cpanm -l deps --installdeps --with-develop -n .
-    - run:
-        command: |
-          export PERL5LIB=$(pwd)/deps/lib/perl5:$(pwd)/deps/lib/perl5/$(perl -MConfig -le'print $Config{archname}'):$PERL5LIB
-          cover -test -report coveralls
-        name: Coverage
+              cpanm -l deps --installdeps --with-develop -n .
+      - run:
+          name: Coverage
+          command: |
+              export PERL5LIB=$(pwd)/deps/lib/perl5:$(pwd)/deps/lib/perl5/$(perl -MConfig -le'print $Config{archname}'):$PERL5LIB
+              cover -test -report coveralls
   
   update_docker_image:
     executor: docker/docker
