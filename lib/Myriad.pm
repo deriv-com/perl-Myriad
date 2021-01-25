@@ -188,6 +188,8 @@ IO::Async::Loop->new->add(
 
 # The IO::Async::Loop instance
 has $loop;
+# Any coderefs to call when the framework starts
+has $startup_tasks = [ ];
 # Any coderefs to call when shutdown is requested
 has $shutdown_tasks = [ ];
 # The Myriad::Config instance
@@ -268,7 +270,6 @@ async method configure_from_argv (@args) {
     );
     $self->setup_logging;
     $self->setup_tracing;
-    await $self->redis->start;
 
     $commands = Myriad::Commands->new(
         myriad => $self
@@ -305,6 +306,10 @@ method redis () {
                 redis_uri => $config ? $config->redis_uri->as_string : '',
             )
         );
+
+        $self->on_start(async sub {
+            await $self->redis->start;
+        });
     }
     $redis
 }
@@ -500,6 +505,18 @@ async method shutdown () {
     return $f->without_cancel;
 }
 
+=head2 on_start
+
+Registers a coderef to be called during startup.
+The coderef is expected to return a L<Future>.
+
+=cut
+
+method on_start ($code) {
+    push $startup_tasks->@*, $code;
+    $self;
+}
+
 =head2 on_shutdown
 
 Registers a coderef to be called during shutdown.
@@ -582,6 +599,12 @@ async method run () {
             $self->shutdown->await;
         }))
     } qw(TERM INT QUIT);
+
+    # Run the startup tasks
+    await Future->needs_all(
+        map { $_->() } splice $startup_tasks->@*
+    );
+
     map {
         my $component = $_;
         $self->$component->start->on_fail(sub {

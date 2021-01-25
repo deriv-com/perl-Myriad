@@ -48,7 +48,7 @@ our %DEFAULTS = (
     subscription_transport => undef,
     rpc_transport          => undef,
     storage_transport      => undef,
-    myriad_transport       => 'redis',
+    transport              => 'redis',
     service_name           => '',
 );
 
@@ -62,7 +62,7 @@ our %SHORTCUTS_FOR = (
     config_path       => [qw(c)],
     log_level         => [qw(l)],
     library_path      => [qw(lib)],
-    myriad_transport  => [qw(t)],
+    transport         => [qw(t)],
     service_name      => [qw(s)],
 );
 
@@ -89,7 +89,7 @@ BUILD (%args) {
         ) or die pod2usage(1);
     }
 
-    $config->{$_} //= $ENV{'MYRIAD_' . $self->fix_env_key_name($_)} for grep { exists $ENV{'MYRIAD_' . $self->fix_env_key_name($_)} } keys %DEFAULTS;
+    $config->{$_} //= $ENV{'MYRIAD_' . $_} for grep { exists $ENV{'MYRIAD_' . $_} } keys %DEFAULTS;
 
     $config->{config_path} //= $DEFAULTS{config_path};
     if(defined $config->{config_path} and -r $config->{config_path}) {
@@ -120,7 +120,7 @@ BUILD (%args) {
     # Populate transports with the default transport if they are not already
     # configured by the developer
 
-    $config->{$_} //= $config->{myriad_transport} for qw(rpc_transport subscription_transport storage_transport);
+    $config->{$_} //= $config->{transport} for qw(rpc_transport subscription_transport storage_transport);
 
     push @INC, split /,:/, $config->{library_path} if $config->{library_path};
     $config->{$_} = Ryu::Observable->new($config->{$_}) for keys %$config;
@@ -134,24 +134,10 @@ method define ($key, $v) {
     $config->{$key} = $DEFAULTS{$key} = Ryu::Observable->new($v);
 }
 
-=head2 fix_env_key_name
-
-Correct the config key name that we need to look for in
-the environment variables to avoid naming varaiables such as
-MYRIAD_MYRIAD_TRANSPORT.
-
-=cut
-
-method fix_env_key_name ($config_key_name) {
-    return uc($config_key_name =~ s/myriad_//r);
-}
-
 method DESTROY { }
 
 method AUTOLOAD () {
     my ($k) = our $AUTOLOAD =~ m{^.*::([^:]+)$};
-    # We enforce `_` because everything should be namespaced
-    die 'unknown k ' . $k unless $k =~ /_/;
     die 'unknown config key ' . $k unless exists $config->{$k};
     my $code = method () { return $self->key($k); };
     { no strict 'refs'; *$k = $code; }
