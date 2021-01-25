@@ -39,6 +39,30 @@ jobs:
           command: |
             export PERL5LIB=$(pwd)/deps/lib/perl5:$(pwd)/deps/lib/perl5/$(perl -MConfig -le'print $Config{archname}'):$PERL5LIB
             dzil xtest
+
+  coverage:
+    docker:
+      - image: deriv/dzil:latest
+        entrypoint: /bin/bash
+    steps:
+      - checkout
+      - run:
+          name: Prepare environment
+          command: |
+            apt-get update
+            apt-get -y -q --no-install-recommends install $(cat aptfile)
+      - restore_cache:
+          keys:
+            - cpanfile-{{ arch }}-{{ checksum "cpanfile" }}
+      - run:
+          name: Install deps
+          command: |
+            cpanm -l deps --installdeps --with-develop -n .
+    - run:
+        command: |
+          export PERL5LIB=$(pwd)/deps/lib/perl5:$(pwd)/deps/lib/perl5/$(perl -MConfig -le'print $Config{archname}'):$PERL5LIB
+          cover -test -report coveralls
+        name: Coverage
   
   update_docker_image:
     executor: docker/docker
@@ -64,6 +88,9 @@ workflows:
   merged:
     jobs:
       - run_tests:
+          context: perl
+          filters: *filter_only_master
+      - coverage:
           context: perl
           filters: *filter_only_master
       - update_docker_image:
