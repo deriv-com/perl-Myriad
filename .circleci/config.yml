@@ -62,7 +62,8 @@ jobs:
           name: Coverage
           command: |
               export PERL5LIB=$(pwd)/deps/lib/perl5:$(pwd)/deps/lib/perl5/$(perl -MConfig -le'print $Config{archname}'):$PERL5LIB
-              cover -test -report coveralls
+              export PATH=$(pwd)/deps/bin:$PATH
+              dzil run cover -test -report coveralls
   
   update_docker_image:
     executor: docker/docker
