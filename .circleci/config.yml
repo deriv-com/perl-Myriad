@@ -24,7 +24,7 @@ jobs:
       - run:
           name: Install deps
           command: |
-            cpanm -l deps --installdeps -n .
+            cpanm -l deps --installdeps --with-develop -n .
       - save_cache:
           key: cpanfile-{{ arch }}-{{ checksum "cpanfile" }}
           paths:
