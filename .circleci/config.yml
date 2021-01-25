@@ -63,7 +63,8 @@ jobs:
           command: |
               export PERL5LIB=$(pwd)/deps/lib/perl5:$(pwd)/deps/lib/perl5/$(perl -MConfig -le'print $Config{archname}'):$PERL5LIB
               export PATH=$(pwd)/deps/bin:$PATH
-              dzil run cover -test -report coveralls
+              # We don't care about failures here: those are handled by the main tests, we just want the report
+              dzil run cover -test -report coveralls || :
   
   update_docker_image:
     executor: docker/docker
@@ -86,7 +87,6 @@ workflows:
   build-workflow:
     jobs:
       - run_tests
-      - coverage
   merged:
     jobs:
       - run_tests:
