@@ -67,3 +67,8 @@ on 'test' => sub {
     requires 'Test::CheckDeps';
     requires 'Test::NoTabs';
 };
+
+on 'develop' => sub {
+    requires 'Devel::Cover::Report::Coveralls', '>= 0.11';
+    requires 'Devel::Cover';
+};
