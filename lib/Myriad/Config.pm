@@ -40,7 +40,7 @@ alternative.
 
 our %DEFAULTS = (
     config_path            => 'config.yml',
-    redis_uri              => 'redis://localhost:6379',
+    transport_redis        => 'redis://localhost:6379',
     log_level              => 'info',
     library_path           => '',
     opentracing_host       => 'localhost',
