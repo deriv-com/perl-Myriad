@@ -268,6 +268,7 @@ async method configure_from_argv (@args) {
     );
     $self->setup_logging;
     $self->setup_tracing;
+    await $self->redis->start;
 
     $commands = Myriad::Commands->new(
         myriad => $self
