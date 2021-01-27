@@ -39,13 +39,16 @@ async method create_from_source (%args) {
     my $service = delete $args{service} or die 'need a service';
 
     my $stream = $service . '/' . $args{channel};
-    $src->each(sub {
+    $src->map(sub {
         $log->tracef('sub has an event! %s', $_);
-        $redis->xadd(
+        return $redis->xadd(
             encode_utf8($stream) => '*',
             data => encode_json_utf8($_),
-        )->retain;
-    });
+        );
+    })->ordered_futures(
+        low => 100,
+        high => 5000,
+    )->retain;
     return;
 }
 
