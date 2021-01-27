@@ -303,7 +303,7 @@ method redis () {
     unless($redis) {
         $self->loop->add(
             $redis = Myriad::Transport::Redis->new(
-                redis_uri => $config ? $config->redis_uri->as_string : '',
+                redis_uri => $config ? $config->transport_redis->as_string : '',
             )
         );
 
