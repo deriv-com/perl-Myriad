@@ -22,8 +22,7 @@ has $group = { };
 
 has $queues = [ ];
 
-has $should_shutdown = 0;
-has $stopped;
+has $should_shutdown;
 
 BUILD {
     $uuid = Myriad::Util::UUID::uuid();
@@ -48,7 +47,11 @@ async method create_from_source (%args) {
     })->ordered_futures(
         low => 100,
         high => 5000,
-    )->retain;
+    )->completed
+     ->on_fail(sub {
+        $log->debugf("Redis XADD command failed for stream %s", $stream);
+        $should_shutdown->fail("Failed to publish subscription data for $stream - " . shift) unless $should_shutdown->is_ready;
+    })->retain;
     return;
 }
 
@@ -65,65 +68,61 @@ method create_from_sink (%args) {
 }
 
 async method start {
-    $stopped = $self->loop->new_future(label => 'subscription::redis::stopped');
-    while (1) {
-        if($queues->@*) {
-            my $item = shift $queues->@*;
-            push $queues->@*, $item;
-            $log->tracef('Will readgroup on %s', $item);
-            my $stream = $item->{key};
-            my $sink = $item->{sink};
-            my $client = $item->{client};
-            unless(exists $group->{$stream}{$item->{client}}) {
-                try {
-                    $log->tracef('Creating new group for stream %s client %s', $stream, $item->{client});
-                    await $redis->create_group($stream, $item->{client}, '0');
-                } catch {
-                    die $@ unless $@ =~ /^BUSYGROUP/;
-                }
-                $group->{$stream}{$item->{client}} = 1;
-            }
-            my ($streams) = await $redis->xreadgroup(
-                BLOCK   => 2500,
-                GROUP   => $client, $uuid,
-                COUNT   => 10, # $self->batch_count,
-                STREAMS => (
-                    $stream, '>'
-                )
-            );
-            $log->tracef('Read group %s', $streams);
-            for my $delivery ($streams->@*) {
-                my ($stream, $data) = $delivery->@*;
-                for my $item ($data->@*) {
-                    my ($id, $args) = $item->@*;
-                    $log->tracef(
-                        'Item from stream %s is ID %s and args %s',
-                        $stream,
-                        $id,
-                        $args
-                    );
-                    if($args) {
-                        push @$args, ("transport_id", $id);
-                        $args->[1] = decode_json_utf8($args->[1]);
-                        $sink->source->emit($args);
-                        await $redis->ack($stream, $client, $id);
+    $should_shutdown //= $self->loop->new_future(label => 'subscription::redis::shutdown');
+    await Future->wait_any($should_shutdown->without_cancel, async sub {
+            while (1) {
+                if($queues->@*) {
+                    my $item = shift $queues->@*;
+                    push $queues->@*, $item;
+                    $log->tracef('Will readgroup on %s', $item);
+                    my $stream = $item->{key};
+                    my $sink = $item->{sink};
+                    my $client = $item->{client};
+                    unless(exists $group->{$stream}{$item->{client}}) {
+                        try {
+                            $log->tracef('Creating new group for stream %s client %s', $stream, $item->{client});
+                            await $redis->create_group($stream, $item->{client}, '0');
+                        } catch {
+                            die $@ unless $@ =~ /^BUSYGROUP/;
+                        }
+                        $group->{$stream}{$item->{client}} = 1;
                     }
+                    my ($streams) = await $redis->xreadgroup(
+                        BLOCK   => 2500,
+                        GROUP   => $client, $uuid,
+                        COUNT   => 10, # $self->batch_count,
+                        STREAMS => (
+                            $stream, '>'
+                        )
+                    );
+                    $log->tracef('Read group %s', $streams);
+                    for my $delivery ($streams->@*) {
+                        my ($stream, $data) = $delivery->@*;
+                        for my $item ($data->@*) {
+                            my ($id, $args) = $item->@*;
+                            $log->tracef(
+                                'Item from stream %s is ID %s and args %s',
+                                $stream,
+                                $id,
+                                $args
+                            );
+                            if($args) {
+                                push @$args, ("transport_id", $id);
+                                $args->[1] = decode_json_utf8($args->[1]);
+                                $sink->source->emit($args);
+                                await $redis->ack($stream, $client, $id);
+                            }
+                        }
+                    }
+                } else {
+                    await $self->loop->delay_future(after => 1);
                 }
-            }
-        } else {
-            await $self->loop->delay_future(after => 1);
         }
-
-        if($should_shutdown) {
-            $stopped->done;
-            last;
-        }
-    }
+    }->());
 }
 
 async method stop {
-    $should_shutdown = 1;
-    await $stopped;
+    $should_shutdown->done() unless $should_shutdown->is_ready;
 }
 
 1;
