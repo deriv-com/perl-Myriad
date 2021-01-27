@@ -76,7 +76,7 @@ subtest "Myriad attributes setting tests" => sub {
     # RPC Client
     my $rpc_client = $myriad->rpc_client;
     isa_ok($rpc_client, 'Myriad::RPC::Client::Implementation::Perl', 'Myriad RPC Client is set');
-    my $current_notifiers = loop_notifiers($myriad->loop);
+    $current_notifiers = loop_notifiers($myriad->loop);
     ok($current_notifiers->{'Myriad::RPC::Client::Implementation::Perl'}, 'RPC Cleint is added to loop');
 
     # HTTP
