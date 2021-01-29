@@ -49,7 +49,7 @@ async method create_from_source (%args) {
         high => 5000,
     )->completed
      ->on_fail(sub {
-        $log->debugf("Redis XADD command failed for stream %s", $stream);
+        $log->warnf("Redis XADD command failed for stream %s", $stream);
         $should_shutdown->fail("Failed to publish subscription data for $stream - " . shift) unless $should_shutdown->is_ready;
     })->retain;
     return;
