@@ -212,7 +212,7 @@ async method start {
                 my $code = $spec->{code};
                 push @pending, $spec->{current} = $self->$code(
                     $sink->source,
-                )->on_error(sub {
+                )->on_fail(sub {
                     $log->fatalf('Receiver for %s failed - %s', $method, shift);
                 })->retain;
             }
