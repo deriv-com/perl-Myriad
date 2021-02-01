@@ -61,7 +61,6 @@ sub apply_attributes {
         $args = +{ eval "$args" } if length $args;
 
         $log->tracef('Attribute %s (%s) applying to %s', $type, $args, $pkg);
-        warn "CLASS: $class | pkg: $pkg | method: $method | code: $args{code} | TYPE: $type | args: $args";
         my $handler = $known_attributes{$type}
             or die 'unknown attribute ' . $type;
         $class->$handler(
@@ -88,7 +87,6 @@ This will cause the method to be registered in L<Myriad::Registry/add_rpc>.
 
 sub rpc {
     my ($class, $pkg, $method, $code, $args) = @_;
-    warn "RPCCCCCCCCCCCCCCCCCCCCCCCCCCC " . $Myriad::REGISTRY . " | " . ref($Myriad::REGISTRY);
     $Myriad::REGISTRY->add_rpc(
         $pkg,
         $method,
