@@ -89,7 +89,7 @@ BUILD (%args) {
         ) or die pod2usage(1);
     }
 
-    $config->{$_} //= $ENV{'MYRIAD_' . $_} for grep { exists $ENV{'MYRIAD_' . $_} } keys %DEFAULTS;
+    $config->{$_} //= $ENV{'MYRIAD_' . uc($_)} for grep { exists $ENV{'MYRIAD_' . uc($_)} } keys %DEFAULTS;
 
     $config->{config_path} //= $DEFAULTS{config_path};
     if(defined $config->{config_path} and -r $config->{config_path}) {
