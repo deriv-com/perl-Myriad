@@ -68,7 +68,6 @@ async method start {
             $subscription->{sink}->emit($messages{$event_id});
             await $transport->ack_message($subscription->{channel}, 'subscriber', $event_id);
         }
-
         if($should_shutdown) {
             $stopped->done;
             last;

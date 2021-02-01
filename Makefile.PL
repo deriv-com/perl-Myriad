@@ -80,6 +80,8 @@ my %WriteMakefileArgs = (
     "Test::Deep" => "1.130",
     "Test::Fatal" => "0.014",
     "Test::MemoryGrowth" => "0.03",
+    "Test::MockModule" => 0,
+    "Test::MockObject" => 0,
     "Test::More" => "0.98",
     "Test::NoTabs" => 0
   },
@@ -142,6 +144,8 @@ my %FallbackPrereqs = (
   "Test::Deep" => "1.130",
   "Test::Fatal" => "0.014",
   "Test::MemoryGrowth" => "0.03",
+  "Test::MockModule" => 0,
+  "Test::MockObject" => 0,
   "Test::More" => "0.98",
   "Test::NoTabs" => 0,
   "Time::Moment" => "0.44",
