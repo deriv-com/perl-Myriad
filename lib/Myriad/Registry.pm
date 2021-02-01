@@ -31,13 +31,19 @@ declare_exception UnknownClass => (
 
 use Myriad::API;
 
-has $rpc = {};
-has $service_by_name = {};
-has $batch = {};
-has $sink = {};
-has $stream = {};
-has $emitter = {};
-has $receiver = {};
+has $rpc ;
+has $service_by_name;
+has $batch;
+has $emitter;
+has $receiver;
+
+BUILD {
+ $rpc = {};
+ $service_by_name = {};
+ $batch = {};
+ $emitter = {};
+ $receiver = {};
+}
 
 =head2 add_service
 
@@ -69,9 +75,7 @@ async method add_service (%args) {
     );
 
     $rpc->{$pkg} ||= {};
-    $stream->{$pkg} ||= {};
     $batch->{$pkg} ||= {};
-    $sink->{$pkg} ||= {};
     $emitter->{$pkg} ||= {};
     $receiver->{$pkg} ||= {};
     $log->tracef('Going to add service %s', $service_name);
@@ -80,7 +84,7 @@ async method add_service (%args) {
     );
     my $k = refaddr($srv);
     weaken($service_by_name->{$service_name} = $srv);
-    $self->{services}{$k} = $srv;
+    weaken($myriad->services->{$k} = $srv);
 
     try {
         await $srv->start;
@@ -125,29 +129,10 @@ Returns a hashref of RPC definitions for the given class.
 =cut
 
 method rpc_for ($pkg) {
+    # Exception if getting for an empty unadded service or totally unknown.
     return $rpc->{$pkg} // Myriad::Exception::Registry::UnknownClass->throw(
         reason => 'unknown package ' . $pkg
     );
-}
-
-=head2 add_stream
-
-Registers a new stream method for the given class.
-
-=cut
-
-method add_stream ($pkg, $method, $code, $args) {
-    $stream->{$pkg}{$method} = $code;
-}
-
-=head2 streams_for
-
-Returns a hashref of stream methods for the given class.
-
-=cut
-
-method streams_for ($pkg) {
-    return $stream->{$pkg} // Myriad::Exception::Registry::UnknownPackage->throw(reason => 'unknown package ' . $pkg);
 }
 
 =head2 add_batch
@@ -157,37 +142,23 @@ Registers a new batch method for the given class.
 =cut
 
 method add_batch ($pkg, $method, $code, $args) {
-    $batch->{$pkg}{$method} = $code;
+    $batch->{$pkg}{$method} = {
+        code => $code,
+        args => $args,
+    };
 }
 
-=head2 batches_for
+=head2 batch_for
 
 Returns a hashref of batch methods for the given class.
 
 =cut
 
-method batches_for ($pkg) {
-    return $batch->{$pkg};
-}
-
-=head2 add_sink
-
-Registers a new sink method for the given class.
-
-=cut
-
-method add_sink ($pkg, $method, $code, $args) {
-    $sink->{$pkg}{$method} = $code;
-}
-
-=head2 sinks_for
-
-Returns a hashref of sink methods for the given class.
-
-=cut
-
-method sinks_for ($pkg) {
-    return $sink->{$pkg};
+method batch_for ($pkg) {
+    # Exception if getting for an empty unadded service or totally unknown.
+    return $batch->{$pkg} // Myriad::Exception::Registry::UnknownClass->throw(
+        reason => 'unknown package ' . $pkg
+    );
 }
 
 =head2 add_emitter
@@ -204,14 +175,17 @@ method add_emitter ($pkg, $method, $code, $args) {
     };
 }
 
-=head2 emitters_for
+=head2 emitter_for
 
 Returns a hashref of emitter methods for the given class.
 
 =cut
 
-method emitters_for ($pkg) {
-    return $emitter->{$pkg};
+method emitter_for ($pkg) {
+    # Exception if getting for an empty unadded service or totally unknown.
+    return $emitter->{$pkg} // Myriad::Exception::Registry::UnknownClass->throw(
+        reason => 'unknown package ' . $pkg
+    );
 }
 
 =head2 add_receiver
@@ -229,14 +203,17 @@ method add_receiver ($pkg, $method, $code, $args) {
     };
 }
 
-=head2 receivers_for
+=head2 receiver_for
 
 Returns a hashref of receiver methods for the given class.
 
 =cut
 
-method receivers_for ($pkg) {
-    return $receiver->{$pkg};
+method receiver_for ($pkg) {
+    # Exception if getting for an empty unadded service or totally unknown.
+    return $receiver->{$pkg} // Myriad::Exception::Registry::UnknownClass->throw(
+        reason => 'unknown package ' . $pkg
+    );
 }
 
 =head2 make_service_name
