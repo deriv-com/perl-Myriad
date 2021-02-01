@@ -200,8 +200,7 @@ method iterate (%args) {
             }
         })->()->without_cancel
     )->on_fail(sub {
-        my $error = shift;
-        $log->errorf("Failed while iterating on messages due: %s", $error);
+        $src->fail(shift);
     })->retain;
     $src;
 }
@@ -339,8 +338,7 @@ method pending (%args) {
     )->on_ready(sub {
         $self->return_instance_to_pool($instance) if $instance;
     })->on_fail(sub  {
-        my $error = shift;
-        $log->errorf("Failed while looking for pending messages due: %s", $error);
+        $src->fail(shift);
     })->retain;
     $src;
 }
