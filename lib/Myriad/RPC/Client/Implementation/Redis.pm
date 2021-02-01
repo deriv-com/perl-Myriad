@@ -30,11 +30,6 @@ method configure (%args) {
     $redis = delete $args{redis} if $args{redis};
 }
 
-method _add_to_loop ($loop) {
-    $self->start->retain();
-    $self->next::method($loop);
-}
-
 async method start() {
     my $sub = await $redis->subscribe($whoami);
     $subscription = $sub->events->map('payload')->map(sub{

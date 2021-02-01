@@ -367,6 +367,10 @@ method rpc_client () {
                 myriad => $self,
             )
         );
+
+        $self->on_shutdown(async sub {
+            await $rpc_client->stop;
+        });
     }
     $rpc_client
 }
@@ -612,7 +616,8 @@ async method run () {
             $log->warnf("%s failed due %s", $component, $error);
             $self->shutdown_future->fail($error);
         })->retain();
-    } qw(rpc subscription);
+    } qw(rpc subscription rpc_client);
+
     await $self->shutdown_future;
 }
 
