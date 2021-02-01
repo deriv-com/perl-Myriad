@@ -42,6 +42,8 @@ method whoami { $whoami }
 
 has $rpc_methods;
 
+has $iteration_future;
+
 sub service_name_from_stream ($stream) {
     my $pattern = RPC_SUFFIX . '$';
     $stream =~ s/$pattern//;
@@ -59,7 +61,11 @@ method configure (%args) {
 }
 
 async method start () {
-    return unless $rpc_methods;
+    if (!$rpc_methods) {
+        $iteration_future = Future->done;
+        return;
+    }
+
     await fmap0 {
             my $stream = stream_name_from_service(shift);
             $self->redis->create_group($stream,$self->group_name);
@@ -76,29 +82,28 @@ method create_from_sink (%args) {
     $rpc_methods->{$service}->{$method} = $sink;
 }
 
-
 async method stop () {
-    $self->listener->cancel;
+        $iteration_future->done unless $iteration_future->is_ready;
 }
 
 async method listener () {
-    # ordering is not important
-    my @streams = map {stream_name_from_service($_)} keys $rpc_methods->%*;
-    my %stream_config = (
-        group  => $self->group_name,
-        client => $self->whoami
-    );
-
-    my $incoming_request = $self->redis->iterate(streams => \@streams, %stream_config);
-
-    # xpending doesn't accept multiple streams like xreadgroup
-    for my $stream (@streams) {
-        $incoming_request->merge(
-            $self->redis->pending(stream => $stream, %stream_config)
+    $iteration_future //= do {
+        # ordering is not important
+        my @streams = map {stream_name_from_service($_)} keys $rpc_methods->%*;
+        my %stream_config = (
+            group  => $self->group_name,
+            client => $self->whoami
         );
-    }
 
-    try {
+        my $incoming_request = $self->redis->iterate(streams => \@streams, %stream_config);
+
+        # xpending doesn't accept multiple streams like xreadgroup
+        for my $stream (@streams) {
+            $incoming_request->merge(
+                $self->redis->pending(stream => $stream, %stream_config)
+            );
+        }
+
         await $incoming_request
             ->map(sub {
                 my $item = $_;
@@ -126,9 +131,7 @@ async method listener () {
                         await $self->reply_error($service, $message, $error);
                     }
                 }
-            })->resolve->completed;
-    } catch ($e) {
-        $log->errorf("RPC listener stopped due to: %s", $e);
+        })->resolve->completed;
     }
 }
 

@@ -32,6 +32,6 @@ try {
     );
     await $myriad->configure_from_argv(@ARGV);
     await $myriad->run;
-} catch {
-    $log->errorf('Failed at top level due to %s', $@);
+} catch ($e) {
+    $log->errorf('%s failed due to %s', $0, $e);
 }
