@@ -56,7 +56,6 @@ BUILD (%args) {
                     }
                     await $default_rpc->{$method};
                 };
-                $meta_service->add_method($method, async sub {'dummy'});
             }
         }
     } catch ($e) {
