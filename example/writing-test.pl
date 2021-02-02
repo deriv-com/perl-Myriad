@@ -16,6 +16,10 @@ package Test::Service::Real {
         return {mocked => 0};
     }
 
+    async method say_bye : RPC {
+        return {bye => 1};
+    }
+
     async method get_event : Receiver(service => 'Test::Service::Mocked', channel => 'weekends') ($source) {
         await $source->each(sub {
             my $event = shift;
