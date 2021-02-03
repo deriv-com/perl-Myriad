@@ -67,7 +67,7 @@ subtest "Adding and viewing components" => sub {
 subtest "Adding and starting Service" => sub {
 
     my $myriad = new_ok('Myriad');
-    my $config = new_ok('Myriad::Config' => [commandline => ['--rpc_transport', 'perl', '--subscription_transport', 'perl', '--storage_transport', 'perl']]);
+    my $config = new_ok('Myriad::Config' => [commandline => ['--transport', 'perl']]);
     my $myriad_meta = $myriad->META;
     $myriad_meta->get_slot('$config')->value($myriad) = $config;
     my $registry = $Myriad::REGISTRY;
