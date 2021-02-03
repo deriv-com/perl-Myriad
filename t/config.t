@@ -52,7 +52,7 @@ subtest "Test order configuration applying preference" => sub {
 };
 
 subtest "Test other functionality" => sub {
- 
+
     $ENV{'MYRIAD_LIBRARY_PATH'} = '/test/path/included';
     my @before_inc = @INC;
     my $config = new_ok('Myriad::Config');
