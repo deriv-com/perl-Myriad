@@ -72,4 +72,3 @@ subtest "Test other functionality" => sub {
 };
 
 done_testing;
-
