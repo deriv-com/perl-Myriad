@@ -40,14 +40,15 @@ alternative.
 
 our %DEFAULTS = (
     config_path            => 'config.yml',
-    redis_uri              => 'redis://localhost:6379',
+    transport_redis        => 'redis://localhost:6379',
     log_level              => 'info',
     library_path           => '',
     opentracing_host       => 'localhost',
     opentracing_port       => 6832,
-    subscription_transport => 'perl',
-    rpc_transport          => 'perl',
-    storage_transport      => 'perl',
+    subscription_transport => undef,
+    rpc_transport          => undef,
+    storage_transport      => undef,
+    transport              => 'redis',
     service_name           => '',
 );
 
@@ -58,11 +59,11 @@ The C<< %SHORTCUTS_FOR >> hash allows commandline shortcuts for common parameter
 =cut
 
 our %SHORTCUTS_FOR = (
-    config_path   => [qw(c)],
-    log_level     => [qw(l)],
-    library_path  => [qw(lib)],
-    rpc_transport => [qw(t)],
-    service_name  => [qw(s)],
+    config_path       => [qw(c)],
+    log_level         => [qw(l)],
+    library_path      => [qw(lib)],
+    transport         => [qw(t)],
+    service_name      => [qw(s)],
 );
 
 # Our configuration so far. Populated via L</BUILD>,
@@ -116,6 +117,11 @@ BUILD (%args) {
 
     $config->{$_} //= $DEFAULTS{$_} for keys %DEFAULTS;
 
+    # Populate transports with the default transport if they are not already
+    # configured by the developer
+
+    $config->{$_} //= $config->{transport} for qw(rpc_transport subscription_transport storage_transport);
+
     push @INC, split /,:/, $config->{library_path} if $config->{library_path};
     $config->{$_} = Ryu::Observable->new($config->{$_}) for keys %$config;
     $log->debugf("Config is %s", $config);
@@ -132,8 +138,6 @@ method DESTROY { }
 
 method AUTOLOAD () {
     my ($k) = our $AUTOLOAD =~ m{^.*::([^:]+)$};
-    # We enforce `_` because everything should be namespaced
-    die 'unknown k ' . $k unless $k =~ /_/;
     die 'unknown config key ' . $k unless exists $config->{$k};
     my $code = method () { return $self->key($k); };
     { no strict 'refs'; *$k = $code; }

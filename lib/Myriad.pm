@@ -188,6 +188,8 @@ IO::Async::Loop->new->add(
 
 # The IO::Async::Loop instance
 has $loop;
+# Any coderefs to call when the framework starts
+has $startup_tasks = [ ];
 # Any coderefs to call when shutdown is requested
 has $shutdown_tasks = [ ];
 # The Myriad::Config instance
@@ -301,9 +303,13 @@ method redis () {
     unless($redis) {
         $self->loop->add(
             $redis = Myriad::Transport::Redis->new(
-                redis_uri => $config ? $config->redis_uri->as_string : '',
+                redis_uri => $config ? $config->transport_redis->as_string : '',
             )
         );
+
+        $self->on_start(async sub {
+            await $self->redis->start;
+        });
     }
     $redis
 }
@@ -361,6 +367,10 @@ method rpc_client () {
                 myriad => $self,
             )
         );
+
+        $self->on_shutdown(async sub {
+            await $rpc_client->stop;
+        });
     }
     $rpc_client
 }
@@ -499,6 +509,18 @@ async method shutdown () {
     return $f->without_cancel;
 }
 
+=head2 on_start
+
+Registers a coderef to be called during startup.
+The coderef is expected to return a L<Future>.
+
+=cut
+
+method on_start ($code) {
+    push $startup_tasks->@*, $code;
+    $self;
+}
+
 =head2 on_shutdown
 
 Registers a coderef to be called during shutdown.
@@ -581,6 +603,12 @@ async method run () {
             $self->shutdown->await;
         }))
     } qw(TERM INT QUIT);
+
+    # Run the startup tasks
+    await Future->needs_all(
+        map { $_->() } splice $startup_tasks->@*
+    );
+
     map {
         my $component = $_;
         $self->$component->start->on_fail(sub {
@@ -588,7 +616,8 @@ async method run () {
             $log->warnf("%s failed due %s", $component, $error);
             $self->shutdown_future->fail($error);
         })->retain();
-    } qw(rpc subscription);
+    } qw(rpc subscription rpc_client);
+
     await $self->shutdown_future;
 }
 

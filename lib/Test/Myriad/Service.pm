@@ -54,9 +54,13 @@ BUILD (%args) {
                     if ($mocked_rpc->{$method}) {
                         return delete $mocked_rpc->{$method};
                     }
-                    await $default_rpc->{$method};
+                    try {
+                        await $default_rpc->{$method}->(@_);
+                    } catch ($e) {
+                        $log->tracef("An exception has been thrown while calling the original sub - %s", $e);
+                        die $e;
+                    }
                 };
-                $meta_service->add_method($method, async sub {'dummy'});
             }
         }
     } catch ($e) {
