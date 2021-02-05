@@ -1,8 +1,6 @@
 FROM deriv/dzil
 ARG HTTP_PROXY
-
 ONBUILD COPY . /app/
-
 ONBUILD RUN prepare-apt-cpan.sh \
  && dzil authordeps | cpanm -n
 
