@@ -60,7 +60,7 @@ sub apply_attributes {
         my ($type, $args) = $attr =~ m{^([a-z]+)(.*$)}si;
         # Nasty, but functional for now - this will likely be replaced by
         # an m//gc parser later with a restricted set of options.
-        $args = +{ eval "$args" } if length $args;
+        $args = +{ eval "$args" // die 'invalid attribute parameters: ' . $@ } if length $args;
 
         $log->tracef('Attribute %s (%s) applying to %s', $type, $args, $pkg);
         my $handler = $known_attributes{$type}
