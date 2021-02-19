@@ -61,6 +61,8 @@ our %ALLOWED_MODULES = map {
     ),
     __PACKAGE__;
 
+our %constant;
+
 =head1 METHODS - Class
 
 =head2 allow_modules
@@ -76,6 +78,52 @@ Don't ever use this.
 sub allow_modules {
     my $class = shift;
     @ALLOWED_MODULES{@_} = (1) x @_;
+}
+
+sub open_pipe {
+    # Establish comms channel for child process
+    socketpair my $child_pipe, my $parent_pipe, $constant{AF_UNIX}, $constant{SOCK_STREAM}, $constant{PF_UNSPEC}
+        or die $!;
+
+    { # Unbuffered writes
+        my $old = select($child_pipe);
+        $| = 1; select($parent_pipe);
+        $| = 1; select($old);
+    }
+
+    return ($parent_pipe, $child_pipe);
+}
+
+sub make_pipe_nonblocking {
+    my $pipe = shift;
+    my $flags = fcntl($pipe, $constant{F_GETFL}, 0)
+        or die "Can't get flags for the socket: $!\n";
+
+    $flags = fcntl($pipe, $constant{F_SETFL}, $flags | $constant{O_NONBLOCK})
+        or die "Can't set flags for the socket: $!\n";
+}
+
+sub listen_to_pipe {
+    my ($pipe, $on_read) = @_; 
+    # See https://perldoc.perl.org/functions/select#select-RBITS,WBITS,EBITS,TIMEOUT
+    # for a better understanding
+    my $input = '';
+    my $rin = my $win = '';
+    vec($rin, fileno($pipe), 1) = 1;
+    my $ein = $rin | $win;
+    
+    ACTIVE:
+    while(1) {
+        die $! unless defined(my $nfound = select my $rout = $rin, my $wout = $win, my $eout = $ein, 5);
+        if($nfound) {
+            my $rslt = sysread $pipe, my $buf, 4096;
+            last ACTIVE unless $rslt;
+            $input .= $buf;
+            while($input =~ s/^[\r\n]*(.*)[\r\n]+//) {
+                $on_read->($1);
+            }
+        }
+    }
 }
 
 =head2 boot
@@ -94,7 +142,6 @@ sub boot {
         say "$$ - HUP detected";
     };
 
-    my %constant;
     { # Read constants from various modules without loading them into the main process
         die $! unless defined(my $pid = open my $child, '-|');
         my %constant_map = (
@@ -127,16 +174,40 @@ sub boot {
             die "Missing constant $_" for grep !exists $constant{$_}, @constants;
         }
     }
+    
 
-    # Establish comms channel for child process
-    socketpair my $child_pipe, my $parent_pipe, $constant{AF_UNIX}, $constant{SOCK_STREAM}, $constant{PF_UNSPEC}
-        or die $!;
+    my ($intoify_parent_pipe, $inotify_child_pipe) = open_pipe();
 
-    { # Unbuffered writes
-        my $old = select($child_pipe);
-        $| = 1; select($parent_pipe);
-        $| = 1; select($old);
+    {
+        if(my $pid = fork // die "fork! $!") {
+            close $inotify_parent_pipe;
+            listen_to_pipe($inotify_child_pipe, sub {
+                # TODO: kill the Myriad instance and reload
+            });
+            
+            if(my $exit = waitpid $pid, 0) {
+                say "$$ Exit was $exit";
+            } else {
+                say "$$ No exit code yet";
+            }
+            say "$$ - Done";
+            exit 0;
+        } else {
+            require Module::Load;
+            Module::Load::load('Linux::Inotify2');
+            my $watcher = Linux::Inotify2->new();
+            
+            listen_to_pipe($parent_pipe, sub {
+                $watcher->watch(shift, IN_MODIFY);
+            });
+
+            while (my $events = $watcher->read) {
+                print $parent_pipe "reload"
+            }
+        }
     }
+
+    my ($parent_pipe, $child_pipe) = open_pipe();
 
     my $active = 1;
     MAIN:
@@ -147,13 +218,7 @@ sub boot {
             # The parent watches for events from the child...
             close $parent_pipe or die $!;
 
-            { # Switch child pipe to nonblocking mode
-                my $flags = fcntl($child_pipe, $constant{F_GETFL}, 0)
-                    or die "Can't get flags for the socket: $!\n";
-
-                $flags = fcntl($child_pipe, $constant{F_SETFL}, $flags | $constant{O_NONBLOCK})
-                    or die "Can't set flags for the socket: $!\n";
-            }
+            make_pipe_nonblocking($child_pipe);
 
             # Note that we don't have object methods available yet, since that'd pull in IO::Handle
             print $child_pipe "Parent active\n";
@@ -175,29 +240,10 @@ sub boot {
             local $SIG{HUP} = sub {
                 say "$$ - HUP detected in parent";
                 kill 3, $pid;
-    #           $stop = 1;
             };
 
-            # Build up any output from the child process
-            my $input = '';
-
-            my $rin = my $win = '';
-            vec($rin, fileno($child_pipe), 1) = 1;
-            my $ein = $rin | $win;
-            ACTIVE:
-            while(!$stop) {
-                say "$$ Parent loop cycle";
-                die $! unless defined(my $nfound = select my $rout = $rin, my $wout = $win, my $eout = $ein, 5);
-                if($nfound) {
-    #               say "$$ Child has something to report ($nfound): $rout, $wout, $eout";
-                    my $rslt = sysread $child_pipe, my $buf, 4096;
-                    last ACTIVE unless $rslt;
-                    $input .= $buf;
-                    while($input =~ s/^[\r\n]*(.*)[\r\n]+//) {
-                        say "Received from child: $1";
-                    }
-                }
-            }
+            listen_to_pipe($child_pipe, sub {say shift});
+            
             if(my $exit = waitpid $pid, 0) {
                 say "$$ Exit was $exit";
                 last MAIN;
@@ -208,13 +254,8 @@ sub boot {
             exit 0;
         } else {
             say "$$ - Child with parent " . $parent_pid;
-            { # Switch parent pipe to nonblocking mode
-                my $flags = fcntl($parent_pipe, $constant{F_GETFL}, 0)
-                    or die "Can't get flags for the socket: $!\n";
-
-                $flags = fcntl($parent_pipe, $constant{F_SETFL}, $flags | $constant{O_NONBLOCK})
-                    or die "Can't set flags for the socket: $!\n";
-            }
+            
+            make_pipe_nonblocking($parent_pipe);
 
             # We'd expect to pass through some more details here as well
             my %args = (
