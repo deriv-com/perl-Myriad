@@ -25,11 +25,15 @@ use Module::Runtime qw(require_module);
 use Myriad::Service::Remote;
 
 has $myriad;
+has $queued_commands;
+has $remote_service;
 
 BUILD (%args) {
     weaken(
         $myriad = $args{myriad} // die 'needs a Myriad parent object'
     );
+    $queued_commands = [];
+    $remote_service;
 }
 
 =head2 service
@@ -71,36 +75,73 @@ async method service (@args) {
             await $myriad->add_service($module, name => $service_custom_name);
         }
     }, foreach => \@modules, concurrent => 4);
+    push @$queued_commands, {cmd => 'service'};
 }
 
 async method rpc ($rpc, @args) {
     try {
-        my $service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
-        my $response = await $service->call_rpc($rpc, @args);
-        $log->infof('RPC response is %s', $response);
+        $remote_service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
+        push @$queued_commands, {cmd => 'rpc', name => $rpc, args => \@args};
+        #my $response = await $service->call_rpc($rpc, @args);
+        #$log->infof('RPC response is %s', $response);
     } catch ($e) {
         $log->warnf('RPC command failed due: %s', $e);
     }
 }
 
 async method subscription ($stream, @args) {
-    my $service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
-    $log->infof('Subscribing to: %s | %s', $service->service_name, $stream);
-    my $uuid = Myriad::Util::UUID::uuid();
-    $service->subscribe($stream, "$0/$uuid")->each(sub {
-        my $e = shift;
-        my %info = ($e->@*);
-        $log->infof('DATA: %s', decode_utf8($info{data}));
-    })->completed->retain;
+    $remote_service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
+    push @$queued_commands, {cmd => 'subscription', stream => $stream, args => \@args}; 
 
 }
 
-async method storage($command, $key) {
-    my $service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
-    my $response = await $service->storage->$command($key);
-    $log->infof('Storage resposne is: %s', $response);
+async method storage($action, $key) {
+    $remote_service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
+    push @$queued_commands, {cmd => 'storage', action => $action, key => $key}; 
 }
 
+async method run_queued() {
+
+    await fmap0(async sub {
+        my ($command) = @_;
+            if ($command->{cmd} eq 'rpc') {
+                my $response = await $remote_service->call_rpc($command->{name}, $command->{args}->@*);
+                $log->infof('RPC response is %s', $response);
+                await $myriad->shutdown;
+            } elsif ( $command->{cmd} eq 'service' ) {
+                
+                fmap0( async sub { await $_->start }, foreach => [values $myriad->services->%*], concurrent => 4);
+                map {
+                    my $component = $_;
+                    $myriad->$component->start->on_fail(sub {
+                        my $error = shift;
+                        $log->warnf("%s failed due %s", $component, $error);
+                        $myriad->shutdown_future->fail($error);
+                    })->retain();
+                } qw(rpc subscription rpc_client);
+
+            } elsif ( $command->{cmd} eq 'subscription' ) {
+
+                my $stream = $command->{stream};
+
+                $log->infof('Subscribing to: %s | %s', $remote_service->service_name, $stream);
+                my $uuid = Myriad::Util::UUID::uuid();
+                $remote_service->subscribe($stream, "$0/$uuid")->each(sub {
+                    my $e = shift;
+                    my %info = ($e->@*);
+                    $log->infof('DATA: %s', decode_utf8($info{data}));
+                })->completed->retain;
+            } elsif ( $command->{cmd} eq 'storage') {
+
+                my $action = $command->{action};
+                my $key = $command->{key};
+                my $response = await $remote_service->storage->$action($key);
+                $log->infof('Storage resposne is: %s', $response);
+
+            }
+    }, foreach => $queued_commands, concurrent => 4);
+
+}
 
 1;
 

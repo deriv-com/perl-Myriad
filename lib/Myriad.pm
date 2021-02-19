@@ -244,6 +244,14 @@ Returns the main L<IO::Async::Loop> instance for this process.
 
 method loop { $loop //= IO::Async::Loop->new }
 
+=head2 services
+
+retruns hash containing added services instances
+
+=cut
+
+method services { $services //= {} }
+
 =head2 configure_from_argv
 
 Applies configuration from commandline parameters.
@@ -544,9 +552,12 @@ triggered by a fault or a Unix signal.
 =cut
 
 method shutdown_future () {
+=c
     return $shutdown_without_cancel //= (
         $shutdown //= $self->loop->new_future->set_label('shutdown')
     )->without_cancel;
+=cut
+    return $shutdown->without_cancel;
 }
 
 =head2 setup_logging
@@ -609,16 +620,12 @@ async method run () {
         map { $_->() } splice $startup_tasks->@*
     );
 
-    map {
-        my $component = $_;
-        $self->$component->start->on_fail(sub {
-            my $error = shift;
-            $log->warnf("%s failed due %s", $component, $error);
-            $self->shutdown_future->fail($error);
-        })->retain();
-    } qw(rpc subscription rpc_client);
 
+    $shutdown //= $self->loop->new_future->set_label('shutdown');
+
+    await $commands->run_queued;    
     await $self->shutdown_future;
+
 }
 
 1;

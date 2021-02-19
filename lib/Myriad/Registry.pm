@@ -80,10 +80,10 @@ async method add_service (%args) {
     );
     my $k = refaddr($srv);
     weaken($service_by_name->{$service_name} = $srv);
-    $self->{services}{$k} = $srv;
+    weaken($myriad->services->{$k} = $srv);
 
     try {
-        await $srv->start;
+        #await $srv->start;
         $log->infof('Added service [%s]', $service_name);
     } catch ($e) {
         $log->errorf('Failed to add service [%s] due: %s', $service_name, $e);
