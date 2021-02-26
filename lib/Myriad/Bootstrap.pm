@@ -249,14 +249,14 @@ sub boot {
                     my $module = shift;
                     print $inotify_child_pipe "$module\r\n";
                 });
+
+                if(my $exit = waitpid $pid, $constant{WNOHANG}) {
+                    say "$$ Exit was $exit";
+                    last MAIN;
+                }
+
             }
 
-            if(my $exit = waitpid $pid, 0) {
-                say "$$ Exit was $exit";
-                last MAIN;
-            } else {
-                say "$$ No exit code yet";
-            }
             say "$$ - Done";
             exit 0;
         } else {
