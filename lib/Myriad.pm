@@ -552,12 +552,9 @@ triggered by a fault or a Unix signal.
 =cut
 
 method shutdown_future () {
-=c
     return $shutdown_without_cancel //= (
         $shutdown //= $self->loop->new_future->set_label('shutdown')
     )->without_cancel;
-=cut
-    return $shutdown->without_cancel;
 }
 
 =head2 setup_logging
@@ -620,8 +617,6 @@ async method run () {
         map { $_->() } splice $startup_tasks->@*
     );
 
-
-    $shutdown //= $self->loop->new_future->set_label('shutdown');
 
     await $commands->run_queued;    
     await $self->shutdown_future;
