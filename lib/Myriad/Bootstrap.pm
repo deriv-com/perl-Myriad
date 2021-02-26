@@ -91,6 +91,9 @@ sub open_pipe {
         $| = 1; select($old);
     }
 
+    make_pipe_nonblocking($parent_pipe);
+    make_pipe_nonblocking($child_pipe);
+
     return ($parent_pipe, $child_pipe);
 }
 
@@ -103,27 +106,27 @@ sub make_pipe_nonblocking {
         or die "Can't set flags for the socket: $!\n";
 }
 
-sub listen_to_pipe {
-    my ($pipe, $on_read) = @_; 
+sub check_messages_in_pipe {
+    my ($pipe, $on_read) = @_;
     # See https://perldoc.perl.org/functions/select#select-RBITS,WBITS,EBITS,TIMEOUT
     # for a better understanding
     my $input = '';
     my $rin = my $win = '';
     vec($rin, fileno($pipe), 1) = 1;
     my $ein = $rin | $win;
-    
-    ACTIVE:
-    while(1) {
-        die $! unless defined(my $nfound = select my $rout = $rin, my $wout = $win, my $eout = $ein, 5);
-        if($nfound) {
-            my $rslt = sysread $pipe, my $buf, 4096;
-            last ACTIVE unless $rslt;
-            $input .= $buf;
-            while($input =~ s/^[\r\n]*(.*)[\r\n]+//) {
-                $on_read->($1);
-            }
+
+    die $! unless defined(my $nfound = select my $rout = $rin, my $wout = $win, my $eout = $ein, 3);
+
+    if($nfound) {
+        my $rslt = sysread $pipe, my $buf, 4096;
+        return 0 unless $rslt;
+        $input .= $buf;
+        while($input =~ s/^[\r\n]*(.*)(?:\r\n)+//) {
+            $on_read->($1);
         }
     }
+
+    return 1;
 }
 
 =head2 boot
@@ -174,36 +177,32 @@ sub boot {
             die "Missing constant $_" for grep !exists $constant{$_}, @constants;
         }
     }
-    
 
-    my ($intoify_parent_pipe, $inotify_child_pipe) = open_pipe();
+    my ($inotify_parent_pipe, $inotify_child_pipe) = open_pipe();
 
     {
-        if(my $pid = fork // die "fork! $!") {
-            close $inotify_parent_pipe;
-            listen_to_pipe($inotify_child_pipe, sub {
-                # TODO: kill the Myriad instance and reload
-            });
-            
-            if(my $exit = waitpid $pid, 0) {
-                say "$$ Exit was $exit";
-            } else {
-                say "$$ No exit code yet";
-            }
-            say "$$ - Done";
-            exit 0;
-        } else {
+        unless (my $pid = fork // die "fork! $!") {
             require Module::Load;
             Module::Load::load('Linux::Inotify2');
-            my $watcher = Linux::Inotify2->new();
-            
-            listen_to_pipe($parent_pipe, sub {
-                $watcher->watch(shift, IN_MODIFY);
-            });
-
-            while (my $events = $watcher->read) {
-                print $parent_pipe "reload"
+            Linux::Inotify2->import;
+            my $mask;
+            {
+                no strict 'refs';
+                $mask = *{'Linux::Inotify2::IN_MODIFY'}->();
             }
+            my $watcher = Linux::Inotify2->new();
+            $watcher->blocking(0);
+            while (1) {
+                check_messages_in_pipe($inotify_parent_pipe, sub {
+                    my $module_path = shift;
+                    say "$$ - Going to watch $module_path for changes";
+                    $watcher->watch($module_path, $mask, sub {
+                        print $inotify_parent_pipe "change\r\n";
+                    });
+                });
+                $watcher->poll;
+            }
+            exit 0;
         }
     }
 
@@ -215,13 +214,7 @@ sub boot {
         if(my $pid = fork // die "fork: $!") {
             say "$$ - Parent with $pid child";
 
-            # The parent watches for events from the child...
-            close $parent_pipe or die $!;
-
-            make_pipe_nonblocking($child_pipe);
-
             # Note that we don't have object methods available yet, since that'd pull in IO::Handle
-            print $child_pipe "Parent active\n";
 
             { # Make sure we didn't pull in anything unexpected
                 my %found = map {
@@ -236,14 +229,28 @@ sub boot {
                 die "excessive module loading detected: $loaded_modules" if $loaded_modules;
             }
 
-            my $stop = 0;
             local $SIG{HUP} = sub {
                 say "$$ - HUP detected in parent";
                 kill 3, $pid;
             };
 
-            listen_to_pipe($child_pipe, sub {say shift});
-            
+            print $child_pipe "Parent active\r\n";
+
+            ACTIVE:
+            while (1) {
+
+                last ACTIVE unless check_messages_in_pipe($inotify_child_pipe, sub {
+                    say "$$ - File has been detected reloading..";
+                    kill 3, $pid;
+                    next MAIN;
+                });
+
+                last ACTIVE unless check_messages_in_pipe($child_pipe, sub {
+                    my $module = shift;
+                    print $inotify_child_pipe "$module\r\n";
+                });
+            }
+
             if(my $exit = waitpid $pid, 0) {
                 say "$$ Exit was $exit";
                 last MAIN;
@@ -254,8 +261,6 @@ sub boot {
             exit 0;
         } else {
             say "$$ - Child with parent " . $parent_pid;
-            
-            make_pipe_nonblocking($parent_pipe);
 
             # We'd expect to pass through some more details here as well
             my %args = (
@@ -268,7 +273,9 @@ sub boot {
             } else {
                 require Module::Load;
                 Module::Load::load($target);
-                $target->new->run(%args);
+                my $module = $target->new;
+                $module->configure_from_argv(@ARGV);
+                $module->run(%args)->get();
             }
             exit 0;
         }

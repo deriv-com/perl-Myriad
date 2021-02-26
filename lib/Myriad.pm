@@ -230,6 +230,8 @@ has $tracing;
 has $services = {};
 # Ryu::Source that can be used to recieve commands events
 has $ryu;
+# Pipeline that might be passed from booting script
+has $parent_pipe;
 
 # Note that we don't use Object::Pad as heavily within the core framework as we
 # would expect in microservices - this is mainly due to complications regarding
@@ -587,6 +589,20 @@ method setup_tracing () {
     return;
 }
 
+=head2 tell_parent
+
+Send a message to the parent process
+in case if Myriad is running under
+debug mode.
+
+=cut
+
+method tell_parent ($data) {
+    if ($parent_pipe) {
+        print $parent_pipe "$data\r\n";
+    }
+}
+
 =head2 run
 
 Starts the main loop.
@@ -595,7 +611,7 @@ Applies signal handlers for TERM and QUIT, then starts the loop.
 
 =cut
 
-async method run () {
+async method run (%args) {
     map {
         my $signal = $_;
         $self->loop->attach_signal($signal => $self->$curry::weak(method {
@@ -618,6 +634,9 @@ async method run () {
         })->retain();
     } qw(rpc subscription rpc_client);
 
+    if ($args{parent_pipe}) {
+        $parent_pipe = delete $args{parent_pipe};
+    }
     await $self->shutdown_future;
 }
 
