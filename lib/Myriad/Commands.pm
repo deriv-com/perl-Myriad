@@ -164,7 +164,7 @@ method start_components ($components = ['rpc', 'subscription', 'rpc_client']) {
 
 async method run_queued() {
 
-    $log->warnf('Number of Commands: %d', scalar @$queued_commands);
+    $log->tracef('Number of Commands: %d', scalar @$queued_commands);
 
     my @running_commands;
     push @running_commands, $_->{cmd}->($_->{params}) for @$queued_commands;
