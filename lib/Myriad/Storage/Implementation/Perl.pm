@@ -85,6 +85,32 @@ async method set : Defer ($k, $v) {
     return $data{$k} = $v;
 }
 
+=head2 getset
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $v >> - the scalar value to set
+
+=back
+
+Note that references are currently B<not> supported - attempts to write an arrayref, hashref
+or object will fail.
+
+Returns a L<Future> which will resolve on completion.
+
+=cut
+
+async method getset : Defer ($k, $v) {
+    die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
+    my $original = delete $data{$k};
+    $data{$k} = $v;
+    return $original;
+}
+
 =head2 observe
 
 Observe a specific key.

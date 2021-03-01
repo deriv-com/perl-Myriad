@@ -76,6 +76,30 @@ async method set ($k, $v) {
     await $redis->borrow_instance->set($k => $v);
 }
 
+=head2 getset
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $v >> - the scalar value to set
+
+=back
+
+Note that references are currently B<not> supported - attempts to write an arrayref, hashref
+or object will fail.
+
+Returns a L<Future> which will resolve to the original value on completion.
+
+=cut
+
+async method getset ($k, $v) {
+    die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
+    return await $redis->borrow_instance->getset($k => $v);
+}
+
 =head2 observe
 
 Observe a specific key.
