@@ -172,7 +172,7 @@ async method start {
             return;
         }
 
-        if(my $emitters = $registry->emitter_for(ref($self))) {
+        if(my $emitters = $registry->emitters_for(ref($self))) {
             for my $method (sort keys $emitters->%*) {
                 $log->tracef('Found emitter %s as %s', $method, $emitters->{$method});
                 my $spec = $emitters->{$method};
@@ -194,7 +194,7 @@ async method start {
             }
         }
 
-        if(my $receivers = $registry->receiver_for(ref($self))) {
+        if(my $receivers = $registry->receivers_for(ref($self))) {
             for my $method (sort keys $receivers->%*) {
                 $log->tracef('Found receiver %s as %s', $method, $receivers->{$method});
                 my $spec = $receivers->{$method};
@@ -218,7 +218,7 @@ async method start {
             }
         }
 
-        if (my $batches = $registry->batch_for(ref($self))) {
+        if (my $batches = $registry->batches_for(ref($self))) {
             for my $method (sort keys $batches->%*) {
                 $log->tracef('Starting batch process %s for %s', $method, ref($self));
                 my $code = $batches->{$method}{code};

@@ -31,19 +31,11 @@ declare_exception UnknownClass => (
 
 use Myriad::API;
 
-has $rpc ;
-has $service_by_name;
-has $batch;
-has $emitter;
-has $receiver;
-
-BUILD {
- $rpc = {};
- $service_by_name = {};
- $batch = {};
- $emitter = {};
- $receiver = {};
-}
+has %rpc ;
+has %service_by_name;
+has %batch;
+has %emitter;
+has %receiver;
 
 =head2 add_service
 
@@ -74,16 +66,16 @@ async method add_service (%args) {
         service_name => $service_name,
     );
 
-    $rpc->{$pkg} ||= {};
-    $batch->{$pkg} ||= {};
-    $emitter->{$pkg} ||= {};
-    $receiver->{$pkg} ||= {};
+    $rpc{$pkg} ||= {};
+    $batch{$pkg} ||= {};
+    $emitter{$pkg} ||= {};
+    $receiver{$pkg} ||= {};
     $log->tracef('Going to add service %s', $service_name);
     $self->loop->add(
         $srv
     );
     my $k = refaddr($srv);
-    weaken($service_by_name->{$service_name} = $srv);
+    weaken($service_by_name{$service_name} = $srv);
     weaken($myriad->services->{$k} = $srv);
 
     try {
@@ -104,7 +96,7 @@ Will throw an exception if the service cannot be found.
 =cut
 
 method service_by_name ($k) {
-    return $service_by_name->{$k} // Myriad::Exception::Registry::ServiceNotFound->throw(
+    return $service_by_name{$k} // Myriad::Exception::Registry::ServiceNotFound->throw(
         reason => 'service ' . $k . ' not found'
     );
 }
@@ -116,7 +108,7 @@ Registers a new RPC method for the given class.
 =cut
 
 method add_rpc ($pkg, $method, $code, $args) {
-    $rpc->{$pkg}{$method} = {
+    $rpc{$pkg}{$method} = {
         code => $code,
         args => $args,
     };
@@ -130,7 +122,7 @@ Returns a hashref of RPC definitions for the given class.
 
 method rpc_for ($pkg) {
     # Exception if getting for an empty unadded service or totally unknown.
-    return $rpc->{$pkg} // Myriad::Exception::Registry::UnknownClass->throw(
+    return $rpc{$pkg} // Myriad::Exception::Registry::UnknownClass->throw(
         reason => 'unknown package ' . $pkg
     );
 }
@@ -142,21 +134,21 @@ Registers a new batch method for the given class.
 =cut
 
 method add_batch ($pkg, $method, $code, $args) {
-    $batch->{$pkg}{$method} = {
+    $batch{$pkg}{$method} = {
         code => $code,
         args => $args,
     };
 }
 
-=head2 batch_for
+=head2 batches_for
 
 Returns a hashref of batch methods for the given class.
 
 =cut
 
-method batch_for ($pkg) {
+method batches_for ($pkg) {
     # Exception if getting for an empty unadded service or totally unknown.
-    return $batch->{$pkg} // Myriad::Exception::Registry::UnknownClass->throw(
+    return $batch{$pkg} // Myriad::Exception::Registry::UnknownClass->throw(
         reason => 'unknown package ' . $pkg
     );
 }
@@ -169,21 +161,21 @@ Registers a new emitter method for the given class.
 
 method add_emitter ($pkg, $method, $code, $args) {
     $args->{channel} //= $method;
-    $emitter->{$pkg}{$method} = {
+    $emitter{$pkg}{$method} = {
         code => $code,
         args => $args,
     };
 }
 
-=head2 emitter_for
+=head2 emitters_for
 
 Returns a hashref of emitter methods for the given class.
 
 =cut
 
-method emitter_for ($pkg) {
+method emitters_for ($pkg) {
     # Exception if getting for an empty unadded service or totally unknown.
-    return $emitter->{$pkg} // Myriad::Exception::Registry::UnknownClass->throw(
+    return $emitter{$pkg} // Myriad::Exception::Registry::UnknownClass->throw(
         reason => 'unknown package ' . $pkg
     );
 }
@@ -197,21 +189,21 @@ Registers a new receiver method for the given class.
 method add_receiver ($pkg, $method, $code, $args) {
     $args->{channel} //= $method;
     $args->{service} = $self->make_service_name($args->{service}) if $args->{service};
-    $receiver->{$pkg}{$method} = {
+    $receiver{$pkg}{$method} = {
         code => $code,
         args => $args,
     };
 }
 
-=head2 receiver_for
+=head2 receivers_for
 
 Returns a hashref of receiver methods for the given class.
 
 =cut
 
-method receiver_for ($pkg) {
+method receivers_for ($pkg) {
     # Exception if getting for an empty unadded service or totally unknown.
-    return $receiver->{$pkg} // Myriad::Exception::Registry::UnknownClass->throw(
+    return $receiver{$pkg} // Myriad::Exception::Registry::UnknownClass->throw(
         reason => 'unknown package ' . $pkg
     );
 }

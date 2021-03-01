@@ -30,6 +30,13 @@ sub loop_notifiers {
     return \%loaded_in_loop;
 }
 
+my $METHODS_MAP = {rpc => 'rpc_for', batch => 'batches_for', emitter => 'emitters_for', receiver => 'receivers_for'};
+sub component_for_method {
+    my $method = shift;
+
+    return $METHODS_MAP->{$method};
+}
+
 subtest "Adding and viewing components" => sub {
 
     my $registry = new_ok('Myriad::Registry');
@@ -47,11 +54,13 @@ subtest "Adding and viewing components" => sub {
         my $slot = {"$srv_class" => { $sub_name => {args => $args, code => $dummy_sub}}};
 
         my $add = join '_', 'add', $component;
-        my $for = join '_', $component, 'for';
+
+        my  $for = component_for_method($component);
+        note "FFFF: $for";
 
         # Always pass empty $args only with receiver set service name
         $registry->$add($srv_class, $sub_name, $dummy_sub, $component eq 'receiver'? {'service' => $srv_class} : {});
-        my $reg_slot = $reg_meta->get_slot('$'.$component)->value($registry);
+        my $reg_slot = $reg_meta->get_slot('%'.$component)->value($registry);
         cmp_deeply($reg_slot, $slot, "added $component");
 
         my $for_method = $registry->$for($srv_class);
@@ -96,7 +105,7 @@ subtest "Adding and starting Service" => sub {
     my $services = $myriad_meta->get_slot('$services')->value($myriad);
     # We should be having only one.
     is (keys %$services, 1, 'Only one service is added');
-    my ($service) = values $services->%*;
+    my ($service) = values %$services;
     # Service name is set
     my $service_name = $service->service_name;
     like($registry->make_service_name('Testing::Service'), qr/$service_name/, "Service name is set correctly");
@@ -104,7 +113,7 @@ subtest "Adding and starting Service" => sub {
     my $srv_meta = $service->META;
     isa_ok($srv_meta->get_slot('$api')->value($service), 'Myriad::API', "API instance been injected in Service");
     # Calling empty <component>_for for an added service will not trigger exception. reveiver and emitter in this case.
-    my ($rpc, $batch, $receiver, $emitter) = map {my $meth = $_ . "_for"; $registry->$meth('Testing::Service')} qw(rpc batch receiver emitter);
+    my ($rpc, $batch, $receiver, $emitter) = map {my $meth = component_for_method($_); $registry->$meth('Testing::Service')} qw(rpc batch receiver emitter);
     cmp_deeply([map {keys %$_ } ($rpc, $batch, $receiver, $emitter)], ['inc_test', 'batch_test'], 'Registry components configured after service adding');
 
     my $current_notifiers = loop_notifiers($myriad->loop);
