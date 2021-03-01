@@ -11,6 +11,8 @@ use Future::AsyncAwait;
 
 use experimental qw(signatures);
 
+use Metrics::Any qw($metrics);
+
 =encoding utf8
 
 =head1 NAME
@@ -54,6 +56,22 @@ our @READ_METHODS = qw(get observe hash_get hash_keys hash_values hash_exists ha
 
 requires $_ for @WRITE_METHODS;
 requires $_ for @READ_METHODS;
+
+$metrics->make_timer(time_elapsed => 
+    name => [qw(myriad storage)],
+    description => 'Time taken to process storage request',
+    labels => [qw(method status)],
+);
+
+foreach my $method (@WRITE_METHODS, @READ_METHODS) {
+    around $method => sub {
+        my $code = shift;
+        return $code->(@_)->on_ready(sub {
+            my $f = shift;
+            $metrics->report_timer(time_elapsed => $f->elapsed, {method => $method, status => $f->state});
+        });
+    };
+}
 
 =head2 get
 
