@@ -120,6 +120,6 @@ subtest "rpc command" => sub {
     note Dumper($myriad->rpc_client);
     
 # my $service = Myriad::Test::Service->new('');
-#$service->add_rpc('rpc_name', %default_response);
+# $service->add_rpc('rpc_name', %default_response);
 };
 done_testing;
