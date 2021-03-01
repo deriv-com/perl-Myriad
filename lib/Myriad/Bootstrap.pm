@@ -115,7 +115,7 @@ sub check_messages_in_pipe {
     vec($rin, fileno($pipe), 1) = 1;
     my $ein = $rin | $win;
 
-    die $! unless defined(my $nfound = select my $rout = $rin, my $wout = $win, my $eout = $ein, 3);
+    die $! unless defined(my $nfound = select my $rout = $rin, my $wout = $win, my $eout = $ein, 0.5);
 
     if($nfound) {
         my $rslt = sysread $pipe, my $buf, 4096;
@@ -139,18 +139,15 @@ pipe, then starts the code.
 sub boot {
     my ($class, $target) = @_;
     my $parent_pid = $$;
-    # Most of the handling here involves catching things, and reporting
-    # to the parent via STDOUT
-    $SIG{HUP} = sub {
-        say "$$ - HUP detected";
-    };
+    my @children_pids;
 
     { # Read constants from various modules without loading them into the main process
         die $! unless defined(my $pid = open my $child, '-|');
         my %constant_map = (
-            Socket => [qw(AF_UNIX SOCK_STREAM PF_UNSPEC)],
-            Fcntl  => [qw(F_GETFL F_SETFL O_NONBLOCK)],
-            POSIX  => [qw(WNOHANG)],
+            Socket            => [qw(AF_UNIX SOCK_STREAM PF_UNSPEC)],
+            Fcntl             => [qw(F_GETFL F_SETFL O_NONBLOCK)],
+            POSIX             => [qw(WNOHANG)],
+            'Linux::Inotify2' => [qw(IN_MODIFY)]
         );
         unless($pid) {
             # We've forked, so we're free to load any extra modules we'd like here
@@ -181,23 +178,28 @@ sub boot {
     my ($inotify_parent_pipe, $inotify_child_pipe) = open_pipe();
 
     {
-        unless (my $pid = fork // die "fork! $!") {
+        if (my $pid = fork // die "fork! $!") {
+            push @children_pids, $pid;
+        } else {
+            local $SIG{HUP}= sub {
+                say "$pid - inotify process termintated";
+                exit 0;
+            };
+
             require Module::Load;
             Module::Load::load('Linux::Inotify2');
-            Linux::Inotify2->import;
-            my $mask;
-            {
-                no strict 'refs';
-                $mask = *{'Linux::Inotify2::IN_MODIFY'}->();
-            }
+
             my $watcher = Linux::Inotify2->new();
             $watcher->blocking(0);
             while (1) {
                 check_messages_in_pipe($inotify_parent_pipe, sub {
                     my $module_path = shift;
                     say "$$ - Going to watch $module_path for changes";
-                    $watcher->watch($module_path, $mask, sub {
+                    $watcher->watch($module_path, $constant{IN_MODIFY}, sub {
+                        my $e = shift;
                         print $inotify_parent_pipe "change\r\n";
+                        # The new child might have different paths
+                        $e->w->cancel;
                     });
                 });
                 $watcher->poll;
@@ -213,6 +215,7 @@ sub boot {
     while($active) {
         if(my $pid = fork // die "fork: $!") {
             say "$$ - Parent with $pid child";
+            push @children_pids, $pid;
 
             # Note that we don't have object methods available yet, since that'd pull in IO::Handle
 
@@ -250,11 +253,14 @@ sub boot {
                     print $inotify_child_pipe "$module\r\n";
                 });
 
-                if(my $exit = waitpid $pid, $constant{WNOHANG}) {
-                    say "$$ Exit was $exit";
-                    last MAIN;
+                for my $child_pid (@children_pids) {
+                    if(my $exit = waitpid $pid, $constant{WNOHANG}) {
+                        say "$$ Exit was $exit";
+                        # stop the other processes
+                        kill 1, $_ for grep {$_ eq $child_pid} @children_pids;
+                        last MAIN;
+                    }
                 }
-
             }
 
             say "$$ - Done";
