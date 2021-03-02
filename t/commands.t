@@ -75,12 +75,6 @@ BEGIN {
     Test::Myriad->add_service(name => "Test::Service::Mocked")->add_rpc('testing_rpc', success => 1);
 }
 
-# testing command class only
-#my $service_module = Test::MockModule->new('Myriad::Service::Remote');
-#$service_module->mock('call_rpc', async sub { my ($self, $rpc, %args) = @_; $rmt_svc_cmd_called->{$rpc}++; return {success => 1, args => \%args}; } );
-# Instead of mocking Remote service let's mock 
-# Myriad->rpc_client and cross tests part of Myriad::Service::Remote class
-
 my $myriad_mod = Test::MockModule->new('Myriad');
 my $rmt_svc_cmd_called = {};
 my $testing_rpc = 'testing_rpc';
@@ -100,8 +94,6 @@ $myriad_mod->mock('rpc_client', sub {
 );
 
 subtest "rpc command" => sub {
-    ok 1, 'jusr';
-
     my $myriad = Myriad->new;
     my $svc_pkg_name = 'Test::Service::Mocked';
     $myriad->META->get_slot('$config')->value($myriad) = Myriad::Config->new( commandline => ['--service_name', $svc_pkg_name] );
@@ -115,11 +107,6 @@ subtest "rpc command" => sub {
 
     # Check what service is called
     is ($_->{svc}, $myriad->registry->make_service_name($svc_pkg_name), "Correct service name passed") for $rmt_svc_cmd_called->{rpc}->@*;
-    use Data::Dumper;
-    note Dumper($rmt_svc_cmd_called);
-    note Dumper($myriad->rpc_client);
-    
-# my $service = Myriad::Test::Service->new('');
-# $service->add_rpc('rpc_name', %default_response);
 };
+
 done_testing;
