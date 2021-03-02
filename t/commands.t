@@ -78,16 +78,16 @@ BEGIN {
 my $myriad_mod = Test::MockModule->new('Myriad');
 my $rmt_svc_cmd_called = {};
 my $testing_rpc = 'testing_rpc';
-$myriad_mod->mock('rpc_client', sub { 
+$myriad_mod->mock('rpc_client', sub {
         my ($self) = @_;
         my $mock = Test::MockObject->new();
-        $mock->mock( 'call_rpc', async sub { 
+        $mock->mock( 'call_rpc', async sub {
                 my ($self, $service_name, $rpc, %args) = @_;
                 $rmt_svc_cmd_called->{rpc} //= [];
                 push @{$rmt_svc_cmd_called->{rpc}}, {svc => $service_name, rpc => $rpc, args => \%args};
                 die 'Unknown RPC' unless $rpc eq $testing_rpc;
                 return {success => 1};
-            } 
+            }
         );
         return $mock;
     }
