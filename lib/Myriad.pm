@@ -225,9 +225,8 @@ has $shutdown;
 has $shutdown_without_cancel;
 # The Net::Async::OpenTracing instance
 has $tracing;
-# Any service definitions wait what why is this here,
-# can we not use the registry instead?
-has $services = {};
+# Any service definitions which is added by registry
+has $services;
 # Ryu::Source that can be used to recieve commands events
 has $ryu;
 

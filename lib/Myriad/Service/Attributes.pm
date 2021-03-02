@@ -38,8 +38,6 @@ use Sub::Util ();
 
 my %known_attributes = (
     RPC      => 'rpc',
-    Stream   => 'stream',
-    Sink     => 'sink',
     Batch    => 'batch',
     Emitter  => 'emitter',
     Receiver => 'receiver',
@@ -97,34 +95,6 @@ sub rpc {
     );
 }
 
-=head2 Stream
-
-Mark this as an async method which expects to be called with a L<Ryu::Sink>,
-and is responsible for streaming data into that sink until cancelled.
-
- has $src;
- async method example_stream : Stream ($sink) {
-  $src //= $self->ryu->source;
-  $sink->from($src);
-  my $idx = 0;
-  while(1) {
-   await $self->loop->delay_future(after => 0.1);
-   $src->emit(++$idx);
-  }
- }
-
-=cut
-
-sub stream {
-    my ($class, $pkg, $method, $code, $args) = @_;
-    $Myriad::REGISTRY->add_stream(
-        $pkg,
-        $method,
-        $code,
-        $args,
-    );
-}
-
 =head2 Batch
 
 Mark this as an async method which should be called repeatedly to generate
@@ -140,28 +110,6 @@ arrayref batches of data.
 sub batch {
     my ($class, $pkg, $method, $code, $args) = @_;
     $Myriad::REGISTRY->add_batch(
-        $pkg,
-        $method,
-        $code,
-        $args,
-    );
-}
-
-=head2 Sink
-
-Mark this as an async method which should be called repeatedly to generate
-arrayref batches of data.
-
- has $id = 0;
- async method example_batch : Batch {
-  return [ ++$id ];
- }
-
-=cut
-
-sub sink {
-    my ($class, $pkg, $method, $code, $args) = @_;
-    $Myriad::REGISTRY->add_sink(
         $pkg,
         $method,
         $code,
