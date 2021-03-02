@@ -14,7 +14,7 @@ use IO::Async::Test;
 use Myriad;
 use Myriad::Commands;
 use Myriad::Config;
-use Test::Myriad; 
+use Test::Myriad;
 
 my $loop = IO::Async::Loop->new;
 testing_loop($loop);
