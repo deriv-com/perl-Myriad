@@ -2,18 +2,73 @@ use strict;
 use warnings;
 
 use Test::More;
+use Test::Deep;
 use Test::Fatal;
 use Log::Any::Adapter qw(TAP);
 
 use Myriad::Config;
 
-is(exception {
-    Myriad::Config->new
-}, undef, '->new without parameters succeeds');
+my %defaults = %Myriad::Config::DEFAULTS;
+subtest "Test order configuration applying preference" => sub {
+    # - commandline parameter
+    # - environment
+    # - config file
+    # - defaults
 
-my $cfg = Myriad::Config->new;
-is($cfg->key('subscription_transport'), 'redis', 'have the right default transport for subscriptions');
-is($cfg->key('storage_transport'), 'redis', 'have the right default transport for storage');
-is($cfg->key('rpc_transport'), 'redis', 'have the right default transport for RPC');
+    # Defaults
+    my $config = Myriad::Config->new;
+    # Those are meant to be set to transport as default
+    @defaults{qw(rpc_transport subscription_transport storage_transport)} = ($defaults{'transport'}) x 3;
+    is($config->key($_), $defaults{$_}, "$_ Defaults are set fine") for keys %defaults;
+
+    # Config file
+    my $test_config_file = 't/config.yml';
+    $config = Myriad::Config->new(commandline => ['--config_path', $test_config_file]);
+    # Check for multi level configurations
+    # AUTOLOAD will kick in and throw an error of unkwon config
+    like (exception {$config->key('multi_option')}, qr/unknown config key/, 'Multi level option parent is not set');
+    is ($config->key('opt1'), 1, 'Multi level option1 is set');
+    is ($config->key('opt2'), 2, 'Multi level option2 is set');
+    # Remove config_path from defaults and check it separately
+    my $config_file = delete $defaults{'config_path'};
+    is($config->key($_), 'config_test', "$_ from config_file are set fine") for keys %defaults;
+    like($config->key('config_path'), qr/$test_config_file/, 'config_path has been set correctly');
+    # Keep it removed since we are still using config_file in next test
+    #$defaults{'config_path'} = $config_file;
+
+    # ENV
+    $ENV{'MYRIAD_'.uc($_)} = 'ENV' for keys %defaults;
+    $config = Myriad::Config->new(commandline => ['--config_path', $test_config_file]);
+    # We are still passing config file, but ENV have higher priority
+    is($config->key($_), 'ENV', "$_ from ENV are set fine") for keys %defaults;
+
+    # Commandline (Highest priority)
+    # Set all parameters to test_command_param
+    my $comm_test_string = 'test_command_param';
+    $defaults{'config_path'} = $config_file;
+    my @command_line = map {('--'.$_, $comm_test_string)} keys %defaults;
+    $config = Myriad::Config->new(commandline => \@command_line);
+    is($config->key($_),$comm_test_string, "$_ overridden by commandline options" ) for keys %defaults;
+};
+
+subtest "Test other functionality" => sub {
+
+    $ENV{'MYRIAD_LIBRARY_PATH'} = '/test/path/included';
+    my @before_inc = @INC;
+    my $config = new_ok('Myriad::Config');
+    my $config_meta = $config->META;
+
+    my $config_slot = $config_meta->get_slot('$config')->value($config);
+    isa_ok( $config_slot->{$_}, 'Ryu::Observable', "$_ Config Slot is set") for keys %defaults;
+
+    # test define functionality
+    $config->define('test', 'test_value');
+    like(exception{ $config->define('config_path', 'will not work') }, qr/already exists/, 'Not allowed to redefine');
+    like($config->key('test'), qr/test_value/, 'Able to add new keys to config');
+
+    # Test that we have updated @INC
+    push @before_inc, $ENV{'MYRIAD_LIBRARY_PATH'};
+    cmp_set(\@INC, \@before_inc, 'Updated @INC with configured path');
+};
+
 done_testing;
-
