@@ -84,6 +84,16 @@ The name of the service, defaults to the package name.
 
 method service_name () { $service_name }
 
+
+=head1 METRICS
+
+=cut
+
+
+#$metrics->make_counter( test =>
+#   name => [ "test" ],
+#);
+
 =head1 METHODS
 
 =head2 configure
@@ -162,6 +172,7 @@ Perform the diagnostics check and start the service components (RPC, Batches, Su
 async method start {
     my $registry = $Myriad::REGISTRY;
     await $self->startup;
+    $metrics->inc_counter('test');
     my @pending;
     try {
         unless(await Future->wait_any(

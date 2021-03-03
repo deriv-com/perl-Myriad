@@ -176,7 +176,7 @@ use Myriad::Transport::HTTP;
 use Log::Any::Adapter;
 
 use Net::Async::OpenTracing;
-use Metrics::Any::Adapter 'Statsd';
+use Metrics::Any::Adapter 'DogStatsd';
 
 our $REGISTRY;
 BEGIN {

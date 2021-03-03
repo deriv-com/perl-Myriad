@@ -50,7 +50,7 @@ This can be used to call RPC methods and act on subscriptions.
 =cut
 
 method service_by_name ($name) {
-    return Myriad::Service::Remote->new(service_name => $myriad->registry->make_service_name($name), myriad => $myriad);
+    return Myriad::Service::Remote->new(service_name => $myriad->registry->make_service_name($name), myriad => $myriad, local_service_name => $service_name);
 }
 
 1;
