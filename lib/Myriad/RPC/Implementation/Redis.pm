@@ -43,6 +43,7 @@ method whoami { $whoami }
 has $rpc_methods;
 
 has $iteration_future;
+has $started;
 
 sub service_name_from_stream ($stream) {
     my $pattern = RPC_SUFFIX . '$';
@@ -60,9 +61,15 @@ method configure (%args) {
     $group_name = 'processors';
 }
 
+method is_started() {
+    return defined $started ? $started : Myriad::Exception::InternalError->new(message => '->start was not called')->throw;
+}
+
 async method start () {
+    $started = $self->loop->new_future(label => 'rpc_subscription');
     if (!$rpc_methods) {
         $iteration_future = Future->done;
+        $started->done('started');
         return;
     }
 
@@ -70,6 +77,7 @@ async method start () {
             my $stream = stream_name_from_service(shift);
             $self->redis->create_group($stream,$self->group_name);
     } foreach => [keys $rpc_methods->%*], concurrent => 8;
+    $started->done('started');
 
     await $self->listener;
 }

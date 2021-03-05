@@ -24,6 +24,8 @@ has $queues = [ ];
 
 has $should_shutdown;
 
+has $started;
+
 BUILD {
     $uuid = Myriad::Util::UUID::uuid();
 }
@@ -67,8 +69,13 @@ async method create_from_sink (%args) {
     };
 }
 
+method is_started() {
+    return defined $started ? $started : Myriad::Exception::InternalError->new(message => '->start was not called')->throw;
+}
+
 async method start {
     $should_shutdown //= $self->loop->new_future(label => 'subscription::redis::shutdown');
+    $started = $self->loop->new_future(label => 'subscription');
     await Future->wait_any($should_shutdown->without_cancel, async sub {
             while (1) {
                 if($queues->@*) {
@@ -117,6 +124,7 @@ async method start {
                 } else {
                     await $self->loop->delay_future(after => 1);
                 }
+                $started->done('started') unless $started->is_ready;
         }
     }->());
 }

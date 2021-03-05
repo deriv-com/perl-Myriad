@@ -617,6 +617,9 @@ async method run () {
     );
 
 
+    # Set shutdown future before starting commands.
+    $shutdown //= $self->loop->new_future->set_label('shutdown');
+
     await $commands->run_queued;    
     await $self->shutdown_future;
 
