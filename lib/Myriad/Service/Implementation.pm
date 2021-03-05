@@ -33,7 +33,9 @@ Myriad::Service - microservice coördination
 =cut
 
 use Log::Any qw($log);
+use Metrics::Any qw($metrics);
 use List::Util qw(min);
+use Scalar::Util qw(blessed);
 use Myriad::Service::Attributes;
 
 # Only defer up to this many seconds between batch iterations
@@ -90,9 +92,23 @@ method service_name () { $service_name }
 =cut
 
 
-#$metrics->make_counter( test =>
-#   name => [ "test" ],
-#);
+$metrics->make_timer( rpc_timing =>
+   name => [ qw(myriad service rpc) ],
+   description => "Time taken to perocess the RPC request",
+   labels => [qw(method status service)]
+);
+
+$metrics->make_timer( batch_timing =>
+   name => [ qw(myriad service batch) ],
+   description => "Time taken to perocess the RPC request",
+   labels => [qw(method status service)]
+);
+
+$metrics->make_timer( receiver_timing =>
+   name => [ qw(myriad service batch) ],
+   description => "Time taken to perocess the received event",
+   labels => [qw(method status service)]
+);
 
 =head1 METHODS
 
@@ -146,7 +162,15 @@ async method process_batch($k, $code, $src) {
     $log->tracef('Start batch processing for %s', $k);
     while (1) {
         await $src->unblocked;
-        my $data = await $self->$code;
+        my $data = [];
+        try {
+            $data = await $self->$code()->on_ready(sub {
+                my $f = shift;
+                $metrics->report_timer(batch_timing => $f->elapsed, {method => $k, status => $f->state, service => $service_name});
+            });
+        } catch ($e) {
+            $log->warnf("Batch iteration for %s failed - %s", $k, $e);
+        }
         if ($data->@*) {
             $backoff = 0;
             $src->emit($_) for $data->@*;
@@ -172,7 +196,6 @@ Perform the diagnostics check and start the service components (RPC, Batches, Su
 async method start {
     my $registry = $Myriad::REGISTRY;
     await $self->startup;
-    $metrics->inc_counter('test');
     my @pending;
     try {
         unless(await Future->wait_any(
@@ -221,11 +244,18 @@ async method start {
                     service => $service_name,
                 );
                 my $code = $spec->{code};
-                push @pending, $spec->{current} = $self->$code(
-                    $sink->source,
-                )->on_fail(sub {
-                    $log->fatalf('Receiver for %s failed - %s', $method, shift);
-                })->retain;
+                my $current = $self->$code($sink->source);
+
+                die "you should return the source given to the receiver for method $method" 
+                    unless blessed $current && $current->isa('Ryu::Source');
+
+                $current->map(sub {
+                    my $f = Future->wrap(shift);
+                    $metrics->report_timer(receiver_timing => $f->elapsed, {method => $method, status => $f->state, service => $service_name});
+                    return $f;
+                })->resolve->completed;
+
+                push @pending, $spec->{current} = $current->retain;
             }
         }
 
@@ -256,7 +286,10 @@ async method start {
                 $spec->{current} = $sink->source->map(async sub {
                     my $message = shift;
                     try {
-                        my $response = await $self->$code($message->args->%*);
+                        my $response = await $self->$code($message->args->%*)->on_ready(sub {
+                            my $f = shift;
+                            $metrics->report_timer(rpc_timing => $f->elapsed, {method => $method, status => $f->state, service => $service_name});
+                        });
                         await $rpc->reply_success($service_name, $message, $response);
                     } catch ($e) {
                         await $rpc->reply_error($service_name, $message, $e);
