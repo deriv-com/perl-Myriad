@@ -25,7 +25,7 @@ use Myriad::Role::Storage;
 use Metrics::Any qw($metrics);
 
 BEGIN {
-    $metrics->make_timer(time_elapsed => 
+    $metrics->make_timer(time_elapsed =>
         name => [qw(myriad storage)],
         description => 'Time taken to process storage request',
         labels => [qw(method status service)],

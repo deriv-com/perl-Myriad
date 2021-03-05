@@ -89,6 +89,12 @@ method service_name () { $service_name }
 
 =head1 METRICS
 
+General metrics that any service is assumed to have
+
+=head2 myriad.service.rpc
+
+Timing information about RPC calls tagged by service, status and method name
+
 =cut
 
 
@@ -98,16 +104,40 @@ $metrics->make_timer( rpc_timing =>
    labels => [qw(method status service)]
 );
 
+=head2 myriad.service.batch
+
+Timing information about the batch subscriptions tagged by service, status and method name
+
+=cut
+
 $metrics->make_timer( batch_timing =>
    name => [ qw(myriad service batch) ],
    description => "Time taken to perocess the RPC request",
    labels => [qw(method status service)]
 );
 
+=head2 myriad.service.receiver
+
+Timing information about events receivers tagged by service, status and method name
+
+=cut
+
 $metrics->make_timer( receiver_timing =>
-   name => [ qw(myriad service batch) ],
-   description => "Time taken to perocess the received event",
+   name => [ qw(myriad service receiver) ],
+   description => "Time taken to perocess the received events",
    labels => [qw(method status service)]
+);
+
+=head2 myriad.service.emitter
+
+A counter for the events emitted by emitters tagged by service and method name
+
+=cut
+
+$metrics->make_counter( emitters_count =>
+    name => [qw(myriad service emitter)],
+    description => "Counter for the events emitted by the emitters",
+    labels => [qw(method service)],
 );
 
 =head1 METHODS
@@ -215,7 +245,10 @@ async method start {
                     label => "emitter:$chan",
                 );
                 await $subscription->create_from_source(
-                    source  => $sink->source,
+                    source  => $sink->source->map(sub {
+                        $metrics->inc_counter('emitters_count', {method => $method, service => $service_name});
+                        return @_;
+                    }),
                     channel => $chan,
                     service => $service_name,
                 );
@@ -244,9 +277,9 @@ async method start {
                     service => $service_name,
                 );
                 my $code = $spec->{code};
-                my $current = $self->$code($sink->source);
+                my $current = await $self->$code($sink->source);
 
-                die "you should return the source given to the receiver for method $method" 
+                die "Receivers method: $method should return a Ryu::Source"
                     unless blessed $current && $current->isa('Ryu::Source');
 
                 $current->map(sub {

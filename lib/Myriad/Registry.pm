@@ -67,6 +67,10 @@ async method add_service (%args) {
         myriad => $myriad,
         service_name => $service_name,
     );
+    {
+        no strict 'refs';
+        ${"${pkg}::metrics"}->{name_prefix} = [$service_name];
+    }
 
     $rpc->{$pkg} ||= {};
     $stream->{$pkg} ||= {};
