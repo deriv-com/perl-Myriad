@@ -225,9 +225,8 @@ has $shutdown;
 has $shutdown_without_cancel;
 # The Net::Async::OpenTracing instance
 has $tracing;
-# Any service definitions wait what why is this here,
-# can we not use the registry instead?
-has $services = {};
+# Any service definitions which is added by registry
+has $services;
 # Ryu::Source that can be used to recieve commands events
 has $ryu;
 # Pipeline that might be passed from booting script
@@ -245,6 +244,14 @@ Returns the main L<IO::Async::Loop> instance for this process.
 =cut
 
 method loop { $loop //= IO::Async::Loop->new }
+
+=head2 services
+
+retruns hash containing added services instances
+
+=cut
+
+method services { $services //= {} }
 
 =head2 configure_from_argv
 
