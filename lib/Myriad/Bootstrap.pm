@@ -244,10 +244,10 @@ sub boot {
             };
 
             print $child_pipe "Parent active\r\n";
-
+            my $active = 1;
             ACTIVE:
-            while (1) {
-                last ACTIVE unless check_messages_in_pipe($inotify_child_pipe, sub {
+            while ($active) {
+                $active = 0 unless check_messages_in_pipe($inotify_child_pipe, sub {
                     say "$$ - File has been detected reloading..";
                     kill QUIT => $pid;
                     # wait for the process to finish
@@ -255,7 +255,7 @@ sub boot {
                     next MAIN;
                 });
 
-                last ACTIVE unless check_messages_in_pipe($child_pipe, sub {
+                $active = 0 unless check_messages_in_pipe($child_pipe, sub {
                     my $module = shift;
                     print $inotify_child_pipe "$module\r\n";
                 });
@@ -264,12 +264,11 @@ sub boot {
                     if(my $exit = waitpid $pid, $constant{WNOHANG}) {
                         say "$$ Exit was $exit";
                         # stop the other processes
-                        kill HUB => $_ for grep {$_ eq $child_pid} @children_pids;
+                        kill QUIT => $_ for grep {$_ eq $child_pid} @children_pids;
                         last MAIN;
                     }
                 }
             }
-
             say "$$ - Done";
             exit 0;
         } else {
