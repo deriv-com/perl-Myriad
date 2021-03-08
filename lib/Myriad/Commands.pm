@@ -170,7 +170,7 @@ async method start_components ($components = ['rpc', 'subscription', 'rpc_client
 }
 
 async method run_cmd() {
-    await $cmd->{code}->($cmd->{params});
+    await $cmd->{code}->($cmd->{params}) if exists $cmd->{code};
 }
 
 1;
