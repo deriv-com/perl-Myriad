@@ -78,6 +78,7 @@ async method service (@args) {
             await fmap0 {
                 my $service = shift;
                 try {
+                    $log->infof('Starting service [%s]', $service->service_name);
                     $service->start;
                 } catch($e) {
                     $log->warnf('FAILED to start service %s | %s', $service->service_name, $e);

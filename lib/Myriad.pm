@@ -622,7 +622,6 @@ async method run () {
     await $commands->run_cmd;
 
     await $self->shutdown_future;
-
 }
 
 1;
