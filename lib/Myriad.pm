@@ -616,11 +616,11 @@ async method run () {
         map { $_->() } splice $startup_tasks->@*
     );
 
-
     # Set shutdown future before starting commands.
     $shutdown //= $self->loop->new_future->set_label('shutdown');
 
-    await $commands->run_queued;    
+    await $commands->run_cmd;
+
     await $self->shutdown_future;
 
 }

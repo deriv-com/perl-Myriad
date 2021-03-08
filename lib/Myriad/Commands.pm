@@ -25,13 +25,12 @@ use Module::Runtime qw(require_module);
 use Myriad::Service::Remote;
 
 has $myriad;
-has $cmd_queue;
+has $cmd;
 
 BUILD (%args) {
     weaken(
         $myriad = $args{myriad} // die 'needs a Myriad parent object'
     );
-    $cmd_queue = [];
 }
 
 =head2 service
@@ -74,8 +73,8 @@ async method service (@args) {
         }
     }, foreach => \@modules, concurrent => 4);
  
-    push @$cmd_queue, {
-        cmd => async sub {
+    $cmd = {
+        code => async sub {
             await fmap0 {
                 my $service = shift;
                 try {
@@ -94,8 +93,8 @@ async method service (@args) {
 
 async method rpc ($rpc, @args) {
     my $remote_service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
-    push @$cmd_queue, {
-        cmd => async sub {
+    $cmd = {
+        code => async sub {
             my $params = shift;
             my ($remote_service, $command, $args) = map { $params->{$_} } qw(remote_service name args);
 
@@ -114,8 +113,8 @@ async method rpc ($rpc, @args) {
 
 async method subscription ($stream, @args) {
     my $remote_service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
-    push @$cmd_queue, {
-        cmd => async sub {
+    $cmd = {
+        code => async sub {
             my $params = shift;
             my ($remote_service, $stream, $args) = map { $params->{$_} } qw(remote_service stream args);
             await $self->start_components(['subscription']);
@@ -136,8 +135,8 @@ async method subscription ($stream, @args) {
 
 async method storage($action, $key, $extra = undef) {
     my $remote_service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
-    push @$cmd_queue, {
-        cmd => async sub {
+    $cmd = {
+        code => async sub {
             my $params = shift;
             my ($remote_service, $action, $key, $extra) = map { $params->{$_} } qw(remote_service action key extra);
 
@@ -166,17 +165,11 @@ async method start_components ($components = ['rpc', 'subscription', 'rpc_client
     } @$components;
 
     # Make sure all components have actually started.
-    await Future->wait_all(@components_started);
+    await Future->needs_all(@components_started);
 }
 
-async method run_queued() {
-
-    $log->tracef('Number of Commands: %d', scalar @$cmd_queue);
-
-    my @running_commands;
-    push @running_commands, $_->{cmd}->($_->{params}) for @$cmd_queue;
-    await Future->wait_all(@running_commands);
-
+async method run_cmd() {
+    await $cmd->{code}->($cmd->{params});
 }
 
 1;
