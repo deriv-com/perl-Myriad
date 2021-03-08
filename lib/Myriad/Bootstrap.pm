@@ -115,7 +115,7 @@ sub check_messages_in_pipe {
     vec($rin, fileno($pipe), 1) = 1;
     my $ein = $rin | $win;
 
-    die $! unless defined(my $nfound = select my $rout = $rin, my $wout = $win, my $eout = $ein, 0.5);
+    die $! unless (my $nfound = select my $rout = $rin, my $wout = $win, my $eout = $ein, 0.5) > -1;
 
     if($nfound) {
         my $rslt = sysread $pipe, my $buf, 4096;
@@ -180,7 +180,11 @@ sub boot {
     {
         if (my $pid = fork // die "fork! $!") {
             push @children_pids, $pid;
+            close $inotify_parent_pipe;
         } else {
+
+            close $inotify_child_pipe;
+
             local $SIG{HUP}= sub {
                 say "$pid - inotify process termintated";
                 exit 0;
@@ -208,12 +212,14 @@ sub boot {
         }
     }
 
-    my ($parent_pipe, $child_pipe) = open_pipe();
 
     my $active = 1;
     MAIN:
     while($active) {
+        my ($parent_pipe, $child_pipe) = open_pipe();
+
         if(my $pid = fork // die "fork: $!") {
+            close $parent_pipe;
             say "$$ - Parent with $pid child";
             push @children_pids, $pid;
 
@@ -234,17 +240,18 @@ sub boot {
 
             local $SIG{HUP} = sub {
                 say "$$ - HUP detected in parent";
-                kill 3, $pid;
+                kill QUIT => $pid;
             };
 
             print $child_pipe "Parent active\r\n";
 
             ACTIVE:
             while (1) {
-
                 last ACTIVE unless check_messages_in_pipe($inotify_child_pipe, sub {
                     say "$$ - File has been detected reloading..";
-                    kill 3, $pid;
+                    kill QUIT => $pid;
+                    # wait for the process to finish
+                    waitpid $pid, 0;
                     next MAIN;
                 });
 
@@ -257,7 +264,7 @@ sub boot {
                     if(my $exit = waitpid $pid, $constant{WNOHANG}) {
                         say "$$ Exit was $exit";
                         # stop the other processes
-                        kill 1, $_ for grep {$_ eq $child_pid} @children_pids;
+                        kill HUB => $_ for grep {$_ eq $child_pid} @children_pids;
                         last MAIN;
                     }
                 }
@@ -267,12 +274,12 @@ sub boot {
             exit 0;
         } else {
             say "$$ - Child with parent " . $parent_pid;
-
+            close $child_pipe;
+            close $inotify_child_pipe;
             # We'd expect to pass through some more details here as well
             my %args = (
                 parent_pipe => $parent_pipe
             );
-
             # Support coderef or package name
             if(ref $target) {
                 $target->(%args);
@@ -281,8 +288,14 @@ sub boot {
                 Module::Load::load($target);
                 my $module = $target->new;
                 $module->configure_from_argv(@ARGV);
-                $module->run(%args)->get();
+                $module->run(%args)->await;
             }
+
+            if (my $error = $@) {
+                $error =~ s/\n/\n\t/g;
+                print "$$ - target code/module exited unexpectedly due:\n\t$error";
+            }
+
             exit 0;
         }
     }
