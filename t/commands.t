@@ -133,7 +133,7 @@ subtest "rpc command" => sub {
     my $svc_pkg_name = 'Test::Service::Mocked';
     $myriad->META->get_slot('$config')->value($myriad) = Myriad::Config->new( commandline => ['--service_name', $svc_pkg_name] );
     my $command = new_ok('Myriad::Commands'=> ['myriad', $myriad]);
-    mock_component('rpc_client', 'call_rpc', 'rpc_client_test'); 
+    mock_component('rpc_client', 'call_rpc', 'rpc_client_test');
     ok wait_for_future( $command->rpc($test_cmd, value => 1) )->get, 'Command has been added';
 
     is $started_components{'rpc_client'}, undef, 'Component RPC not yet started';

@@ -72,7 +72,7 @@ async method service (@args) {
             await $myriad->add_service($module, name => $service_custom_name);
         }
     }, foreach => \@modules, concurrent => 4);
- 
+
     $cmd = {
         code => async sub {
             await fmap0 {
