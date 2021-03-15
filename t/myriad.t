@@ -107,7 +107,7 @@ subtest "Myriad attributes setting tests" => sub {
 subtest  "Run and shutdown behaviour" => sub {
 
     like(exception {
-        $myriad->shutdown->get
+        wait_for_future($myriad->shutdown)->get
     }, qr/attempting to shut down before we have started,/, 'can not shutdown as nothing started yet.');
 
     my $shutdown_task_called = 0;
@@ -121,7 +121,7 @@ subtest  "Run and shutdown behaviour" => sub {
     wait_for_future(Future->needs_all(
         $loop->delay_future(after => 0)->on_ready(sub {
             is(exception {
-                $myriad->shutdown->get
+                wait_for_future($myriad->shutdown)->get
             }, undef, 'can shut down without exceptions arising');
         }),
         $myriad->run,

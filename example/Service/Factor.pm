@@ -9,7 +9,7 @@ async method diagnostics ($level) {
     return 1;
 }
 
-async method secret_checks :Receiver(service => 'example.service.secret') ($sink) {
+async method secret_checks : Receiver(service => 'example.service.secret') ($sink) {
     await $sink->map(
         async sub {
             my $e = shift;

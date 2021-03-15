@@ -621,14 +621,10 @@ async method run () {
         map { $_->() } splice $startup_tasks->@*
     );
 
-    map {
-        my $component = $_;
-        $self->$component->start->on_fail(sub {
-            my $error = shift;
-            $log->warnf("%s failed due %s", $component, $error);
-            $self->shutdown_future->fail($error);
-        })->retain();
-    } qw(rpc subscription rpc_client);
+    # Set shutdown future before starting commands.
+    $shutdown //= $self->loop->new_future->set_label('shutdown');
+
+    await $commands->run_cmd;
 
     await $self->shutdown_future;
 }

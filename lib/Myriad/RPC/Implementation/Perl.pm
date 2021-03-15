@@ -34,6 +34,7 @@ method group_name { $group_name //= 'processors' }
 has $should_shutdown;
 has $rpc_methods = {};
 has $services_list;
+has $started;
 
 method configure(%args) {
     $transport = delete $args{transport} if exists $args{transport};
@@ -50,8 +51,10 @@ Start waiting for new requests to fill in the internal requests queue.
 =cut
 
 async method start () {
+    $started = $self->loop->new_future(label => 'rpc_subscription');
     if(!$services_list) {
         $should_shutdown = Future->done();
+        $started->done();
         return;
     }
 
@@ -59,6 +62,8 @@ async method start () {
     for my $service ($services_list->@*) {
         await $transport->create_consumer_group($service, $self->group_name, 0, 1);
     }
+
+    $started->done('started');
 
     while (1) {
         my $service = shift $services_list->@*;
@@ -85,6 +90,10 @@ async method start () {
         }
         await Future::wait_any($should_shutdown, $self->loop->delay_future(after => 0.1));
     }
+}
+
+method is_started() {
+    return defined $started ? $started : Myriad::Exception::InternalError->new(message => '->start was not called')->throw;
 }
 
 =head2 create_from_sink
