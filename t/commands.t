@@ -7,6 +7,8 @@ use Test::MockObject;
 use Test::Fatal;
 use Test::Deep;
 
+use Log::Any::Adapter qw(TAP);
+
 use Future::AsyncAwait;
 use IO::Async::Loop;
 use IO::Async::Test;

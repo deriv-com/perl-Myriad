@@ -95,6 +95,9 @@ async method service (@args) {
 method remote_service {
     return Myriad::Service::Remote->new(
         myriad       => $myriad,
+        # TODO Why is this mandatory? We shouldn't need a local service if we're just calling RPC
+        # or subscribing.
+        local_service_name => 'xxx',
         service_name => $myriad->registry->make_service_name(
             $myriad->config->service_name->as_string
         ) // die 'no service name found'
