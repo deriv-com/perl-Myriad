@@ -55,7 +55,7 @@ async method create_from_source (%args) {
     return;
 }
 
-method create_from_sink (%args) {
+async method create_from_sink (%args) {
     my $sink = delete $args{sink} or die 'need a sink';
     my $remote_service = $args{from} || $args{service};
     my $stream = $remote_service . '/' . $args{channel};

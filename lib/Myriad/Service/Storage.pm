@@ -22,21 +22,32 @@ Myriad::Service:Storage - microservice storage abstraction
 =cut
 
 use Myriad::Role::Storage;
+use Metrics::Any qw($metrics);
 
 BEGIN {
+    $metrics->make_timer(time_elapsed =>
+        name => [qw(myriad storage)],
+        description => 'Time taken to process storage request',
+        labels => [qw(method status service)],
+    );
+
     my $meta = Myriad::Service::Storage->META;
     for my $method (@Myriad::Role::Storage::WRITE_METHODS, @Myriad::Role::Storage::READ_METHODS) {
         $meta->add_method($method, sub {
             my ($self, $key, @rest) = @_;
-            return $self->storage->$method($self->apply_prefix($key), @rest);
+            return $self->storage->$method($self->apply_prefix($key), @rest)->on_ready(sub {
+                my $f = shift;
+                $metrics->report_timer(time_elapsed => $f->elapsed, {method => $method, status => $f->state, service => $self->prefix});
+            });
         });
     }
 }
 
 has $storage;
-method storage { $storage }
-
 has $prefix;
+
+method storage { $storage }
+method prefix { $prefix }
 
 BUILD (%args) {
     $prefix = delete $args{prefix} // die 'need a prefix';

@@ -22,13 +22,26 @@ Myriad::Service::Storage::Remote - abstraction to access other services storage.
 
 use Myriad::Role::Storage;
 
+use Metrics::Any qw($metrics);
+
 BEGIN {
+
+    $metrics->make_timer(time_elapsed =>
+        name => [qw(myriad storage remote)],
+        description => 'Time taken to process remote storage request',
+        labels => [qw(method status service)],
+    );
+
     my $meta = Myriad::Service::Storage::Remote->META;
 
     for my $method (@Myriad::Role::Storage::READ_METHODS) {
         $meta->add_method($method, sub {
             my ($self, $key, @rest) = @_;
-            return $self->storage->$method($self->apply_prefix($key), @rest);
+            return $self->storage->$method($self->apply_prefix($key), @rest)->on_ready(sub {
+                my $f = shift;
+                $metrics->report_timer(time_elapsed =>
+                    $f->elapsed, {method => $method, status => $f->state, service => $self->local_service_name});
+            });
         });
     }
 }
@@ -36,11 +49,14 @@ BEGIN {
 
 has $prefix;
 has $storage;
+has $local_service_name;
 method storage { $storage };
+method local_service_name { $local_service_name };
 
 BUILD (%args) {
     $prefix = delete $args{prefix} // die 'need a prefix';
     $storage = delete $args{storage} // die 'need a storage instance';
+    $local_service_name = delete $args{local_service_name} // die 'need a local service name';
 }
 
 =head2 apply_prefix

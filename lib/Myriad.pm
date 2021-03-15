@@ -176,6 +176,7 @@ use Myriad::Transport::HTTP;
 use Log::Any::Adapter;
 
 use Net::Async::OpenTracing;
+use Metrics::Any::Adapter 'DogStatsd';
 
 our $REGISTRY;
 BEGIN {
@@ -185,6 +186,10 @@ BEGIN {
 IO::Async::Loop->new->add(
     $REGISTRY
 );
+
+# Enable Future time trace
+
+$Future::TIMES = 1;
 
 # The IO::Async::Loop instance
 has $loop;
