@@ -11,8 +11,8 @@ Myriad::Service::Remote - abstraction to access other services over the network.
 
 =head1 SYNOPSIS
 
-my $remote_service = $api->service_by_name('service');
-await $remote_service->call_api('some_method', %args);
+ my $remote_service = $api->service_by_name('service');
+ await $remote_service->call_api('some_method', %args);
 
 =head1 DESCRIPTION
 
