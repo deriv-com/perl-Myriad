@@ -56,7 +56,7 @@ requires 'Database::Async::Engine::PostgreSQL', '>= 0.010';
 requires 'Devel::MAT::Dumper';
 
 # Things that may move out
-requires 'Term::ReadLine';
+recommends 'Term::ReadLine';
 
 on 'test' => sub {
     requires 'Test::More', '>= 0.98';
@@ -75,3 +75,4 @@ on 'develop' => sub {
     requires 'Devel::Cover::Report::Coveralls', '>= 0.11';
     requires 'Devel::Cover';
 };
+
