@@ -59,7 +59,7 @@ async method service (@args) {
 
     my $service_custom_name = $myriad->config->service_name->as_string;
 
-    die 'You cannot pass a service name and load multiple modules' if (scalar @modules > 1 && $service_custom_name ne '');
+    die 'You cannot pass a service name and load multiple modules' if @modules > 1 and length $service_custom_name;
 
     await fmap0(async sub {
         my ($module) = @_;
@@ -97,7 +97,7 @@ method remote_service {
         myriad       => $myriad,
         service_name => $myriad->registry->make_service_name(
             $myriad->config->service_name->as_string
-        )
+        ) // die 'no service name found'
     );
 }
 
