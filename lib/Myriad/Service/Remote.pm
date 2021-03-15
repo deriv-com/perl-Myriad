@@ -31,9 +31,10 @@ BUILD(%args) {
     $service_name = delete $args{service_name} // die 'need a service name';
     $local_service_name = delete $args{local_service_name} // die 'need a local service name';
     $storage = Myriad::Service::Storage::Remote->new(
-                                                prefix => $service_name,
-                                                storage => $myriad->storage,
-                                                local_service_name => $local_service_name);
+        prefix             => $service_name,
+        storage            => $myriad->storage,
+        local_service_name => $local_service_name
+    );
 }
 
 method service_name { $service_name }
