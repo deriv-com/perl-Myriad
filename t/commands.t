@@ -16,13 +16,18 @@ use Myriad::Commands;
 use Myriad::Config;
 use Test::Myriad;
 
+BEGIN {
+    # if we want to fully test the command
+    # we should be able to run mock service with a testing RPC
+    # then call it with the command and test it.
+    # This will be used in a different flow.t test
+    Test::Myriad->add_service(name => "Test::Service::Mocked")->add_rpc('test_cmd', success => 1);
+}
+
 my $loop = IO::Async::Loop->new;
 testing_loop($loop);
 
-
-
-subtest "Service Command" => sub {
-
+subtest "service command" => sub {
     # Myriad module is required for Command creation but only used in Service command
     my $myriad_module = Test::MockModule->new('Myriad');
     my ( @added_services_modules, @add_services_by_name );
@@ -66,15 +71,8 @@ subtest "Service Command" => sub {
     wait_for_future( $command->service('Ta::Sibling1') )->get;
     cmp_deeply(\@added_services_modules, ['Ta::Sibling1'], 'Added one service');
     cmp_deeply(\@add_services_by_name, [$srv_run_name], "Added $srv_run_name by name");
+    done_testing;
 };
-
-BEGIN {
-    # if we want to fully test the command
-    # we should be able to run mock service with a testing RPC
-    # then call it with the command and test it.
-    # This will be used in a different flow.t test
-    Test::Myriad->add_service(name => "Test::Service::Mocked")->add_rpc('test_cmd', success => 1);
-}
 
 my $myriad_mod = Test::MockModule->new('Myriad');
 
