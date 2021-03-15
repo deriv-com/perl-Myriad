@@ -151,6 +151,7 @@ subtest "rpc command" => sub {
     like ( $working_cmd->result, qr/shutdown called/, 'RPC command called shutdown' );
 
     is $shutdown_count, 2, "Shutdown called 2 times because we passed 2 commands";
+    done_testing;
 };
 
 done_testing;
