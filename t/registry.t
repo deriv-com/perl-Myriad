@@ -73,7 +73,7 @@ subtest "Adding and viewing components" => sub {
 
 };
 
-subtest "Adding and starting Service" => sub {
+subtest "Adding Service" => sub {
 
     my $myriad = new_ok('Myriad');
     my $config = new_ok('Myriad::Config' => [commandline => ['--transport', 'perl']]);
@@ -121,8 +121,7 @@ subtest "Adding and starting Service" => sub {
 
     my $srv_in_registry = $registry->service_by_name($registry->make_service_name('Testing::Service'));
     cmp_deeply($service, $srv_in_registry, 'Same service in Myriad and Regisrty');
-    ok($started_services->{'Testing::Service'}, 'Registry has started service');
-
+    is($started_services->{'Testing::Service'}, undef, 'Registry has not started service');
 };
 
 subtest "Service name" => sub {

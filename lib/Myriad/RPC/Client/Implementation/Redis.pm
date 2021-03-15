@@ -19,6 +19,7 @@ has $subscription;
 has $pending_requests;
 has $whoami;
 has $current_id;
+has $started;
 
 BUILD {
     $pending_requests = {};
@@ -30,7 +31,12 @@ method configure (%args) {
     $redis = delete $args{redis} if $args{redis};
 }
 
+method is_started() {
+    return defined $started ? $started : Myriad::Exception::InternalError->new(message => '->start was not called')->throw;
+}
+
 async method start() {
+    $started = $self->loop->new_future(label => 'rpc_client_subscription');
     my $sub = await $redis->subscribe($whoami);
     $subscription = $sub->events->map('payload')->map(sub{
         try {
@@ -47,6 +53,8 @@ async method start() {
             $log->warnf('failed to parse rpc response due %s', $e);
         }
     })->completed;
+
+    $started->done('started');
 
     await $subscription;
 }

@@ -72,41 +72,87 @@ BEGIN {
     # if we want to fully test the command
     # we should be able to run mock service with a testing RPC
     # then call it with the command and test it.
-    Test::Myriad->add_service(name => "Test::Service::Mocked")->add_rpc('testing_rpc', success => 1);
+    # This will be used in a different flow.t test
+    Test::Myriad->add_service(name => "Test::Service::Mocked")->add_rpc('test_cmd', success => 1);
 }
 
 my $myriad_mod = Test::MockModule->new('Myriad');
-my $rmt_svc_cmd_called = {};
-my $testing_rpc = 'testing_rpc';
-$myriad_mod->mock('rpc_client', sub {
+
+# Mock shutdown behaviour
+# As some commands  are expected to call shutdown on completion.
+my $shutdown_count = 0;
+$myriad_mod->mock('shutdown', async sub {
+    my $self = shift;
+    my $shutdown_f = $loop->new_future(label => 'shutdown future');
+    $shutdown_count++;
+    $shutdown_f->done('shutdown called');
+});
+my $rmt_svc_cmd_called;
+my $test_cmd;
+my %calls;
+my %started_components;
+
+sub mock_component {
+    my ($component, $cmd, $test_name) = @_;
+
+    $test_cmd = $test_name;
+    undef %calls;
+    $rmt_svc_cmd_called = {};
+    undef %started_components;
+    $myriad_mod->mock($component, sub {
         my ($self) = @_;
         my $mock = Test::MockObject->new();
-        $mock->mock( 'call_rpc', async sub {
-                my ($self, $service_name, $rpc, %args) = @_;
-                $rmt_svc_cmd_called->{rpc} //= [];
-                push @{$rmt_svc_cmd_called->{rpc}}, {svc => $service_name, rpc => $rpc, args => \%args};
-                die 'Unknown RPC' unless $rpc eq $testing_rpc;
-                return {success => 1};
-            }
-        );
+        $mock->mock( $cmd, async sub {
+            my ($self, $service_name, $rpc, %args) = @_;
+            $rmt_svc_cmd_called->{$cmd} //= [];
+            push @{$rmt_svc_cmd_called->{$cmd}}, {svc => $service_name, rpc => $rpc, args => \%args};
+            $calls{$rpc}++;
+            return {success => 1};
+        });
+        my $f;
+        $mock->mock('start', async sub {
+            my ($self) = @_;
+            $f //= $loop->new_future;
+            $started_components{$component} = 1;
+            return $f;
+        });
+        $mock->mock('is_started', async sub {
+            my ($self) = @_;
+            my $started = $loop->new_future;
+            return defined $f ? $started->done("$component started") : $started->fail('start not called');
+        });
+
+        $mock->mock('create_from_sink', async sub {});
         return $mock;
-    }
-);
+    });
+
+}
 
 subtest "rpc command" => sub {
     my $myriad = Myriad->new;
     my $svc_pkg_name = 'Test::Service::Mocked';
     $myriad->META->get_slot('$config')->value($myriad) = Myriad::Config->new( commandline => ['--service_name', $svc_pkg_name] );
     my $command = new_ok('Myriad::Commands'=> ['myriad', $myriad]);
-    my $working_rpc = wait_for_future( $command->rpc($testing_rpc, value => 1) )->get;
-    my $failed_rpc  = wait_for_future( $command->rpc('not_an_rpc', value => 1) )->get;
+    mock_component('rpc_client', 'call_rpc', 'rpc_client_test');
+    ok wait_for_future( $command->rpc($test_cmd, value => 1) )->get, 'Command has been added';
 
-    # Checking response also confirms correct rpc name.
-    like( $working_rpc, qr/RPC response is {success => 1}/, 'Successful RPC command response');
-    like( $failed_rpc, qr/RPC command failed due: Unknown RPC/, 'Not an actual RPC');
+    is $started_components{'rpc_client'}, undef, 'Component RPC not yet started';
+    # Results will be printed as log.
+    my $working_cmd = wait_for_future($command->run_cmd)->get;
 
+    ok $started_components{'rpc_client'}, 'Component RPC started';
+    is $calls{$test_cmd}, 1, 'called correct command ';
     # Check what service is called
-    is ($_->{svc}, $myriad->registry->make_service_name($svc_pkg_name), "Correct service name passed") for $rmt_svc_cmd_called->{rpc}->@*;
+    is ($_->{svc}, $myriad->registry->make_service_name($svc_pkg_name), "Correct service name passed") for $rmt_svc_cmd_called->{call_rpc}->@*;
+    like ( $working_cmd->result, qr/shutdown called/, 'RPC command called shutdown' );
+
+
+    ok wait_for_future( $command->rpc('not_an_rpc', value => 1) )->get, 'Wrond command has been added';
+    my $fail_cmd = wait_for_future($command->run_cmd)->get;
+    is $calls{'not_an_rpc'}, 1, 'called correct command ';
+    like ( $working_cmd->result, qr/shutdown called/, 'RPC command called shutdown' );
+
+    is $shutdown_count, 2, "Shutdown called 2 times because we passed 2 commands";
 };
 
 done_testing;

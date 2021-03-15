@@ -14,7 +14,7 @@ async method diagnostics ($level) {
     return 1;
 }
 
-async method check :RPC (%args) {
+async method check : RPC (%args) {
     my ($id, $value) = map { $args{$_} } qw(id value);
     $ids->{$id} = 1;
     # If it was not set by ENV
@@ -50,7 +50,7 @@ async method check :RPC (%args) {
 
 }
 
-async method reset_game :RPC (%args) {
+async method reset_game : RPC (%args) {
     # Storage not yet impleminting DEL or HGETALL hence
     my $res = await fmap_void( async sub {
         my $id = shift;

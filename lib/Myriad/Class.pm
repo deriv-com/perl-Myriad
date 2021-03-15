@@ -103,6 +103,7 @@ use Object::Pad ();
 
 use Log::Any qw($log);
 use OpenTracing::Any qw($tracer);
+use Metrics::Any;
 
 sub import {
     my ($called_on, %args) = @_;
@@ -165,6 +166,7 @@ sub import {
     Syntax::Keyword::Try->import_into($pkg);
     Syntax::Keyword::Dynamically->import_into($pkg);
     Future::AsyncAwait->import_into($pkg);
+    Metrics::Any->import_into($pkg, '$metrics');
 
     # For history here, see this:
     # https://rt.cpan.org/Ticket/Display.html?id=132337
@@ -183,7 +185,7 @@ sub import {
         *{$pkg . '::log'} = \Log::Any->get_logger(
             category => $pkg
         );
-        *{$pkg . '::tracer'} = \(OpenTracing->global_tracer);
+        *{$pkg . '::tracer'}  = \(OpenTracing->global_tracer);
     }
     return $meta;
 }
