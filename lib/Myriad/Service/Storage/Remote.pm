@@ -51,12 +51,12 @@ has $prefix;
 has $storage;
 has $local_service_name;
 method storage { $storage };
-method local_service_name { $local_service_name };
+method local_service_name { $local_service_name // 'local' };
 
 BUILD (%args) {
     $prefix = delete $args{prefix} // die 'need a prefix';
     $storage = delete $args{storage} // die 'need a storage instance';
-    $local_service_name = delete $args{local_service_name} // die 'need a local service name';
+    $local_service_name = delete $args{local_service_name};
 }
 
 =head2 apply_prefix
