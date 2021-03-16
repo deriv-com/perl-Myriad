@@ -63,6 +63,8 @@ our %ALLOWED_MODULES = map {
 
 our %constant;
 
+my $CRLF = "\x0D\x0A";
+
 =head1 METHODS - Class
 
 =head2 allow_modules
@@ -147,7 +149,6 @@ sub boot {
             Socket            => [qw(AF_UNIX SOCK_STREAM PF_UNSPEC)],
             Fcntl             => [qw(F_GETFL F_SETFL O_NONBLOCK)],
             POSIX             => [qw(WNOHANG)],
-            'Linux::Inotify2' => [qw(IN_MODIFY)]
         );
         unless($pid) {
             # We've forked, so we're free to load any extra modules we'd like here
@@ -190,20 +191,18 @@ sub boot {
                 exit 0;
             };
 
-            require Module::Load;
-            Module::Load::load('Linux::Inotify2');
+            require Linux::Inotify2;
 
             my $watcher = Linux::Inotify2->new();
             $watcher->blocking(0);
+
             while (1) {
                 check_messages_in_pipe($inotify_parent_pipe, sub {
                     my $module_path = shift;
                     say "$$ - Going to watch $module_path for changes";
-                    $watcher->watch($module_path, $constant{IN_MODIFY}, sub {
+                    $watcher->watch($module_path, Linux::Inotify2->IN_MODIFY, sub {
                         my $e = shift;
-                        print $inotify_parent_pipe "change\r\n";
-                        # The new child might have different paths
-                        $e->w->cancel;
+                        print $inotify_parent_pipe "change$CRLF";
                     });
                 });
                 $watcher->poll;
@@ -214,6 +213,8 @@ sub boot {
 
 
     my $active = 1;
+    my $watched_modules = {};
+
     MAIN:
     while($active) {
         my ($parent_pipe, $child_pipe) = open_pipe();
@@ -243,7 +244,7 @@ sub boot {
                 kill QUIT => $pid;
             };
 
-            print $child_pipe "Parent active\r\n";
+            print $child_pipe "Parent active$CRLF";
             my $active = 1;
             ACTIVE:
             while ($active) {
@@ -257,7 +258,10 @@ sub boot {
 
                 $active = 0 unless check_messages_in_pipe($child_pipe, sub {
                     my $module = shift;
-                    print $inotify_child_pipe "$module\r\n";
+                    if (!$watched_modules->{$module}) {
+                        print $inotify_child_pipe "${module}${CRLF}";
+                        $watched_modules->{$module} = 1;
+                    }
                 });
 
                 for my $child_pid (@children_pids) {
@@ -279,6 +283,15 @@ sub boot {
             my %args = (
                 parent_pipe => $parent_pipe
             );
+
+            unshift @INC, sub { 
+                my ($code, $module) = @_; 
+                my ($path) = grep { !ref and -r "$_/$module"} @INC;
+                if ($path) {
+                    print $parent_pipe "$path/${module}${CRLF}";
+                }
+            }; 
+
             # Support coderef or package name
             if(ref $target) {
                 $target->(%args);
@@ -286,8 +299,9 @@ sub boot {
                 require Module::Load;
                 Module::Load::load($target);
                 my $module = $target->new;
-                $module->configure_from_argv(@ARGV);
-                $module->run(%args)->await;
+                $module->configure(%args);
+                $module->configure_from_argv(@ARGV)->await;
+                $module->run()->await;
             }
 
             if (my $error = $@) {

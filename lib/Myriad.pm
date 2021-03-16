@@ -282,6 +282,7 @@ async method configure_from_argv (@args) {
     $config = Myriad::Config->new(
         commandline => \@args
     );
+
     $self->setup_logging;
     $self->setup_tracing;
 
@@ -303,6 +304,17 @@ async method configure_from_argv (@args) {
             last;
         }
     }
+}
+
+
+=head2 configure 
+
+An API to apply configurations programmatically 
+
+=cut
+
+method configure (%args) {
+    $parent_pipe = $args{parent_pipe};
 }
 
 method config () { $config }
@@ -623,7 +635,7 @@ Applies signal handlers for TERM and QUIT, then starts the loop.
 
 =cut
 
-async method run (%args) {
+async method run () {
     map {
         my $signal = $_;
         $self->loop->attach_signal($signal => $self->$curry::weak(method {
@@ -642,9 +654,6 @@ async method run (%args) {
 
     await $commands->run_cmd;
 
-    if ($args{parent_pipe}) {
-        $parent_pipe = delete $args{parent_pipe};
-    }
     await $self->shutdown_future;
 }
 
