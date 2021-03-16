@@ -49,7 +49,7 @@ a concrete implementation - instead, see classes such as:
 
 use Role::Tiny;
 
-our @WRITE_METHODS = qw(set push unshift pop shift hash_set hash_add);
+our @WRITE_METHODS = qw(set getset push unshift pop shift hash_set hash_add);
 our @READ_METHODS = qw(get observe hash_get hash_keys hash_values hash_exists hash_count hash_as_list);
 
 requires $_ for @WRITE_METHODS;
@@ -84,11 +84,30 @@ or object will fail.
 
 Returns a L<Future> which will resolve on completion.
 
+=head2 getset
+
+Performs the same operation as L</set>, but additionally returns the original key value, if any.
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $v >> - the scalar value to set
+
+=back
+
+Note that references are currently B<not> supported - attempts to write an arrayref, hashref
+or object will fail.
+
+Returns a L<Future> which will resolve on completion to the original value, or C<undef> if none.
+
 =head2 observe
 
 Observe a specific key.
 
-Returns a L<Ryu::Source> which will emit the current and all subsequent values.
+Returns a L<Ryu::Observable> which will emit the current and all subsequent values.
 
 =head2 push
 
@@ -102,9 +121,7 @@ Takes the following parameters:
 
 =back
 
-Returns a L<Future> which will resolve to .
-
-requires 'push';
+Returns a L<Future>.
 
 =head2 unshift
 
@@ -116,31 +133,17 @@ Takes the following parameters:
 
 =back
 
-Returns a L<Future> which will resolve to .
+Returns a L<Future>.
 
 =head2 pop
 
-Takes the following parameters:
-
-=over 4
-
-=item *
-
-=back
-
-Returns a L<Future> which will resolve to .
+Returns a L<Future> which will resolve to the item removed from the list,
+or C<undef> if none available.
 
 =head2 shift
 
-Takes the following parameters:
-
-=over 4
-
-=item *
-
-=back
-
-Returns a L<Future> which will resolve to .
+Returns a L<Future> which will resolve to the item removed from the list,
+or C<undef> if none available.
 
 =head2 hash_set
 

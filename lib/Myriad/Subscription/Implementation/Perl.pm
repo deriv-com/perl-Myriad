@@ -11,7 +11,7 @@ with 'Myriad::Role::Subscription';
 
 has $transport;
 
-has $receivers = [];
+has $receivers;
 
 has $should_shutdown = 0;
 has $stopped;

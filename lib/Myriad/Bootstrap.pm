@@ -193,18 +193,31 @@ sub boot {
 
             require Linux::Inotify2;
 
+            my $watch_mask = Linux::Inotify2->IN_CLOSE_WRITE;
+
             my $watcher = Linux::Inotify2->new();
             $watcher->blocking(0);
-            my @watchers;
+
+            my $on_change;
+            $on_change = sub {
+                # Some editors like vim will set this flag to true
+                # Linux::Inotify2 will cancel the watcher if it gets
+                # this flag  https://stackoverflow.com/a/16762193
+                my $e = shift;
+                if($e->IN_IGNORED) {
+                    $watcher->watch($e->fullname, $watch_mask, $on_change);
+                }
+                print $inotify_parent_pipe "change$CRLF";
+
+            };
+
             while (1) {
                 check_messages_in_pipe($inotify_parent_pipe, sub {
                     my $module_path = shift;
                     say "$$ - Going to watch $module_path for changes";
-                    push @watchers, $watcher->watch($module_path, Linux::Inotify2->IN_MODIFY, sub {
-                        my $e = shift;
-                        print $inotify_parent_pipe "change$CRLF";
-                    });
+                    $watcher->watch($module_path, $watch_mask, $on_change);
                 });
+
                 $watcher->poll;
             }
             exit 0;
@@ -284,13 +297,13 @@ sub boot {
                 parent_pipe => $parent_pipe
             );
 
-            unshift @INC, sub { 
-                my ($code, $module) = @_; 
+            unshift @INC, sub {
+                my ($code, $module) = @_;
                 my ($path) = grep { !ref and -r "$_/$module"} @INC;
                 if ($path) {
                     print $parent_pipe "$path/${module}${CRLF}";
                 }
-            }; 
+            };
 
             # Support coderef or package name
             if(ref $target) {

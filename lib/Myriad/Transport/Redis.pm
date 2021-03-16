@@ -29,8 +29,8 @@ use List::Util qw(pairmap);
 
 has $redis_uri;
 has $redis;
-has $redis_pool = [ ];
-has $waiting_redis_pool = [];
+has $redis_pool;
+has $waiting_redis_pool;
 has $pending_redis_count = 0;
 has $wait_time = 15_000;
 has $batch_count = 50;

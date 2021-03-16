@@ -194,9 +194,9 @@ $Future::TIMES = 1;
 # The IO::Async::Loop instance
 has $loop;
 # Any coderefs to call when the framework starts
-has $startup_tasks = [ ];
+has $startup_tasks;
 # Any coderefs to call when shutdown is requested
-has $shutdown_tasks = [ ];
+has $shutdown_tasks;
 # The Myriad::Config instance
 has $config;
 # Registered commands for the management interface
@@ -242,6 +242,11 @@ has $parent_pipe;
 # rôle/inheritance behaviour, and at some future point we expect to refactor code
 # to move more of these classes over to Object::Pad.
 
+BUILD {
+    $startup_tasks = [ ];
+    $shutdown_tasks = [ ];
+}
+
 =head2 loop
 
 Returns the main L<IO::Async::Loop> instance for this process.
@@ -252,7 +257,8 @@ method loop { $loop //= IO::Async::Loop->new }
 
 =head2 services
 
-retruns hash containing added services instances
+Hashref of services that have been added to this instance,
+as C<name> => C<Myriad::Service> pairs.
 
 =cut
 
@@ -307,9 +313,9 @@ async method configure_from_argv (@args) {
 }
 
 
-=head2 configure 
+=head2 configure
 
-An API to apply configurations programmatically 
+An API to apply configurations programmatically.
 
 =cut
 

@@ -11,8 +11,8 @@ Myriad::Service::Remote - abstraction to access other services over the network.
 
 =head1 SYNOPSIS
 
-my $remote_service = $api->service_by_name('service');
-await $remote_service->call_api('some_method', %args);
+ my $remote_service = $api->service_by_name('service');
+ await $remote_service->call_api('some_method', %args);
 
 =head1 DESCRIPTION
 
@@ -29,11 +29,12 @@ has $storage;
 BUILD(%args) {
     weaken($myriad = delete $args{myriad});
     $service_name = delete $args{service_name} // die 'need a service name';
-    $local_service_name = delete $args{local_service_name} // die 'need a local service name';
+    $local_service_name = delete $args{local_service_name};
     $storage = Myriad::Service::Storage::Remote->new(
-                                                prefix => $service_name,
-                                                storage => $myriad->storage,
-                                                local_service_name => $local_service_name);
+        prefix             => $service_name,
+        storage            => $myriad->storage,
+        local_service_name => $local_service_name
+    );
 }
 
 method service_name { $service_name }

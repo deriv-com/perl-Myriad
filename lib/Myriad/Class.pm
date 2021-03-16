@@ -102,7 +102,7 @@ use IO::Async::Notifier;
 use Object::Pad ();
 
 use Log::Any qw($log);
-use OpenTracing::Any qw($log);
+use OpenTracing::Any qw($tracer);
 use Metrics::Any;
 
 sub import {

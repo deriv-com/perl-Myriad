@@ -32,7 +32,7 @@ method group_name { $group_name //= 'processors' }
 
 
 has $should_shutdown;
-has $rpc_methods = {};
+has $rpc_methods;
 has $services_list;
 has $started;
 

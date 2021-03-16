@@ -3,12 +3,12 @@ requires 'mro';
 requires 'indirect';
 requires 'multidimensional';
 requires 'bareword::filehandles';
-requires 'Syntax::Keyword::Dynamically', '>= 0.06';
+requires 'Syntax::Keyword::Dynamically', '>= 0.07';
 requires 'Syntax::Keyword::Try', '>= 0.21';
 requires 'Future', '>= 0.47';
 requires 'Future::Queue';
-requires 'Future::AsyncAwait', '>= 0.47';
-requires 'Object::Pad', '>= 0.35';
+requires 'Future::AsyncAwait', '>= 0.49';
+requires 'Object::Pad', '>= 0.36';
 requires 'Role::Tiny', '>= 2.002004';
 # Streams
 requires 'Ryu', '>= 2.007';
@@ -20,8 +20,8 @@ requires 'IO::Async::Test', '>= 0.78';
 requires 'IO::Async::SSL', '>= 0.22';
 # Functionality
 requires 'curry', '>= 1.001';
-requires 'Log::Any', '>= 1.708';
-requires 'Log::Any::Adapter', '>= 1.708';
+requires 'Log::Any', '>= 1.709';
+requires 'Log::Any::Adapter', '>= 1.709';
 requires 'Config::Any', '>= 0.32';
 requires 'YAML::XS', '>= 0.82';
 requires 'Metrics::Any', '>= 0.06';
@@ -43,11 +43,10 @@ requires 'Pod::Usage';
 # Integration
 requires 'Net::Async::OpenTracing', '>= 1.000';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
-requires 'Log::Any::Adapter::Multiplexor', '>= 0.03';
 requires 'Metrics::Any::Adapter::DogStatsd', '>= 0.02';
 # Transport
-requires 'Net::Async::Redis', '>= 3.010';
-requires 'Net::Async::HTTP', '>= 0.47';
+requires 'Net::Async::Redis', '>= 3.011';
+requires 'Net::Async::HTTP', '>= 0.48';
 requires 'Net::Async::HTTP::Server', '>= 0.13';
 requires 'Net::Async::SMTP', '>= 0.002';
 requires 'Database::Async', '>= 0.013';
@@ -56,8 +55,8 @@ requires 'Database::Async::Engine::PostgreSQL', '>= 0.010';
 requires 'Devel::MAT::Dumper';
 
 # Things that may move out
-requires 'Term::ReadLine';
-requires 'Linux::Inotify2';
+recommends 'Term::ReadLine';
+recommends 'Linux::Inotify2';
 
 on 'test' => sub {
     requires 'Test::More', '>= 0.98';
@@ -76,3 +75,4 @@ on 'develop' => sub {
     requires 'Devel::Cover::Report::Coveralls', '>= 0.11';
     requires 'Devel::Cover';
 };
+

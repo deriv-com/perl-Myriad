@@ -18,9 +18,9 @@ has $redis;
 has $uuid;
 
 # Group mapping
-has $group = { };
+has $group;
 
-has $queues = [ ];
+has $queues;
 
 has $should_shutdown;
 
