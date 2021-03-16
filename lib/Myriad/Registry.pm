@@ -65,6 +65,10 @@ async method add_service (%args) {
         myriad => $myriad,
         service_name => $service_name,
     );
+    {
+        no strict 'refs';
+        ${"${pkg}::metrics"}->{name_prefix} = [$service_name];
+    }
 
     $rpc{$pkg} ||= {};
     $batch{$pkg} ||= {};
@@ -78,12 +82,6 @@ async method add_service (%args) {
     weaken($service_by_name{$service_name} = $srv);
     weaken($myriad->services->{$k} = $srv);
 
-    try {
-        await $srv->start;
-        $log->infof('Added service [%s]', $service_name);
-    } catch ($e) {
-        $log->errorf('Failed to add service [%s] due: %s', $service_name, $e);
-    }
     return;
 }
 

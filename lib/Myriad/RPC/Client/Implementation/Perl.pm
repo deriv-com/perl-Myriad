@@ -15,6 +15,7 @@ has $whoami;
 has $current_id;
 has $subscription;
 has $pending_requests;
+has $started;
 
 BUILD {
     $whoami = Myriad::Util::UUID::uuid();
@@ -26,7 +27,12 @@ method configure (%args) {
     $transport = delete $args{transport} if $args{transport};
 }
 
+method is_started() {
+    return defined $started ? $started : Myriad::Exception::InternalError->new(message => '->start was not called')->throw;
+}
+
 async method start {
+    $started = $self->loop->new_future(label => 'rpc_client_subscription');
     my $sub = await $transport->subscribe($whoami);
     $subscription = $sub->each(sub {
         try {
@@ -39,6 +45,8 @@ async method start {
             $log->warnf('failed to parse rpc response due %s', $e);
         }
     })->completed();
+
+    $started->done('started');
 
     await $subscription;
 }

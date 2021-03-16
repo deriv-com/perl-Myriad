@@ -23,12 +23,17 @@ use Myriad::Service::Storage::Remote;
 
 has $myriad;
 has $service_name;
+has $local_service_name;
 has $storage;
 
 BUILD(%args) {
     weaken($myriad = delete $args{myriad});
     $service_name = delete $args{service_name} // die 'need a service name';
-    $storage = Myriad::Service::Storage::Remote->new(prefix => $service_name, storage => $myriad->storage);
+    $local_service_name = delete $args{local_service_name} // die 'need a local service name';
+    $storage = Myriad::Service::Storage::Remote->new(
+                                                prefix => $service_name,
+                                                storage => $myriad->storage,
+                                                local_service_name => $local_service_name);
 }
 
 method service_name { $service_name }

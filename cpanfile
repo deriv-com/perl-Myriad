@@ -44,6 +44,7 @@ requires 'Pod::Usage';
 requires 'Net::Async::OpenTracing', '>= 1.000';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
 requires 'Log::Any::Adapter::Multiplexor', '>= 0.03';
+requires 'Metrics::Any::Adapter::DogStatsd', '>= 0.02';
 # Transport
 requires 'Net::Async::Redis', '>= 3.010';
 requires 'Net::Async::HTTP', '>= 0.47';

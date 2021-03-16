@@ -27,6 +27,7 @@ use Module::Path qw(module_path);
 use Myriad::Service::Remote;
 
 has $myriad;
+has $cmd;
 
 BUILD (%args) {
     weaken(
@@ -74,36 +75,106 @@ async method service (@args) {
         }
         $myriad->tell_parent(module_path($module));
     }, foreach => \@modules, concurrent => 4);
+
+    $cmd = {
+        code => async sub {
+            await fmap0 {
+                my $service = shift;
+                try {
+                    $log->infof('Starting service [%s]', $service->service_name);
+                    $service->start;
+                } catch($e) {
+                    $log->warnf('FAILED to start service %s | %s', $service->service_name, $e);
+                }
+            } foreach => [values $myriad->services->%*], concurrent => 4;
+
+            await $self->start_components();
+
+        },
+        params => {},
+    };
 }
 
 async method rpc ($rpc, @args) {
-    try {
-        my $service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
-        my $response = await $service->call_rpc($rpc, @args);
-        $log->infof('RPC response is %s', $response);
-    } catch ($e) {
-        $log->warnf('RPC command failed due: %s', $e);
-    }
+    my $remote_service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
+    $cmd = {
+        code => async sub {
+            my $params = shift;
+            my ($remote_service, $command, $args) = map { $params->{$_} } qw(remote_service name args);
+
+            await $self->start_components(['rpc_client']);
+            try {
+                my $response = await $remote_service->call_rpc($command, @$args);
+                $log->infof('RPC response is %s', $response);
+            } catch ($e) {
+                $log->warnf('RPC command failed due: %s', $e);
+            }
+            await $myriad->shutdown;
+        },
+        params => { name => $rpc, args => \@args, remote_service => $remote_service}
+    };
 }
 
 async method subscription ($stream, @args) {
-    my $service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
-    $log->infof('Subscribing to: %s | %s', $service->service_name, $stream);
-    my $uuid = Myriad::Util::UUID::uuid();
-    $service->subscribe($stream, "$0/$uuid")->each(sub {
-        my $e = shift;
-        my %info = ($e->@*);
-        $log->infof('DATA: %s', decode_utf8($info{data}));
-    })->completed->retain;
+    my $remote_service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
+    $cmd = {
+        code => async sub {
+            my $params = shift;
+            my ($remote_service, $stream, $args) = map { $params->{$_} } qw(remote_service stream args);
+            await $self->start_components(['subscription']);
+
+            $log->infof('Subscribing to: %s | %s', $remote_service->service_name, $stream);
+            my $uuid = Myriad::Util::UUID::uuid();
+            $remote_service->subscribe($stream, "$0/$uuid")->each(sub {
+                my $e = shift;
+                my %info = ($e->@*);
+                use Data::Dumper;
+                $log->infof('DATA: %s', decode_utf8(Dumper($info{data})));
+            })->completed;
+        },
+        params => { stream => $stream, args => \@args, remote_service => $remote_service}
+    };
 
 }
 
-async method storage($command, $key) {
-    my $service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
-    my $response = await $service->storage->$command($key);
-    $log->infof('Storage resposne is: %s', $response);
+async method storage($action, $key, $extra = undef) {
+    my $remote_service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
+    $cmd = {
+        code => async sub {
+            my $params = shift;
+            my ($remote_service, $action, $key, $extra) = map { $params->{$_} } qw(remote_service action key extra);
+
+            my $response = await $remote_service->storage->$action($key, defined $extra? $extra : () );
+            $log->infof('Storage resposne is: %s', $response);
+            await $myriad->shutdown;
+
+        },
+        params => { action => $action, key => $key, extra => $extra, remote_service => $remote_service} };
 }
 
+async method start_components ($components = ['rpc', 'subscription', 'rpc_client']) {
+    my @components_started = map {
+        my $component = $_;
+        try {
+            # We need retain to make it persists and handle responses.
+            $myriad->$component->start->retain;
+            $log->debugf('Started Component: %s', $component);
+
+        } catch ($e) {
+            $log->warnf("%s failed due %s", $component, $e);
+            $myriad->shutdown_future->fail($e);
+        }
+        # return started future flag
+        $myriad->$component->is_started;
+    } @$components;
+
+    # Make sure all components have actually started.
+    await Future->needs_all(@components_started);
+}
+
+async method run_cmd() {
+    await $cmd->{code}->($cmd->{params}) if exists $cmd->{code};
+}
 
 1;
 
