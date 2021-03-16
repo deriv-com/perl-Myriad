@@ -82,6 +82,13 @@ sub allow_modules {
     @ALLOWED_MODULES{@_} = (1) x @_;
 }
 
+
+=head2 open_pipe
+
+use socketpair to establish communication between parent/child later.
+
+=cut
+
 sub open_pipe {
     # Establish comms channel for child process
     socketpair my $child_pipe, my $parent_pipe, $constant{AF_UNIX}, $constant{SOCK_STREAM}, $constant{PF_UNSPEC}
@@ -98,6 +105,13 @@ sub open_pipe {
 
     return ($parent_pipe, $child_pipe);
 }
+
+
+=head2 make_pipe_noneblocking
+
+Takes a pipe and makes it nonblocking by applying C<O_NONBLOCK>
+
+=cut
 
 sub make_pipe_nonblocking {
     my $pipe = shift;
@@ -312,7 +326,6 @@ sub boot {
                 require Module::Load;
                 Module::Load::load($target);
                 my $module = $target->new;
-                $module->configure(%args);
                 $module->configure_from_argv(@ARGV)->await;
                 $module->run()->await;
             }

@@ -22,8 +22,6 @@ use Future::Utils qw(fmap0);
 
 use Module::Runtime qw(require_module);
 
-use Module::Path qw(module_path);
-
 use Myriad::Service::Remote;
 
 has $myriad;
@@ -73,7 +71,6 @@ async method service (@args) {
         } else {
             await $myriad->add_service($module, name => $service_custom_name);
         }
-        $myriad->tell_parent(module_path($module));
     }, foreach => \@modules, concurrent => 4);
 
     $cmd = {

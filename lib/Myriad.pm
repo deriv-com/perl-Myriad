@@ -234,8 +234,6 @@ has $tracing;
 has $services;
 # Ryu::Source that can be used to recieve commands events
 has $ryu;
-# Pipeline that might be passed from booting script
-has $parent_pipe;
 
 # Note that we don't use Object::Pad as heavily within the core framework as we
 # would expect in microservices - this is mainly due to complications regarding
@@ -310,17 +308,6 @@ async method configure_from_argv (@args) {
             last;
         }
     }
-}
-
-
-=head2 configure
-
-An API to apply configurations programmatically.
-
-=cut
-
-method configure (%args) {
-    $parent_pipe = $args{parent_pipe};
 }
 
 method config () { $config }
@@ -617,20 +604,6 @@ method setup_tracing () {
         await $tracing->sync
     });
     return;
-}
-
-=head2 tell_parent
-
-Send a message to the parent process
-in case if Myriad is running under
-debug mode.
-
-=cut
-
-method tell_parent ($data) {
-    if ($parent_pipe) {
-        print $parent_pipe "$data\r\n";
-    }
 }
 
 =head2 run
