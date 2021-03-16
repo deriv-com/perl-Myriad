@@ -195,12 +195,12 @@ sub boot {
 
             my $watcher = Linux::Inotify2->new();
             $watcher->blocking(0);
-
+            my @watchers;
             while (1) {
                 check_messages_in_pipe($inotify_parent_pipe, sub {
                     my $module_path = shift;
                     say "$$ - Going to watch $module_path for changes";
-                    $watcher->watch($module_path, Linux::Inotify2->IN_MODIFY, sub {
+                    push @watchers, $watcher->watch($module_path, Linux::Inotify2->IN_MODIFY, sub {
                         my $e = shift;
                         print $inotify_parent_pipe "change$CRLF";
                     });
