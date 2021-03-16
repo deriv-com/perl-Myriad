@@ -42,4 +42,3 @@ for my $class (qw(Myriad::Storage::Implementation::Perl)) {
 }
 done_testing;
 
-

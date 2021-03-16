@@ -122,7 +122,6 @@ subtest "Adding Service" => sub {
     my $srv_in_registry = $registry->service_by_name($registry->make_service_name('Testing::Service'));
     cmp_deeply($service, $srv_in_registry, 'Same service in Myriad and Regisrty');
     is($started_services->{'Testing::Service'}, undef, 'Registry has not started service');
-
 };
 
 subtest "Service name" => sub {

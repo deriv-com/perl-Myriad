@@ -59,7 +59,7 @@ async method service (@args) {
 
     my $service_custom_name = $myriad->config->service_name->as_string;
 
-    die 'You cannot pass a service name and load multiple modules' if (scalar @modules > 1 && $service_custom_name ne '');
+    die 'You cannot pass a service name and load multiple modules' if @modules > 1 and length $service_custom_name;
 
     await fmap0(async sub {
         my ($module) = @_;
@@ -92,8 +92,17 @@ async method service (@args) {
     };
 }
 
+method remote_service {
+    return Myriad::Service::Remote->new(
+        myriad       => $myriad,
+        service_name => $myriad->registry->make_service_name(
+            $myriad->config->service_name->as_string
+        ) // die 'no service name found'
+    );
+}
+
 async method rpc ($rpc, @args) {
-    my $remote_service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
+    my $remote_service = $self->remote_service;
     $cmd = {
         code => async sub {
             my $params = shift;
@@ -113,7 +122,7 @@ async method rpc ($rpc, @args) {
 }
 
 async method subscription ($stream, @args) {
-    my $remote_service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
+    my $remote_service = $self->remote_service;
     $cmd = {
         code => async sub {
             my $params = shift;
@@ -134,7 +143,7 @@ async method subscription ($stream, @args) {
 
 }
 
-async method storage($action, $key, $extra = undef) {
+async method storage ($action, $key, $extra = undef) {
     my $remote_service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
     $cmd = {
         code => async sub {
@@ -169,7 +178,7 @@ async method start_components ($components = ['rpc', 'subscription', 'rpc_client
     await Future->needs_all(@components_started);
 }
 
-async method run_cmd() {
+async method run_cmd () {
     await $cmd->{code}->($cmd->{params}) if exists $cmd->{code};
 }
 
