@@ -29,7 +29,7 @@ has $storage;
 BUILD(%args) {
     weaken($myriad = delete $args{myriad});
     $service_name = delete $args{service_name} // die 'need a service name';
-    $local_service_name = delete $args{local_service_name} // die 'need a local service name';
+    $local_service_name = delete $args{local_service_name};
     $storage = Myriad::Service::Storage::Remote->new(
         prefix             => $service_name,
         storage            => $myriad->storage,
