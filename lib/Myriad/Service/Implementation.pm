@@ -288,7 +288,7 @@ async method start {
                     return $f;
                 })->resolve->completed->retain;
 
-                push @pending, $spec->{current} = $current->retain;
+                push @pending, $spec->{current} = $current->completed->retain;
             }
         }
 
