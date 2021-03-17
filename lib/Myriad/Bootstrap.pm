@@ -137,7 +137,7 @@ sub check_messages_in_pipe {
         my $rslt = sysread $pipe, my $buf, 4096;
         return 0 unless $rslt;
         $input .= $buf;
-        while($input =~ s/^[\r\n]*(.*)(?:\r\n)+//) {
+        while($input =~ s/^[\x0D\x0A]*(.*)(?:\x0D\x0A)+//) {
             $on_read->($1);
         }
     }
