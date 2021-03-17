@@ -38,6 +38,11 @@ has $max_pool_count;
 
 has $ryu;
 
+BUILD {
+    $redis_pool = [];
+    $waiting_redis_pool = [];
+}
+
 method configure (%args) {
     if(exists $args{redis_uri}) {
         my $uri = delete $args{redis_uri};
