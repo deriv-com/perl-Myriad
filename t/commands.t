@@ -118,11 +118,6 @@ sub mock_component {
             $started_components{$component} = 1;
             return $f;
         });
-        $mock->mock('is_started', async sub {
-            my ($self) = @_;
-            my $started = $loop->new_future;
-            return defined $f ? $started->done("$component started") : $started->fail('start not called');
-        });
 
         $mock->mock('create_from_sink', async sub {});
         return $mock;

@@ -70,6 +70,7 @@ async method call_rpc ($service, $method, %args) {
     );
 
     $pending_requests->{$message_id} = $pending;
+    await $started;
     await $transport->add_to_stream($service, $request->as_hash->%*);
 
     try {

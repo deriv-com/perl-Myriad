@@ -85,7 +85,7 @@ async method service (@args) {
                 }
             } foreach => [values $myriad->services->%*], concurrent => 4;
 
-            await $self->start_components();
+            $self->start_components();
 
         },
         params => {},
@@ -108,7 +108,7 @@ async method rpc ($rpc, @args) {
             my $params = shift;
             my ($remote_service, $command, $args) = map { $params->{$_} } qw(remote_service name args);
 
-            await $self->start_components(['rpc_client']);
+            $self->start_components(['rpc_client']);
             try {
                 my $response = await $remote_service->call_rpc($command, @$args);
                 $log->infof('RPC response is %s', $response);
@@ -127,7 +127,7 @@ async method subscription ($stream, @args) {
         code => async sub {
             my $params = shift;
             my ($remote_service, $stream, $args) = map { $params->{$_} } qw(remote_service stream args);
-            await $self->start_components(['subscription']);
+            $self->start_components(['subscription']);
 
             $log->infof('Subscribing to: %s | %s', $remote_service->service_name, $stream);
             my $uuid = Myriad::Util::UUID::uuid();
@@ -158,7 +158,7 @@ async method storage ($action, $key, $extra = undef) {
         params => { action => $action, key => $key, extra => $extra, remote_service => $remote_service} };
 }
 
-async method start_components ($components = ['rpc', 'subscription', 'rpc_client']) {
+method start_components ($components = ['rpc', 'subscription', 'rpc_client']) {
     my @components_started = map {
         my $component = $_;
         try {
@@ -170,12 +170,7 @@ async method start_components ($components = ['rpc', 'subscription', 'rpc_client
             $log->warnf("%s failed due %s", $component, $e);
             $myriad->shutdown_future->fail($e);
         }
-        # return started future flag
-        $myriad->$component->is_started;
     } @$components;
-
-    # Make sure all components have actually started.
-    await Future->needs_all(@components_started);
 }
 
 async method run_cmd () {
