@@ -76,7 +76,7 @@ async method call_rpc($service, $method, %args) {
     );
 
     try {
-        await $started;
+        await $self->is_started();
         await $redis->xadd($service => '*', $request->as_hash->%*);
         $log->tracef('Sent RPC request %s', $request->as_hash);
         $pending_requests->{$message_id} = $pending;
