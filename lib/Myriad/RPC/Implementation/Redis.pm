@@ -43,7 +43,6 @@ method whoami { $whoami }
 has $rpc_methods;
 
 has $iteration_future;
-has $started;
 
 sub service_name_from_stream ($stream) {
     my $pattern = RPC_SUFFIX . '$';

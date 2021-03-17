@@ -24,8 +24,6 @@ has $queues;
 
 has $should_shutdown;
 
-has $started;
-
 BUILD {
     $uuid = Myriad::Util::UUID::uuid();
 }
