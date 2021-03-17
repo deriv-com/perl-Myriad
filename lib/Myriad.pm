@@ -630,7 +630,9 @@ async method run () {
     # Set shutdown future before starting commands.
     $shutdown //= $self->loop->new_future->set_label('shutdown');
 
-    await $commands->run_cmd;
+    $commands->run_cmd->retain()->on_fail(sub {
+        $self->shutdown->await();
+    });
 
     await $self->shutdown_future;
 }
