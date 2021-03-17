@@ -247,7 +247,7 @@ async method start {
                 await $subscription->create_from_source(
                     source  => $sink->source->map(sub {
                         $metrics->inc_counter('emitters_count', {method => $method, service => $service_name});
-                        return @_;
+                        return $_;
                     }),
                     channel => $chan,
                     service => $service_name,
@@ -284,9 +284,9 @@ async method start {
 
                 $current->map(sub {
                     my $f = Future->wrap(shift);
-                    $metrics->report_timer(receiver_timing => $f->elapsed, {method => $method, status => $f->state, service => $service_name});
+                    $metrics->report_timer(receiver_timing => ($f->elapsed // 0), {method => $method, status => $f->state, service => $service_name});
                     return $f;
-                })->resolve->completed;
+                })->resolve->completed->retain;
 
                 push @pending, $spec->{current} = $current->retain;
             }
