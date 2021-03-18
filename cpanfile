@@ -56,6 +56,7 @@ requires 'Devel::MAT::Dumper';
 
 # Things that may move out
 recommends 'Term::ReadLine';
+recommends 'Linux::Inotify2';
 
 on 'test' => sub {
     requires 'Test::More', '>= 0.98';

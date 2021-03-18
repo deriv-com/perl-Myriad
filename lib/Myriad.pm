@@ -286,6 +286,7 @@ async method configure_from_argv (@args) {
     $config = Myriad::Config->new(
         commandline => \@args
     );
+
     $self->setup_logging;
     $self->setup_tracing;
 

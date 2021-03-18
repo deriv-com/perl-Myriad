@@ -61,6 +61,10 @@ our %ALLOWED_MODULES = map {
     ),
     __PACKAGE__;
 
+our %constant;
+
+my $CRLF = "\x0D\x0A";
+
 =head1 METHODS - Class
 
 =head2 allow_modules
@@ -78,6 +82,69 @@ sub allow_modules {
     @ALLOWED_MODULES{@_} = (1) x @_;
 }
 
+
+=head2 open_pipe
+
+use socketpair to establish communication between parent/child later.
+
+=cut
+
+sub open_pipe {
+    # Establish comms channel for child process
+    socketpair my $child_pipe, my $parent_pipe, $constant{AF_UNIX}, $constant{SOCK_STREAM}, $constant{PF_UNSPEC}
+        or die $!;
+
+    { # Unbuffered writes
+        my $old = select($child_pipe);
+        $| = 1; select($parent_pipe);
+        $| = 1; select($old);
+    }
+
+    make_pipe_nonblocking($parent_pipe);
+    make_pipe_nonblocking($child_pipe);
+
+    return ($parent_pipe, $child_pipe);
+}
+
+
+=head2 make_pipe_noneblocking
+
+Takes a pipe and makes it nonblocking by applying C<O_NONBLOCK>
+
+=cut
+
+sub make_pipe_nonblocking {
+    my $pipe = shift;
+    my $flags = fcntl($pipe, $constant{F_GETFL}, 0)
+        or die "Can't get flags for the socket: $!\n";
+
+    $flags = fcntl($pipe, $constant{F_SETFL}, $flags | $constant{O_NONBLOCK})
+        or die "Can't set flags for the socket: $!\n";
+}
+
+sub check_messages_in_pipe {
+    my ($pipe, $on_read) = @_;
+    # See https://perldoc.perl.org/functions/select#select-RBITS,WBITS,EBITS,TIMEOUT
+    # for a better understanding
+    my $input = '';
+    my $rin = my $win = '';
+    vec($rin, fileno($pipe), 1) = 1;
+    my $ein = $rin | $win;
+
+    die $! unless (my $nfound = select my $rout = $rin, my $wout = $win, my $eout = $ein, 0.5) > -1;
+
+    if($nfound) {
+        my $rslt = sysread $pipe, my $buf, 4096;
+        return 0 unless $rslt;
+        $input .= $buf;
+        while($input =~ s/^[\x0D\x0A]*(.*)(?:\x0D\x0A)+//) {
+            $on_read->($1);
+        }
+    }
+
+    return 1;
+}
+
 =head2 boot
 
 Given a target coderef or classname, prepares the fork and communication
@@ -88,19 +155,14 @@ pipe, then starts the code.
 sub boot {
     my ($class, $target) = @_;
     my $parent_pid = $$;
-    # Most of the handling here involves catching things, and reporting
-    # to the parent via STDOUT
-    $SIG{HUP} = sub {
-        say "$$ - HUP detected";
-    };
+    my @children_pids;
 
-    my %constant;
     { # Read constants from various modules without loading them into the main process
         die $! unless defined(my $pid = open my $child, '-|');
         my %constant_map = (
-            Socket => [qw(AF_UNIX SOCK_STREAM PF_UNSPEC)],
-            Fcntl  => [qw(F_GETFL F_SETFL O_NONBLOCK)],
-            POSIX  => [qw(WNOHANG)],
+            Socket            => [qw(AF_UNIX SOCK_STREAM PF_UNSPEC)],
+            Fcntl             => [qw(F_GETFL F_SETFL O_NONBLOCK)],
+            POSIX             => [qw(WNOHANG)],
         );
         unless($pid) {
             # We've forked, so we're free to load any extra modules we'd like here
@@ -128,35 +190,68 @@ sub boot {
         }
     }
 
-    # Establish comms channel for child process
-    socketpair my $child_pipe, my $parent_pipe, $constant{AF_UNIX}, $constant{SOCK_STREAM}, $constant{PF_UNSPEC}
-        or die $!;
+    my ($inotify_parent_pipe, $inotify_child_pipe) = open_pipe();
 
-    { # Unbuffered writes
-        my $old = select($child_pipe);
-        $| = 1; select($parent_pipe);
-        $| = 1; select($old);
+    {
+        if (my $pid = fork // die "fork! $!") {
+            push @children_pids, $pid;
+            close $inotify_parent_pipe;
+        } else {
+
+            close $inotify_child_pipe;
+
+            local $SIG{HUP}= sub {
+                say "$pid - inotify process termintated";
+                exit 0;
+            };
+
+            require Linux::Inotify2;
+
+            my $watch_mask = Linux::Inotify2->IN_CLOSE_WRITE;
+
+            my $watcher = Linux::Inotify2->new();
+            $watcher->blocking(0);
+
+            my $on_change;
+            $on_change = sub {
+                # Some editors like vim will set this flag to true
+                # Linux::Inotify2 will cancel the watcher if it gets
+                # this flag  https://stackoverflow.com/a/16762193
+                my $e = shift;
+                if($e->IN_IGNORED) {
+                    $watcher->watch($e->fullname, $watch_mask, $on_change);
+                }
+                print $inotify_parent_pipe "change$CRLF";
+
+            };
+
+            while (1) {
+                check_messages_in_pipe($inotify_parent_pipe, sub {
+                    my $module_path = shift;
+                    say "$$ - Going to watch $module_path for changes";
+                    $watcher->watch($module_path, $watch_mask, $on_change);
+                });
+
+                $watcher->poll;
+            }
+            exit 0;
+        }
     }
 
+
     my $active = 1;
+    my $watched_modules = {};
+
     MAIN:
     while($active) {
+        my ($parent_pipe, $child_pipe) = open_pipe();
+
         if(my $pid = fork // die "fork: $!") {
+            close $parent_pipe;
             say "$$ - Parent with $pid child";
-
-            # The parent watches for events from the child...
-            close $parent_pipe or die $!;
-
-            { # Switch child pipe to nonblocking mode
-                my $flags = fcntl($child_pipe, $constant{F_GETFL}, 0)
-                    or die "Can't get flags for the socket: $!\n";
-
-                $flags = fcntl($child_pipe, $constant{F_SETFL}, $flags | $constant{O_NONBLOCK})
-                    or die "Can't set flags for the socket: $!\n";
-            }
+            push @children_pids, $pid;
 
             # Note that we don't have object methods available yet, since that'd pull in IO::Handle
-            print $child_pipe "Parent active\n";
 
             { # Make sure we didn't pull in anything unexpected
                 my %found = map {
@@ -171,55 +266,58 @@ sub boot {
                 die "excessive module loading detected: $loaded_modules" if $loaded_modules;
             }
 
-            my $stop = 0;
             local $SIG{HUP} = sub {
                 say "$$ - HUP detected in parent";
-                kill 3, $pid;
-    #           $stop = 1;
+                kill QUIT => $pid;
             };
 
-            # Build up any output from the child process
-            my $input = '';
-
-            my $rin = my $win = '';
-            vec($rin, fileno($child_pipe), 1) = 1;
-            my $ein = $rin | $win;
+            print $child_pipe "Parent active$CRLF";
+            my $active = 1;
             ACTIVE:
-            while(!$stop) {
-                say "$$ Parent loop cycle";
-                die $! unless defined(my $nfound = select my $rout = $rin, my $wout = $win, my $eout = $ein, 5);
-                if($nfound) {
-    #               say "$$ Child has something to report ($nfound): $rout, $wout, $eout";
-                    my $rslt = sysread $child_pipe, my $buf, 4096;
-                    last ACTIVE unless $rslt;
-                    $input .= $buf;
-                    while($input =~ s/^[\r\n]*(.*)[\r\n]+//) {
-                        say "Received from child: $1";
+            while ($active) {
+                $active = 0 unless check_messages_in_pipe($inotify_child_pipe, sub {
+                    say "$$ - File has been detected reloading..";
+                    kill QUIT => $pid;
+                    # wait for the process to finish
+                    waitpid $pid, 0;
+                    next MAIN;
+                });
+
+                $active = 0 unless check_messages_in_pipe($child_pipe, sub {
+                    my $module = shift;
+                    if (!$watched_modules->{$module}) {
+                        print $inotify_child_pipe "${module}${CRLF}";
+                        $watched_modules->{$module} = 1;
+                    }
+                });
+
+                for my $child_pid (@children_pids) {
+                    if(my $exit = waitpid $pid, $constant{WNOHANG}) {
+                        say "$$ Exit was $exit";
+                        # stop the other processes
+                        kill QUIT => $_ for grep {$_ eq $child_pid} @children_pids;
+                        last MAIN;
                     }
                 }
-            }
-            if(my $exit = waitpid $pid, 0) {
-                say "$$ Exit was $exit";
-                last MAIN;
-            } else {
-                say "$$ No exit code yet";
             }
             say "$$ - Done";
             exit 0;
         } else {
             say "$$ - Child with parent " . $parent_pid;
-            { # Switch parent pipe to nonblocking mode
-                my $flags = fcntl($parent_pipe, $constant{F_GETFL}, 0)
-                    or die "Can't get flags for the socket: $!\n";
-
-                $flags = fcntl($parent_pipe, $constant{F_SETFL}, $flags | $constant{O_NONBLOCK})
-                    or die "Can't set flags for the socket: $!\n";
-            }
-
+            close $child_pipe;
+            close $inotify_child_pipe;
             # We'd expect to pass through some more details here as well
             my %args = (
                 parent_pipe => $parent_pipe
             );
+
+            unshift @INC, sub {
+                my ($code, $module) = @_;
+                my ($path) = grep { !ref and -r "$_/$module"} @INC;
+                if ($path) {
+                    print $parent_pipe "$path/${module}${CRLF}";
+                }
+            };
 
             # Support coderef or package name
             if(ref $target) {
@@ -227,8 +325,16 @@ sub boot {
             } else {
                 require Module::Load;
                 Module::Load::load($target);
-                $target->new->run(%args);
+                my $module = $target->new;
+                $module->configure_from_argv(@ARGV)->await;
+                $module->run()->await;
             }
+
+            if (my $error = $@) {
+                $error =~ s/\n/\n\t/g;
+                print "$$ - target code/module exited unexpectedly due:\n\t$error";
+            }
+
             exit 0;
         }
     }
