@@ -12,7 +12,5 @@ RUN dzil install \
  && apt purge --autoremove -y \
  && rm -rf .git .circleci
 
-ENV MYRIAD_DEV=${MYRID_DEV}
-
 ENTRYPOINT [ "bin/start.sh" ]
 

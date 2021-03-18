@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ ! -z $MYRIAD_DEV ] 
+if [ ! -z $MYRIAD_DEV ]
 then
     myriad-dev.pl $@
 else
