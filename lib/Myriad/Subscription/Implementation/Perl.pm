@@ -15,7 +15,6 @@ has $receivers;
 
 has $should_shutdown = 0;
 has $stopped;
-has $started;
 
 method _add_to_loop ($loop) {
     $stopped = $loop->new_future(label => 'subscription::redis::stopped');
@@ -47,12 +46,8 @@ async method create_from_sink (%args) {
     return;
 }
 
-method is_started() {
-    return defined $started ? $started : Myriad::Exception::InternalError->new(message => '->start was not called')->throw;
-}
 
 async method start {
-    $started = $self->loop->new_future(label => 'subscription');
     if(!$receivers->@*) {
         $stopped->done;
         return;
@@ -65,8 +60,6 @@ async method start {
             $log->warnf('Failed to create consumer group due: %s', $e);
         }
     }
-
-    $started->done('started');
 
     while (1) {
         my $subscription = shift $receivers->@*;

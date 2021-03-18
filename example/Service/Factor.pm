@@ -10,7 +10,7 @@ async method diagnostics ($level) {
 }
 
 async method secret_checks : Receiver(service => 'example.service.secret') ($sink) {
-    await $sink->map(
+    return $sink->map(
         async sub {
             my $e = shift;
             my %info = ($e->@*);
@@ -43,7 +43,7 @@ async method secret_checks : Receiver(service => 'example.service.secret') ($sin
                 $log->infof('Setting factor %d', $factor);
                 await $api->storage->set('factor', $factor);
         }
-    )->resolve->completed;
+    )->resolve;
 
 }
 
