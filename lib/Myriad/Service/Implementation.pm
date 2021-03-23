@@ -282,13 +282,13 @@ async method start {
                 die "Receivers method: $method should return a Ryu::Source"
                     unless blessed $current && $current->isa('Ryu::Source');
 
-                $current->map(sub {
+                $spec->{current} = $current->map(sub {
                     my $f = Future->wrap(shift);
                     $metrics->report_timer(receiver_timing => ($f->elapsed // 0), {method => $method, status => $f->state, service => $service_name});
                     return $f;
                 })->resolve->completed->retain;
 
-                push @pending, $spec->{current} = $current->completed->retain;
+                push @pending, $spec->{current};
             }
         }
 

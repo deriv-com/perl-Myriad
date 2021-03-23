@@ -14,7 +14,9 @@ my %WriteMakefileArgs = (
   },
   "DISTNAME" => "Myriad",
   "EXE_FILES" => [
-    "bin/myriad.pl"
+    "bin/myriad-dev.pl",
+    "bin/myriad.pl",
+    "bin/start.sh"
   ],
   "LICENSE" => "perl",
   "NAME" => "Myriad",
