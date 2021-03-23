@@ -156,6 +156,7 @@ sub import {
         # here because it sometimes returns an empty list, which would be
         # dangerous - my %hash = (key => trim($value)) for example.
         *{$pkg . '::trim'} = sub ($txt) {
+            return undef unless defined $txt;
             $txt =~ s{^\s+}{};
             $txt =~ s{\s+$}{};
             return $txt;
