@@ -55,8 +55,7 @@ async method add_service (%args) {
     $srv = $srv->new(
         %args,
         name => $service_name,
-        rpc => $myriad->rpc,
-        subscription => $myriad->subscription,
+        myriad => $myriad,
     ) unless blessed($srv) and $srv->isa('Myriad::Service');
 
     # Inject an `$api` instance so that this service can talk
@@ -65,6 +64,7 @@ async method add_service (%args) {
         myriad => $myriad,
         service_name => $service_name,
     );
+
     {
         no strict 'refs';
         ${"${pkg}::metrics"}->{name_prefix} = [$service_name];

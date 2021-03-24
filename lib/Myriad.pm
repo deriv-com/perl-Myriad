@@ -364,6 +364,10 @@ method rpc () {
             )
         );
 
+        $rpc->start->retain->on_fail(sub {
+            $self->shutdown_future->fail(shift);
+        });
+
         $self->on_shutdown(async sub {
             await $rpc->stop;
         });
@@ -386,6 +390,10 @@ method rpc_client () {
                 myriad => $self,
             )
         );
+
+        $rpc_client->start->retain->on_fail(sub {
+            $self->shutdown_future->fail(shift);
+        });
 
         $self->on_shutdown(async sub {
             await $rpc_client->stop;
@@ -424,6 +432,12 @@ method subscription () {
                 myriad    => $self,
             )
         );
+
+        $self->on_startup(async sub {
+            $subscription->start->retain->on_fail(sub {
+                $self->shutdown_future->fail(shift);
+            });
+        });
 
         $self->on_shutdown(async sub {
             await $subscription->stop;

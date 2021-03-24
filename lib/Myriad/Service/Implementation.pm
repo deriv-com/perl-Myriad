@@ -54,8 +54,6 @@ has $ryu;
 has $storage;
 has $myriad;
 has $service_name;
-has $rpc;
-has $subscription;
 has %active_batch;
 
 =head1 ATTRIBUTES
@@ -77,6 +75,18 @@ The L<Myriad> instance which owns this service. Stored internally as a weak refe
 =cut
 
 method myriad () { $myriad }
+
+=head2 rpc
+
+=cut
+
+method rpc () { $myriad->rpc }
+
+=head2 subscription
+
+method subscription () { $myriad->subscription }
+
+=cut
 
 =head2 service_name
 
@@ -151,8 +161,7 @@ Populate internal configuration.
 method configure (%args) {
     $service_name //= (delete $args{name} || die 'need a service name');
     Scalar::Util::weaken($myriad = delete $args{myriad}) if exists $args{myriad};
-    $rpc = delete $args{rpc} if exists $args{rpc};
-    $subscription = delete $args{subscription} if exists $args{subscription};
+    weaken($myriad = delete $args{myriad}) if exists $args{myriad};
     $self->next::method(%args);
 }
 
@@ -244,7 +253,7 @@ async method start {
                 my $sink = $ryu->sink(
                     label => "emitter:$chan",
                 );
-                await $subscription->create_from_source(
+                await $self->subscription->create_from_source(
                     source  => $sink->source->map(sub {
                         $metrics->inc_counter('emitters_count', {method => $method, service => $service_name});
                         return $_;
@@ -269,7 +278,7 @@ async method start {
                 my $sink = $ryu->sink(
                     label => "receiver:$chan",
                 );
-                await $subscription->create_from_sink(
+                await $self->subscription->create_from_sink(
                     sink    => $sink,
                     channel => $chan,
                     client  => $service_name . '/' . $method,
@@ -297,7 +306,7 @@ async method start {
                 $log->tracef('Starting batch process %s for %s', $method, ref($self));
                 my $code = $batches->{$method}{code};
                 my $sink = $ryu->sink(label => 'batch:' . $method);
-                await $subscription->create_from_source(
+                await $self->subscription->create_from_source(
                     source  => $sink->source,
                     channel => $method,
                     service => $service_name,
@@ -313,7 +322,7 @@ async method start {
             for my $method (sort keys $rpc_calls->%*) {
                 my $spec = $rpc_calls->{$method};
                 my $sink = $ryu->sink(label => "rpc:$service_name:$method");
-                $rpc->create_from_sink(service => $service_name, method => $method, sink => $sink);
+                $self->rpc->create_from_sink(service => $service_name, method => $method, sink => $sink);
 
                 my $code = $spec->{code};
                 $spec->{current} = $sink->source->map(async sub {
@@ -323,9 +332,9 @@ async method start {
                             my $f = shift;
                             $metrics->report_timer(rpc_timing => $f->elapsed, {method => $method, status => $f->state, service => $service_name});
                         });
-                        await $rpc->reply_success($service_name, $message, $response);
+                        await $self->rpc->reply_success($service_name, $message, $response);
                     } catch ($e) {
-                        await $rpc->reply_error($service_name, $message, $e);
+                        await $self->rpc->reply_error($service_name, $message, $e);
                     }
                 })->resolve->completed;
             }

@@ -159,18 +159,18 @@ async method storage ($action, $key, $extra = undef) {
 }
 
 method start_components ($components = ['rpc', 'subscription', 'rpc_client']) {
-    my @components_started = map {
-        my $component = $_;
-        try {
-            # We need retain to make it persists and handle responses.
-            $myriad->$component->start->retain;
-            $log->debugf('Started Component: %s', $component);
-
-        } catch ($e) {
-            $log->warnf("%s failed due %s", $component, $e);
-            $myriad->shutdown_future->fail($e);
-        }
-    } @$components;
+#    my @components_started = map {
+#        my $component = $_;
+#        try {
+#            # We need retain to make it persists and handle responses.
+#            $myriad->$component->start->retain;
+#            $log->debugf('Started Component: %s', $component);
+#
+#        } catch ($e) {
+#            $log->warnf("%s failed due %s", $component, $e);
+#            $myriad->shutdown_future->fail($e);
+#        }
+#    } @$components;
 }
 
 async method run_cmd () {

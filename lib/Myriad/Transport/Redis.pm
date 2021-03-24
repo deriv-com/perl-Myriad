@@ -76,7 +76,6 @@ async method start {
         host => $redis_uri->host,
         port => $redis_uri->port,
     );
-    return;
 }
 
 async method oldest_processed_id($stream) {
