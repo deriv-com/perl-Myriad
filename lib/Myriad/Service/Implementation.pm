@@ -100,7 +100,7 @@ Timing information about RPC calls tagged by service, status and method name
 
 $metrics->make_timer( rpc_timing =>
    name => [ qw(myriad service rpc) ],
-   description => "Time taken to perocess the RPC request",
+   description => "Time taken to process the RPC request",
    labels => [qw(method status service)]
 );
 
@@ -112,7 +112,7 @@ Timing information about the batch subscriptions tagged by service, status and m
 
 $metrics->make_timer( batch_timing =>
    name => [ qw(myriad service batch) ],
-   description => "Time taken to perocess the RPC request",
+   description => "Time taken to process the RPC request",
    labels => [qw(method status service)]
 );
 
@@ -124,7 +124,7 @@ Timing information about events receivers tagged by service, status and method n
 
 $metrics->make_timer( receiver_timing =>
    name => [ qw(myriad service receiver) ],
-   description => "Time taken to perocess the received events",
+   description => "Time taken to process the received events",
    labels => [qw(method status service)]
 );
 
