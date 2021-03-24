@@ -72,7 +72,7 @@ async method start {
     $should_shutdown //= $self->loop->new_future(label => 'subscription::redis::shutdown');
     await Future->wait_any($should_shutdown->without_cancel, async sub {
             while (1) {
-                if($queues->@*) {
+                if($queues && $queues->@*) {
                     my $item = shift $queues->@*;
                     push $queues->@*, $item;
                     $log->tracef('Will readgroup on %s', $item);
