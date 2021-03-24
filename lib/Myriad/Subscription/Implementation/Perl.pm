@@ -16,6 +16,10 @@ has $receivers;
 has $should_shutdown = 0;
 has $stopped;
 
+BUILD {
+    $receivers = [];
+}
+
 method _add_to_loop ($loop) {
     $stopped = $loop->new_future(label => 'subscription::redis::stopped');
 }
