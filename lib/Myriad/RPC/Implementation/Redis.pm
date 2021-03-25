@@ -41,6 +41,7 @@ has $whoami;
 method whoami { $whoami }
 
 has $rpc_methods;
+has $streams_list;
 
 has $iteration_future;
 
@@ -61,10 +62,6 @@ method configure (%args) {
 }
 
 async method start () {
-    if (!$rpc_methods) {
-        $iteration_future = Future->done;
-        return;
-    }
 
     await fmap0 {
             my $stream = stream_name_from_service(shift);
@@ -79,7 +76,8 @@ method create_from_sink (%args) {
     my $method = $args{method} // die 'need a method name';
     my $service = $args{service} // die 'need a service name';
 
-    $rpc_methods->{$service}->{$method} = $sink;
+    $rpc_methods->{stream_name_from_service($service)}->{$method} = $sink;
+    push $streams_list->@*, stream_name_from_service($service);
 }
 
 async method stop () {
@@ -88,6 +86,42 @@ async method stop () {
 
 async method listener () {
     $iteration_future //= do {
+        while (1) {
+            if ($streams_list && $streams_list->@*) {
+                my $stream = shift $streams_list->@*;
+                push $streams_list->@*, $stream;
+                my @items = await $self->redis->read_from_stream(
+                    stream => $stream,
+                    group => $self->group_name,
+                    client => $self->whoami
+                );
+
+                for my $item (@items) {
+                    push $item->{data}->@*, ('transport_id', $item->{id});
+                    my $service = service_name_from_stream($item->{stream});
+                    try {
+                        my $message = Myriad::RPC::Message::from_hash($item->{data}->@*);
+                        if (my $sink = $rpc_methods->{$service}->{$message->rpc}) {
+                            $sink->emit($message);
+                        } else {
+                            await $self->reply_error(
+                                $service,
+                                $message,
+                                Myriad::Exception::RPC::MethodNotFound->new(reason => "No such method: " . $message->rpc),
+                            );
+                        }
+                    } catch ($error) {
+                        $log->tracef("error while parsing the incoming messages: %s", $error->message);
+                        await $self->drop($_->{service}, $_->{id});
+                    }
+                }
+            } else {
+                await $self->loop->delay_future(after => 0.001);
+            }
+        }
+    }
+}
+=pod
         # ordering is not important
         my @streams = map {stream_name_from_service($_)} keys $rpc_methods->%*;
         my %stream_config = (
@@ -119,21 +153,16 @@ async method listener () {
                 }
             })->map(async sub {
                 if(my $error = $_->{error}) {
-                    $log->tracef("error while parsing the incoming messages: %s", $error->message);
-                    await $self->drop($_->{service}, $_->{id});
+                   
                 } else {
                     my $message = $_->{message};
                     my $service  = $_->{service};
-                    if (my $sink = $rpc_methods->{$service}->{$message->rpc}) {
-                        $sink->emit($message);
-                    } else {
-                        my $error = Myriad::Exception::RPC::MethodNotFound->new(reason => "No such method: " . $message->rpc);
-                        await $self->reply_error($service, $message, $error);
-                    }
+                    
                 }
         })->resolve->completed;
     }
 }
+=cut
 
 async method reply ($service, $message) {
     my $stream = stream_name_from_service($service);
