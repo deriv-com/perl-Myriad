@@ -90,6 +90,7 @@ use IO::Async::SSL;
 use Net::Async::HTTP;
 
 use Myriad::Service::Implementation;
+use Myriad::Service::Config;
 
 use Log::Any qw($log);
 use OpenTracing::Any qw($tracer);
@@ -110,6 +111,8 @@ sub import ($called_on, @args) {
         target => $pkg,
         extends => 'Myriad::Service::Implementation',
     );
+
+    Myriad::Service::Config->import_into($pkg);
 
     # Helper functions which are used often enough to be valuable as a default
 #    Scalar::Util->export_to_level(1, $pkg, qw(refaddr blessed weaken));

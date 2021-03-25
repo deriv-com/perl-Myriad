@@ -40,6 +40,22 @@ declare_exception UnknownTransport => (
     message => 'Unknown transport'
 );
 
+our $STORAGE;
+
+sub import {
+    my ($class, @args) = @_;
+    if(@args) {
+        my ($varname) = (@args, '$storage');
+        $varname = $1 if $varname =~ /^\$(\w+)$/
+            or die 'invalid variable name ' . $varname;
+        my $caller = caller;
+        {
+            no strict 'refs';
+            *{"${caller}::${varname}"} = weaken(\$STORAGE);
+        }
+    }
+}
+
 sub new {
     my ($class, %args) = @_;
     my $transport = delete $args{transport};
@@ -49,15 +65,17 @@ sub new {
 
     if ($transport eq 'redis') {
         require Myriad::Storage::Implementation::Redis;
-        return Myriad::Storage::Implementation::Redis->new(
+        $STORAGE = Myriad::Storage::Implementation::Redis->new(
             redis   => $myriad->redis,
         );
     } elsif ($transport eq 'perl') {
         require Myriad::Storage::Implementation::Perl;
-        return Myriad::Storage::Implementation::Perl->new();
+        $STORAGE = Myriad::Storage::Implementation::Perl->new();
     } else {
         Myriad::Exception::Storage::UnKnownTransport->throw();
     }
+
+    return $STORAGE;
 }
 
 1;
