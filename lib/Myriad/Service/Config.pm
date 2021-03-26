@@ -11,6 +11,7 @@ use Future::Utils qw(fmap0);
 use Ryu::Observable;
 use Log::Any qw($log);
 
+use Myriad::Util::Secret;
 use Myriad::Exception::Builder category => 'config';
 
 declare_exception 'ConfigRequired' => (
@@ -25,14 +26,20 @@ sub config {
 
     my $observable = Ryu::Observable->new("");    
     my $default = $args{default};
+    my $secure = $args{secure};
 
     if ($default) {
+        # Really -_-
+        if ($secure) {
+            $default = Myriad::Util::Secret->new($default);
+        }
         $observable->set_string($default);
     }
 
     $CONFIG_REGISTRY->{$caller}->{$varname} = {
         required => !$default,
         holder => $observable,
+        secure => $secure,
     };
 
     $log->tracef("registered config %s for service %s", $varname, $caller);
@@ -70,14 +77,19 @@ async sub resolve_config {
         await fmap0(async sub {
             my $key = shift;
             my $storage_key = "myriad.config.service.${service_name}/$key";
+            my $meta = $service_configs->{$key};
 
             if(my $value = await $storage->get($storage_key)) {
+                $value = Myriad::Util::Secret->new($value) if $meta->{secure};
                 $log->tracef("found config %s for service %s in storage", $key, $service_name);
-                $service_configs->{$key}->{holder}->set_string($value);
+                
+                $meta->{holder}->set($value);
 
                 # look for future updates
-                $service_configs->{$key}->{sub} = $storage->observe($storage_key)->each(sub{
-                    $service_configs->{$key}->{holder}->set_string(shift);
+                $meta->{sub} = $storage->observe($storage_key)->each(sub{
+                    my $new_value = shift;
+                    $new_value = Myriad::Util::Secret->new($new_value) if $meta->{secure};
+                    $meta->{holder}->set($new_value);
                 })->completed->on_fail(sub {
                     $log->warnf('No longer listening to updates on config %s - %s', $key, shift);
                 });
