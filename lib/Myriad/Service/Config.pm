@@ -18,10 +18,14 @@ declare_exception 'ConfigRequired' => (
     message => 'A required configueration key was not set'
 );
 
+declare_exception 'UnregisteredConfig' => (
+    message => 'Config should be registered by calling "config" before usage'
+);
+
 sub config {
     my ($varname, %args) = @_;
 
-    $varname = $1 if $varname =~ m/^\$(.*)$/ or die 'config name should start with $';
+    die 'config is required' unless $varname;
     my $caller = caller;
 
     my $observable = Ryu::Observable->new("");    
@@ -43,11 +47,6 @@ sub config {
     };
 
     $log->tracef("registered config %s for service %s", $varname, $caller);
-
-    {
-        no strict 'refs';
-        *{"${caller}::${varname}"} = \$observable;
-    }
 }
 
 sub import_into {

@@ -2,6 +2,7 @@ package Myriad::API;
 
 use Myriad::Service::Remote;
 use Myriad::Service::Storage;
+use Myriad::Service::Config;
 
 use Myriad::Class;
 
@@ -51,6 +52,21 @@ This can be used to call RPC methods and act on subscriptions.
 
 method service_by_name ($name) {
     return Myriad::Service::Remote->new(service_name => $myriad->registry->make_service_name($name), myriad => $myriad, local_service_name => $service_name);
+}
+
+
+=head2 config
+
+Returns a L<Ryu::Observable> that hold the value of the configuration.
+
+=cut
+
+method config ($key) {
+    my $pkg = caller;
+    if(my $conf = $Myriad::Service::Config::CONFIG_REGISTRY->{$pkg}->{$key}->{holder}) {
+        return $conf;
+    }
+    Myriad::Exception::Service::Config::UnregisteredConfig->throw(reason => "$key is not registred by service $service_name");
 }
 
 1;
