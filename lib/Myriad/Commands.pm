@@ -75,15 +75,15 @@ async method service (@args) {
 
     $cmd = {
         code => async sub {
-            await fmap0 {
+            await fmap0(async sub {
                 my $service = shift;
                 try {
                     $log->infof('Starting service [%s]', $service->service_name);
-                    $service->start;
+                    await $service->start;
                 } catch($e) {
                     $log->warnf('FAILED to start service %s | %s', $service->service_name, $e);
                 }
-            } foreach => [values $myriad->services->%*], concurrent => 4;
+            }, foreach => [values $myriad->services->%*], concurrent => 4);
 
             $self->start_components();
 

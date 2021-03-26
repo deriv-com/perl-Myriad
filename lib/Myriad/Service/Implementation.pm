@@ -226,6 +226,7 @@ Perform the diagnostics check and start the service components (RPC, Batches, Su
 async method start {
     my $registry = $Myriad::REGISTRY;
 
+    # Lookup config
     await Myriad::Service::Config::resolve_config(ref $self, $self->service_name);
 
     await $self->startup;
