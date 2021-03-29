@@ -75,18 +75,20 @@ async method service (@args) {
 
     $cmd = {
         code => async sub {
-            await fmap0 {
-                my $service = shift;
-                try {
+            try {
+                await fmap0 {
+                    my $service = shift;
                     $log->infof('Starting service [%s]', $service->service_name);
-                    $service->start;
-                } catch($e) {
-                    $log->warnf('FAILED to start service %s | %s', $service->service_name, $e);
-                }
-            } foreach => [values $myriad->services->%*], concurrent => 4;
+                    $service->start->transform(fail => sub {
+                        return $service->service_name . ' : ' . shift;
+                    });
+                } foreach => [values $myriad->services->%*], concurrent => 4;
 
-            $self->start_components();
-
+                $self->start_components();
+            } catch($e) {
+                $log->warnf('Failed to start services - %s', $e);
+                await $myriad->shutdown;
+            }
         },
         params => {},
     };
@@ -161,15 +163,16 @@ async method storage ($action, $key, $extra = undef) {
 method start_components ($components = ['rpc', 'subscription', 'rpc_client']) {
     my @components_started = map {
         my $component = $_;
-        try {
-            # We need retain to make it persists and handle responses.
-            $myriad->$component->start->retain;
-            $log->debugf('Started Component: %s', $component);
+        # We need retain to make it persists and handle responses.
+        $myriad->$component->start->retain->on_fail(sub {
+            my $error = shift;
+            $log->warnf("%s failed due %s", $component, $error);
+            $myriad->shutdown_future->fail($error);
 
-        } catch ($e) {
-            $log->warnf("%s failed due %s", $component, $e);
-            $myriad->shutdown_future->fail($e);
-        }
+        });
+
+        $log->debugf('Started Component: %s', $component);
+
     } @$components;
 }
 

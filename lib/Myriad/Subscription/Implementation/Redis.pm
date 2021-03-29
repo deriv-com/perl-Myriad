@@ -116,9 +116,9 @@ async method receive_items {
                     $stream, '>'
                 )
             );
-           
+
             $log->tracef('Read group %s', $streams);
-           
+
             for my $delivery ($streams->@*) {
                 my ($stream, $data) = $delivery->@*;
                 for my $item ($data->@*) {
