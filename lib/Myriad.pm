@@ -323,7 +323,7 @@ method redis () {
         $self->loop->add(
             $redis = Myriad::Transport::Redis->new(
                 $config ? (
-                    redis_uri => $config->transport_redis->as_string : '',
+                    redis_uri => $config->transport_redis->as_string,
                     cluster   => ($config->transport_cluster->as_string ? 1 : 0),
                 ) : ()
             )
