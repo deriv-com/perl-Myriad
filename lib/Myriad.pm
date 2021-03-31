@@ -621,13 +621,12 @@ Applies signal handlers for TERM and QUIT, then starts the loop.
 =cut
 
 async method run () {
-    map {
-        my $signal = $_;
+    for my $signal (qw(TERM INT QUIT)) {
         $self->loop->attach_signal($signal => $self->$curry::weak(method {
             $log->infof("%s received, exit", $signal);
             $self->shutdown->await;
         }))
-    } qw(TERM INT QUIT);
+    }
 
     # Run the startup tasks
     await Future->needs_all(
