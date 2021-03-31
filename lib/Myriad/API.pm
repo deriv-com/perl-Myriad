@@ -1,9 +1,9 @@
 package Myriad::API;
 
+use Myriad::Class;
+
 use Myriad::Service::Remote;
 use Myriad::Service::Storage;
-
-use Myriad::Class;
 
 # VERSION
 # AUTHORITY
@@ -30,7 +30,10 @@ has $storage;
 BUILD (%args) {
     weaken($myriad = delete $args{myriad});
     $service_name = delete $args{service_name} // die 'need a service name';
-    $storage = Myriad::Service::Storage->new(prefix => $service_name, storage => $myriad->storage);
+    $storage = Myriad::Service::Storage->new(
+        prefix => $service_name,
+        storage => $myriad->storage
+    );
 }
 
 =head2 storage
@@ -39,7 +42,7 @@ Returns a L<Myriad::Role::Storage>-compatible instance for interacting with stor
 
 =cut
 
-method storage { $storage }
+method storage () { $storage }
 
 =head2 service_by_name
 
@@ -50,10 +53,16 @@ This can be used to call RPC methods and act on subscriptions.
 =cut
 
 method service_by_name ($name) {
-    return Myriad::Service::Remote->new(service_name => $myriad->registry->make_service_name($name), myriad => $myriad, local_service_name => $service_name);
+    return Myriad::Service::Remote->new(
+        myriad             => $myriad,
+        service_name       => $myriad->registry->make_service_name($name),
+        local_service_name => $service_name
+    );
 }
 
 1;
+
+__END__
 
 =head1 AUTHOR
 
