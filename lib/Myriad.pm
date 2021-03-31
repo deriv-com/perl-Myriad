@@ -157,39 +157,35 @@ Documentation for these classes may also be of use:
 use curry;
 use Future;
 
-use Myriad::Config;
 use Myriad::Commands;
+use Myriad::Config;
 use Myriad::Exception;
 use Myriad::Exception::InternalError;
-
 use Myriad::Registry;
 use Myriad::RPC;
-use Myriad::Subscription;
-use Myriad::Storage;
-
-
 use Myriad::RPC::Client;
+use Myriad::Storage;
+use Myriad::Subscription;
+use Myriad::Transport::HTTP;
 use Myriad::Transport::Perl;
 use Myriad::Transport::Redis;
-use Myriad::Transport::HTTP;
 
 use Log::Any::Adapter;
 
 use Net::Async::OpenTracing;
-use Metrics::Any::Adapter 'DogStatsd';
+use Metrics::Any::Adapter qw(DogStatsd);
 
 our $REGISTRY;
 BEGIN {
     $REGISTRY = Myriad::Registry->new;
 }
 
+# Enable Future time trace
+$Future::TIMES = 1;
+
 IO::Async::Loop->new->add(
     $REGISTRY
 );
-
-# Enable Future time trace
-
-$Future::TIMES = 1;
 
 # The IO::Async::Loop instance
 has $loop;
