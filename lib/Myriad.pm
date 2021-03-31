@@ -411,7 +411,7 @@ method http () {
 
 =head2 subscription
 
-The L<Myriad::Subscription> instance to manage events
+The L<Myriad::Subscription> instance to manage events.
 
 =cut
 
@@ -433,7 +433,7 @@ method subscription () {
 
 =head2 storage
 
-The L<Myriad::Storage> instance to manage data
+The L<Myriad::Storage> instance to manage data.
 
 =cut
 

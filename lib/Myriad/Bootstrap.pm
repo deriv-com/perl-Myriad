@@ -63,6 +63,7 @@ our %ALLOWED_MODULES = map {
 
 our %constant;
 
+# See perldoc perlport for the difference between this and \r\n
 my $CRLF = "\x0D\x0A";
 
 =head1 METHODS - Class
@@ -201,7 +202,7 @@ sub boot {
             close $inotify_child_pipe;
 
             local $SIG{HUP}= sub {
-                say "$pid - inotify process termintated";
+                say "$pid - inotify process terminated";
                 exit 0;
             };
 
@@ -276,7 +277,7 @@ sub boot {
             ACTIVE:
             while ($active) {
                 $active = 0 unless check_messages_in_pipe($inotify_child_pipe, sub {
-                    say "$$ - File has been detected reloading..";
+                    say "$$ - File change has been detected, reloading..";
                     kill QUIT => $pid;
                     # wait for the process to finish
                     waitpid $pid, 0;
@@ -341,6 +342,8 @@ sub boot {
 }
 
 1;
+
+__END__
 
 =head1 AUTHOR
 
