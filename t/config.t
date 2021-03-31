@@ -19,7 +19,7 @@ subtest "Test order configuration applying preference" => sub {
     my $config = Myriad::Config->new;
     # Those are meant to be set to transport as default
     @defaults{qw(rpc_transport subscription_transport storage_transport)} = ($defaults{'transport'}) x 3;
-    is($config->key($_), $defaults{$_}, "$_ Defaults are set fine") for keys %defaults;
+    is($config->key($_), $defaults{$_}, "$_ defaults are set fine") for keys %defaults;
 
     # Config file
     my $test_config_file = 't/config.yml';
@@ -31,6 +31,8 @@ subtest "Test order configuration applying preference" => sub {
     is ($config->key('opt2'), 2, 'Multi level option2 is set');
     # Remove config_path from defaults and check it separately
     my $config_file = delete $defaults{'config_path'};
+    delete $defaults{transport_cluster};
+    is($config->key('transport_cluster'), 1, 'was able to set correct transport_cluster');
     is($config->key($_), 'config_test', "$_ from config_file are set fine") for keys %defaults;
     like($config->key('config_path'), qr/$test_config_file/, 'config_path has been set correctly');
     # Keep it removed since we are still using config_file in next test
