@@ -157,39 +157,35 @@ Documentation for these classes may also be of use:
 use curry;
 use Future;
 
-use Myriad::Config;
 use Myriad::Commands;
+use Myriad::Config;
 use Myriad::Exception;
 use Myriad::Exception::InternalError;
-
 use Myriad::Registry;
 use Myriad::RPC;
-use Myriad::Subscription;
-use Myriad::Storage;
-
-
 use Myriad::RPC::Client;
+use Myriad::Storage;
+use Myriad::Subscription;
+use Myriad::Transport::HTTP;
 use Myriad::Transport::Perl;
 use Myriad::Transport::Redis;
-use Myriad::Transport::HTTP;
 
 use Log::Any::Adapter;
 
 use Net::Async::OpenTracing;
-use Metrics::Any::Adapter 'DogStatsd';
+use Metrics::Any::Adapter qw(DogStatsd);
 
 our $REGISTRY;
 BEGIN {
     $REGISTRY = Myriad::Registry->new;
 }
 
+# Enable Future time trace
+$Future::TIMES = 1;
+
 IO::Async::Loop->new->add(
     $REGISTRY
 );
-
-# Enable Future time trace
-
-$Future::TIMES = 1;
 
 # The IO::Async::Loop instance
 has $loop;
@@ -415,7 +411,7 @@ method http () {
 
 =head2 subscription
 
-The L<Myriad::Subscription> instance to manage events
+The L<Myriad::Subscription> instance to manage events.
 
 =cut
 
@@ -437,7 +433,7 @@ method subscription () {
 
 =head2 storage
 
-The L<Myriad::Storage> instance to manage data
+The L<Myriad::Storage> instance to manage data.
 
 =cut
 
@@ -523,11 +519,18 @@ async method shutdown () {
         $_->()
     } splice $shutdown_tasks->@*;
 
-    await Future->wait_all(
-        @shutdown_operations
-    );
+    try {
+        await Future->wait_any(
+            Future->wait_all(
+                @shutdown_operations
+            ),
+            $self->loop->timeout_future(after => 5)
+        );
 
-    $f->done unless $f->is_ready;
+        $f->done unless $f->is_ready;
+    } catch ($e) {
+        $f->fail($e) unless $f->is_ready;
+    }
     return $f->without_cancel;
 }
 
@@ -618,13 +621,12 @@ Applies signal handlers for TERM and QUIT, then starts the loop.
 =cut
 
 async method run () {
-    map {
-        my $signal = $_;
+    for my $signal (qw(TERM INT QUIT)) {
         $self->loop->attach_signal($signal => $self->$curry::weak(method {
             $log->infof("%s received, exit", $signal);
             $self->shutdown->await;
         }))
-    } qw(TERM INT QUIT);
+    }
 
     # Run the startup tasks
     await Future->needs_all(
