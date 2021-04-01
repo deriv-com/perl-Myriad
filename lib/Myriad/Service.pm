@@ -106,7 +106,13 @@ sub import ($called_on, @args) {
         return;
     }
 
+    my $version = 1;
+    if(@args and $args[0] =~ /^:v([0-9]+)/) {
+        $version = $1;
+    }
+
     my $meta = Myriad::Class->import(
+        ":v$version",
         target  => $pkg,
         extends => 'Myriad::Service::Implementation',
     );
