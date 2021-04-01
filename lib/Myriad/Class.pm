@@ -121,13 +121,12 @@ sub import {
 
     # Unused, but we'll support it for now.
     my $version = 1;
-    if($_[0] =~ /^:v([0-9]+)/) {
+    if(@_ and $_[0] =~ /^:v([0-9]+)/) {
         $version = $1;
         shift;
     }
     my %args = @_;
 
-    my ($called_on, %args) = @_;
     my $class = __PACKAGE__;
     my $pkg = $args{target} // caller(0);
 
