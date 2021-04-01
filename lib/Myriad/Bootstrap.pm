@@ -320,21 +320,23 @@ sub boot {
                 }
             };
 
-            # Support coderef or package name
-            if(ref $target) {
-                $target->(%args);
-            } else {
-                require Module::Load;
-                Module::Load::load($target);
-                my $module = $target->new;
-                $module->configure_from_argv(@ARGV)->await;
-                $module->run()->await;
-            }
-
-            if (my $error = $@) {
+            eval {
+                # Support coderef or package name
+                if(ref $target) {
+                    $target->(%args);
+                } else {
+                    require Module::Load;
+                    Module::Load::load($target);
+                    my $module = $target->new;
+                    $module->configure_from_argv(@ARGV)->await;
+                    $module->run()->await;
+                }
+                1;
+            } or do {
+                my $error = $@;
                 $error =~ s/\n/\n\t/g;
                 print "$$ - target code/module exited unexpectedly due:\n\t$error";
-            }
+            };
 
             exit 0;
         }
