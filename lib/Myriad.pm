@@ -520,11 +520,18 @@ async method shutdown () {
         $_->()
     } splice $shutdown_tasks->@*;
 
-    await Future->wait_all(
-        @shutdown_operations
-    );
+    try {
+        await Future->wait_any(
+            Future->wait_all(
+                @shutdown_operations
+            ),
+            $self->loop->timeout_future(after => 5)
+        );
 
-    $f->done unless $f->is_ready;
+        $f->done unless $f->is_ready;
+    } catch ($e) {
+        $f->fail($e) unless $f->is_ready;
+    }
     return $f->without_cancel;
 }
 
