@@ -84,10 +84,7 @@ use Syntax::Keyword::Dynamically;
 use Object::Pad;
 use Scalar::Util;
 
-use Heap;
 use IO::Async::Notifier;
-use IO::Async::SSL;
-use Net::Async::HTTP;
 
 use Myriad::Service::Implementation;
 

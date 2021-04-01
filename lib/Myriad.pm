@@ -172,6 +172,8 @@ use Myriad::Transport::Redis;
 
 use Log::Any::Adapter;
 
+use Heap;
+use IO::Async::Loop;
 use Net::Async::OpenTracing;
 use Metrics::Any::Adapter qw(DogStatsd);
 
@@ -305,6 +307,12 @@ async method configure_from_argv (@args) {
         }
     }
 }
+
+=head2 config
+
+
+
+=cut
 
 method config () { $config }
 
