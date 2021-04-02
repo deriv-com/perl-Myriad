@@ -2,7 +2,6 @@ package Myriad::API;
 
 use Myriad::Service::Remote;
 use Myriad::Service::Storage;
-use Myriad::Service::Config;
 
 use Myriad::Class;
 
@@ -27,11 +26,13 @@ storage, subscription and RPC behaviour.
 has $myriad;
 has $service_name;
 has $storage;
+has $config;
 
 BUILD (%args) {
     weaken($myriad = delete $args{myriad});
     $service_name = delete $args{service_name} // die 'need a service name';
     $storage = Myriad::Service::Storage->new(prefix => $service_name, storage => $myriad->storage);
+    $config = delete $args{config} // {};
 }
 
 =head2 storage
@@ -64,7 +65,7 @@ Returns a L<Ryu::Observable> that hold the value of the configuration.
 method config ($key) {
     my $pkg = caller;
     if(my $conf = $Myriad::Service::Config::CONFIG_REGISTRY->{$pkg}->{$key}->{holder}) {
-        return $conf;
+        return $config->{$conf};
     }
     Myriad::Exception::Service::Config::UnregisteredConfig->throw(reason => "$key is not registred by service $service_name");
 }

@@ -293,6 +293,7 @@ async method configure_from_argv (@args) {
     $commands = Myriad::Commands->new(
         myriad => $self
     );
+
     # At this point, we expect `@args` to contain only the plain
     # parameters such as the service name or a request to run an RPC
     # method.
@@ -622,6 +623,8 @@ async method run () {
             $self->shutdown->await;
         }))
     } qw(TERM INT QUIT);
+    
+    $self->storage;
 
     # Run the startup tasks
     await Future->needs_all(

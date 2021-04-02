@@ -74,7 +74,6 @@ sub new {
     } else {
         Myriad::Exception::Storage::UnKnownTransport->throw();
     }
-
     return $STORAGE;
 }
 
