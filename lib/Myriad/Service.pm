@@ -107,17 +107,19 @@ sub import ($called_on, @args) {
         return;
     }
 
+    my $version = 1;
+    if(@args and $args[0] =~ /^:v([0-9]+)/) {
+        $version = $1;
+    }
+
     my $meta = Myriad::Class->import(
-        target => $pkg,
+        ":v$version",
+        target  => $pkg,
         extends => 'Myriad::Service::Implementation',
     );
 
-
-    # Helper functions which are used often enough to be valuable as a default
-    #Scalar::Util->export_to_level(1, $pkg, qw(refaddr blessed weaken));
-
     # Now we populate various slots, to be filled in when instantiating.
-    # Currently we have `api`, but might be helpful to provide `$storage`
+    # Currently we have `$api`, but might be helpful to provide `$storage`
     # and others directly here.
     $SLOT{$pkg} = {
         map { $_ => $meta->add_slot('$' . $_) } qw(

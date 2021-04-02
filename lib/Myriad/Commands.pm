@@ -94,6 +94,12 @@ async method service (@args) {
     };
 }
 
+=head2 remote_service
+
+
+
+=cut
+
 method remote_service {
     return Myriad::Service::Remote->new(
         myriad       => $myriad,
@@ -102,6 +108,12 @@ method remote_service {
         ) // die 'no service name found'
     );
 }
+
+=head2 rpc
+
+
+
+=cut
 
 async method rpc ($rpc, @args) {
     my $remote_service = $self->remote_service;
@@ -122,6 +134,12 @@ async method rpc ($rpc, @args) {
         params => { name => $rpc, args => \@args, remote_service => $remote_service}
     };
 }
+
+=head2 subscription
+
+
+
+=cut
 
 async method subscription ($stream, @args) {
     my $remote_service = $self->remote_service;
@@ -145,6 +163,12 @@ async method subscription ($stream, @args) {
 
 }
 
+=head2 storage
+
+
+
+=cut
+
 async method storage ($action, $key, $extra = undef) {
     my $remote_service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
     $cmd = {
@@ -159,6 +183,12 @@ async method storage ($action, $key, $extra = undef) {
         },
         params => { action => $action, key => $key, extra => $extra, remote_service => $remote_service} };
 }
+
+=head2 start_components
+
+
+
+=cut
 
 method start_components ($components = ['rpc', 'subscription', 'rpc_client']) {
     my @components_started = map {
@@ -175,6 +205,12 @@ method start_components ($components = ['rpc', 'subscription', 'rpc_client']) {
 
     } @$components;
 }
+
+=head2 run_cmd
+
+
+
+=cut
 
 async method run_cmd () {
     await $cmd->{code}->($cmd->{params}) if exists $cmd->{code};

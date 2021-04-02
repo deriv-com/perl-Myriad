@@ -23,9 +23,13 @@ It should also cover retry for stateless calls.
 
 use Myriad::Redis::Pending;
 
+use Net::Async::Redis;
 use Net::Async::Redis::Cluster;
 
 use List::Util qw(pairmap);
+
+# Cluster mode by default
+has $use_cluster = 1;
 
 has $redis_uri;
 has $redis;
@@ -47,6 +51,9 @@ method configure (%args) {
     if(exists $args{redis_uri}) {
         my $uri = delete $args{redis_uri};
         $redis_uri = ref($uri) ? $uri : URI->new($uri);
+    }
+    if(exists $args{cluster}) {
+        $use_cluster = delete $args{cluster};
     }
     $max_pool_count = exists $args{max_pool_count} ? delete $args{max_pool_count} : 10;
 
@@ -72,10 +79,7 @@ Number of items to allow per batch (pending / readgroup calls).
 method batch_count () { $batch_count }
 
 async method start {
-    await $redis->bootstrap(
-        host => $redis_uri->host,
-        port => $redis_uri->port,
-    );
+    $redis = await $self->redis;
     return;
 }
 
@@ -149,10 +153,6 @@ method next_id($id) {
 }
 
 method _add_to_loop(@) {
-    $self->add_child(
-        $redis = Net::Async::Redis::Cluster->new
-    );
-
     $self->add_child(
         $ryu = Ryu::Async->new
     )
@@ -468,14 +468,7 @@ async method borrow_instance_from_pool {
         return await $self->loop->new_future->done($available_redis);
     } elsif ($pending_redis_count < $max_pool_count) {
         ++$pending_redis_count;
-        $self->add_child(
-            my $instance = Net::Async::Redis::Cluster->new
-        );
-        await $instance->bootstrap(
-            host => $redis_uri->host,
-            port => $redis_uri->port,
-        );
-        return await $self->loop->new_future->done($instance);
+        return await $self->redis;
     }
     push @$waiting_redis_pool, my $f = $self->loop->new_future;
     $log->warnf('All Redis instances are pending, added to waiting list. Current Redis count: %d/%d | Waiting count: %d', $pending_redis_count, $max_pool_count, 0 + $waiting_redis_pool->@*);
@@ -532,6 +525,37 @@ async method subscribe ($channel) {
     await $instance->subscribe($channel)->on_ready(sub {
         $self->return_instance_to_pool($instance);
     });
+}
+
+=head2 redis
+
+Resolves to a new L<Net::Async::Redis> or L<Net::Async::Redis::Cluster>
+instance, depending on the setting of C<$use_cluster>.
+
+=cut
+
+async method redis {
+    my $instance;
+    if($use_cluster) {
+        $instance = Net::Async::Redis::Cluster->new;
+        $self->add_child(
+            $instance
+        );
+        await $instance->bootstrap(
+            host => $redis_uri->host,
+            port => $redis_uri->port,
+        );
+    } else {
+        $instance = Net::Async::Redis->new(
+            host => $redis_uri->host,
+            port => $redis_uri->port,
+        );
+        $self->add_child(
+            $instance
+        );
+        await $instance->connect;
+    }
+    return $instance;
 }
 
 1;
