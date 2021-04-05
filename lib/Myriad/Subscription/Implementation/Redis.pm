@@ -61,7 +61,9 @@ async method create_from_source (%args) {
     )->completed
      ->on_fail(sub {
         $log->warnf("Redis XADD command failed for stream %s", $stream);
-        $should_shutdown->fail("Failed to publish subscription data for $stream - " . shift) unless $should_shutdown->is_ready;
+        $should_shutdown->fail(
+            "Failed to publish subscription data for $stream - " . shift
+        ) unless $should_shutdown->is_ready;
     })->retain;
     return;
 }
@@ -81,7 +83,12 @@ async method create_from_sink (%args) {
 
 async method start {
     $should_shutdown //= $self->loop->new_future(label => 'subscription::redis::shutdown');
-    await Future->wait_any($should_shutdown->without_cancel, $self->receive_items, $self->check_for_overflow);
+    $log->tracef('Starting subscription handler');
+    await Future->wait_any(
+        $should_shutdown->without_cancel,
+        $self->receive_items,
+        $self->check_for_overflow
+    );
 }
 
 async method stop {
@@ -89,6 +96,7 @@ async method stop {
 }
 
 async method receive_items {
+    $log->tracef('Start loop for receiving items');
     while (1) {
         if(@receivers) {
             my $item = shift @receivers;
@@ -138,7 +146,8 @@ async method receive_items {
                 }
            }
         } else {
-           await $self->loop->delay_future(after => 5);
+            $log->tracef('No receivers, waiting for a few seconds');
+            await $self->loop->delay_future(after => 5);
         }
     }
 }

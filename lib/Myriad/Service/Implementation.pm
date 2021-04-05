@@ -262,32 +262,38 @@ async method start {
 
     if(my $receivers = $registry->receivers_for(ref($self))) {
         for my $method (sort keys $receivers->%*) {
-            $log->tracef('Found receiver %s as %s', $method, $receivers->{$method});
-            my $spec = $receivers->{$method};
-            my $chan = $spec->{args}{channel} // die 'expected a channel, but there was none to be found';
-            my $sink = $ryu->sink(
-                label => "receiver:$chan",
-            );
-            await $subscription->create_from_sink(
-                sink    => $sink,
-                channel => $chan,
-                client  => $service_name . '/' . $method,
-                from    => $spec->{args}{service},
-                service => $service_name,
-            );
-            my $code = $spec->{code};
-            my $current = await $self->$code($sink->source);
+            try {
+                $log->tracef('Found receiver %s as %s', $method, $receivers->{$method});
+                my $spec = $receivers->{$method};
+                my $chan = $spec->{args}{channel} // die 'expected a channel, but there was none to be found';
+                my $sink = $ryu->sink(
+                    label => "receiver:$chan",
+                );
+                $log->tracef('Creating receiver from sink');
+                await $subscription->create_from_sink(
+                    sink    => $sink,
+                    channel => $chan,
+                    client  => $service_name . '/' . $method,
+                    from    => $spec->{args}{service},
+                    service => $service_name,
+                );
+                my $code = $spec->{code};
+                my $current = await $self->$code($sink->source);
+                $log->tracef('Completed setup for receiver');
 
-            die "Receivers method: $method should return a Ryu::Source"
-                unless blessed $current && $current->isa('Ryu::Source');
+                die "Receivers method: $method should return a Ryu::Source"
+                    unless blessed $current && $current->isa('Ryu::Source');
 
-            $spec->{current} = $current->map(sub {
-                my $f = Future->wrap(shift);
-                $metrics->report_timer(receiver_timing => ($f->elapsed // 0), {method => $method, status => $f->state, service => $service_name});
-                return $f;
-            })->resolve->completed->retain;
+                $spec->{current} = $current->map(sub {
+                    my $f = Future->wrap(shift);
+                    $metrics->report_timer(receiver_timing => ($f->elapsed // 0), {method => $method, status => $f->state, service => $service_name});
+                    return $f;
+                })->resolve->completed->retain;
 
-            push @pending, $spec->{current};
+                push @pending, $spec->{current};
+            } catch ($e) {
+                $log->errorf('Failed while setting up receiver: %s', $e);
+            }
         }
     }
 
