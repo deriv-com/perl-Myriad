@@ -47,7 +47,7 @@ async method create_from_source (%args) {
 
     my $stream = $service . '/' . $args{channel};
 
-    push @emitters, {stream => $stream, source => $src, max_len => $args{max_len} // 3};
+    push @emitters, {stream => $stream, source => $src, max_len => $args{max_len} // MAX_ALLOWED_STREAM_LENGTH};
 
     $src->map(sub {
         $log->tracef('sub has an event! %s', $_);
