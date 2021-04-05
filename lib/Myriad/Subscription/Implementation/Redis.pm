@@ -147,7 +147,7 @@ async method receive_items {
 async method check_for_overflow () {
     while (1) {
         if(@emitters) {
-            my $emitter = $emitters[0];
+            my $emitter = shift @emitters;
             push @emitters, $emitter;
             try {
                 my $len = await $redis->stream_length($emitter->{stream});
