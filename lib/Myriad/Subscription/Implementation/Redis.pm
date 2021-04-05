@@ -105,7 +105,7 @@ async method receive_items {
             my $stream = $item->{key};
             my $sink = $item->{sink};
             my $client = $item->{client};
-            
+
             unless(exists $group->{$stream}{$item->{client}}) {
                 try {
                     $log->tracef('Creating new group for stream %s client %s', $stream, $item->{client});

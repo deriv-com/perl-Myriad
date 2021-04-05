@@ -85,7 +85,7 @@ async method start {
 
 =head2 oldest_processed_id
 
-Check the last id that has been processed 
+Check the last id that has been processed
 by B<all> the consumer groups in the given stream.
 
 =cut
