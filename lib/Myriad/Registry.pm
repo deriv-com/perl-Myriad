@@ -31,7 +31,7 @@ declare_exception UnknownClass => (
 
 use Myriad::API;
 
-has %rpc ;
+has %rpc;
 has %service_by_name;
 has %batch;
 has %emitter;

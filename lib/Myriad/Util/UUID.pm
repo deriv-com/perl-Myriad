@@ -10,13 +10,25 @@ use Math::Random::Secure;
 
 sub uuid {
     # UUIDv4 (random)
-    return sprintf '%04x%04x-%04x-%04x-%02x%02x-%04x%04x%04x',
-        (map { Math::Random::Secure::irand(2**16) } 1..3),
-        (Math::Random::Secure::irand(2**16) & 0x0FFF) | 0x4000,
-        (Math::Random::Secure::irand(2**8)) & 0xBF,
-        (Math::Random::Secure::irand(2**8)),
-        (map { Math::Random::Secure::irand(2**16) } 1..3)
+    my @rand = map Math::Random::Secure::irand(2**32), 1..4;
+    return sprintf '%08x-%04x-%04x-%04x-%04x%08x',
+        $rand[0],
+        $rand[1] & 0xFFFF,
+        (($rand[1] & 0x0FFF0000) >> 16) | 0x4000,
+        $rand[2] & 0xBFFF,
+        ($rand[2] & 0xFFFF0000) >> 16,
+        $rand[3];
 }
 
 1;
+
+=head1 AUTHOR
+
+Deriv Group Services Ltd. C<< DERIV@cpan.org >>.
+
+See L<Myriad/CONTRIBUTORS> for full details.
+
+=head1 LICENSE
+
+Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
 

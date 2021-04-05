@@ -36,7 +36,7 @@ use Exporter qw(import export_to_level);
 
 use Sub::Util ();
 
-my %known_attributes = (
+our %KNOWN_ATTRIBUTES = (
     RPC      => 'rpc',
     Batch    => 'batch',
     Emitter  => 'emitter',
@@ -61,7 +61,7 @@ sub apply_attributes {
         $args = eval "+{ $args }" // die 'invalid attribute parameters: ' . $@ if length $args;
 
         $log->tracef('Attribute %s (%s) applying to %s', $type, $args, $pkg);
-        my $handler = $known_attributes{$type}
+        my $handler = $KNOWN_ATTRIBUTES{$type}
             or die 'unknown attribute ' . $type;
         $class->$handler(
             $pkg,
