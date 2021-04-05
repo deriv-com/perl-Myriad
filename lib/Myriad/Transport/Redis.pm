@@ -246,9 +246,6 @@ async method cleanup (%args) {
     # Track how far back our active stream list goes - anything older than this is fair game
     my $oldest = await $self->oldest_processed_id($stream);
     $log->debugf('Earliest ID to care about: %s', $oldest);
-    warn $oldest;
-    warn $info->{first_entry}[0];
-    warn $self->compare_id($oldest, $info->{first_entry}[0]);
     if ($oldest and $oldest ne '0-0' and $self->compare_id($oldest, $info->{first_entry}[0]) > 0) {
         # At this point we know we have some older items that can go. We'll need to finesse
         # the direction to search: for now, take the naïve but workable assumption that we
@@ -271,7 +268,6 @@ async method cleanup (%args) {
         my $endpoint = $direction eq 'xrevrange' ? '+' : '-';
         my $total = 0;
         while (1) {
-            warn 'range';
             # XRANGE / XREVRANGE conveniently have switched start/end parameters, so we don't need to swap $endpoint
             # and $oldest depending on type here.
             my ($v) = await $redis->$direction($stream, $endpoint, $oldest, COUNT => $limit);
@@ -283,7 +279,6 @@ async method cleanup (%args) {
             $endpoint = $v->[-1][0];
         }
         $total = $info->{length} - $total if $direction eq 'xrange';
-        warn $total;
         $log->tracef('Would trim to %d items', $total);
 
 #        my ($before) = await $redis->memory_usage($stream);

@@ -154,7 +154,7 @@ async method check_for_overflow () {
                 if ($len >= $emitter->{max_len}) {
                     unless ($emitter->{source}->is_paused) {
                         $emitter->{source}->pause;
-                        $log->infof("Paused emitter on %s, length is %s, max allowed %s", $emitter->{stream}, $len, $emitter->{max_len});
+                        $log->tracef("Paused emitter on %s, length is %s, max allowed %s", $emitter->{stream}, $len, $emitter->{max_len});
                     }
                     await $redis->cleanup(stream => $emitter->{stream}, limit => $emitter->{max_len});
                 } else {
