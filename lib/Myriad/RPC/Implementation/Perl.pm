@@ -89,7 +89,7 @@ async method start () {
 
 =head2 create_from_sink
 
-Register and RPC call and save a reference to its L<RYU::Sink>.
+Register and RPC call and save a reference to its L<Ryu::Sink>.
 
 =cut
 
