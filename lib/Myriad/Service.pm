@@ -90,6 +90,7 @@ use IO::Async::SSL;
 use Net::Async::HTTP;
 
 use Myriad::Service::Implementation;
+use Myriad::Config;
 
 use Log::Any qw($log);
 use OpenTracing::Any qw($tracer);
@@ -130,6 +131,19 @@ sub import ($called_on, @args) {
         no strict 'refs';
 
         push @{$pkg . '::ISA' }, 'Myriad::Service';
+
+        *{$pkg . '::config'} = sub {
+            my ($varname, %args) = @_;
+            die 'config name is required' unless $varname;
+
+            if ($args{default} && $args{secure}) {
+                die "Are you serious $varname should be secure but it has a default value -_-";
+            }
+
+            $Myriad::Config::SERVICES_CONFIG{$pkg}->{$varname} = \%args;
+
+            $log->tracef("registered config %s for service %s", $varname, $pkg);
+        }
     }
     return;
 }

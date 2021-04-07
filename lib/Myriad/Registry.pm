@@ -64,7 +64,9 @@ async method add_service (%args) {
     $Myriad::Service::SLOT{$pkg}{api}->value($srv) = Myriad::API->new(
         myriad => $myriad,
         service_name => $service_name,
+        config => await $myriad->config->service_config($pkg, $service_name),
     );
+
     {
         no strict 'refs';
         ${"${pkg}::metrics"}->{name_prefix} = [$service_name];

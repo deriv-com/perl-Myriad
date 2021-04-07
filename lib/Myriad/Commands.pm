@@ -61,21 +61,21 @@ async method service (@args) {
 
     die 'You cannot pass a service name and load multiple modules' if @modules > 1 and length $service_custom_name;
 
-    await fmap0(async sub {
-        my ($module) = @_;
-        $log->debugf('Loading %s', $module);
-        require_module($module);
-        $log->errorf('loaded %s but it cannot ->new?', $module) unless $module->can('new');
-        if ($service_custom_name eq '') {
-            await $myriad->add_service($module);
-        } else {
-            await $myriad->add_service($module, name => $service_custom_name);
-        }
-    }, foreach => \@modules, concurrent => 4);
-
     $cmd = {
         code => async sub {
             try {
+                await fmap0(async sub {
+                    my ($module) = @_;
+                    $log->debugf('Loading %s', $module);
+                    require_module($module);
+                    $log->errorf('loaded %s but it cannot ->new?', $module) unless $module->can('new');
+                    if ($service_custom_name eq '') {
+                        await $myriad->add_service($module);
+                    } else {
+                        await $myriad->add_service($module, name => $service_custom_name);
+                    }
+                }, foreach => \@modules, concurrent => 4);
+
                 await fmap0 {
                     my $service = shift;
                     $log->infof('Starting service [%s]', $service->service_name);

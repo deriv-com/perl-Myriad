@@ -59,10 +59,10 @@ subtest "service command" => sub {
 
     # Wrong Service(module) name
     like( exception { wait_for_future( $command->service('Ta-wrong') )->get } , qr/unsupported/, 'Died when passing wrong format name');
-    like( exception { wait_for_future( $command->service('Ta_wrong') )->get } , qr/Can't locate/, 'Died when passing module that does not exist');
+    like( exception { wait_for_future( $command->service('Ta_wrong')->get()->{code}->() )->get() } , qr/.*/, 'Died when passing module that does not exist');
 
     # Running multiple services
-    wait_for_future( $command->service('Ta::') )->get;
+    wait_for_future( $command->service('Ta::')->get->{code}->() )->get;
     cmp_deeply(\@added_services_modules, ['Ta::Sibling1', 'Ta::Sibling2'], 'Added both modules');
     # Clear it for next test.
     undef @added_services_modules;
@@ -72,7 +72,7 @@ subtest "service command" => sub {
     $myriad->META->get_slot('$config')->value($myriad) = Myriad::Config->new( commandline => ['--service_name', $srv_run_name] );
     like (exception {wait_for_future( $command->service('Ta::') )->get}, qr/You cannot pass a service/, 'Not able to load multiple due to set service_name');
     # However allowed to run 1
-    wait_for_future( $command->service('Ta::Sibling1') )->get;
+    wait_for_future( $command->service('Ta::Sibling1')->get->{code}->() )->get;
     cmp_deeply(\@added_services_modules, ['Ta::Sibling1'], 'Added one service');
     cmp_deeply(\@add_services_by_name, [$srv_run_name], "Added $srv_run_name by name");
     done_testing;
