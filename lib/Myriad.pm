@@ -627,7 +627,6 @@ async method run () {
             $log->infof("%s received, exit", $signal);
             $self->shutdown->await;
         }))
-    
     }
 
     $self->storage;

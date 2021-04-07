@@ -27,6 +27,16 @@ use List::Util qw(pairmap);
 use Ryu::Observable;
 use Myriad::Storage;
 
+use Myriad::Exception::Builder category => 'config';
+
+declare_exception 'ConfigRequired' => (
+    message => 'A required configueration key was not set'
+);
+
+declare_exception 'UnregisteredConfig' => (
+    message => 'Config should be registered by calling "config" before usage'
+);
+
 =head1 PACKAGE VARIABLES
 
 =head2 DEFAULTS
@@ -93,7 +103,7 @@ BUILD (%args) {
     $self->from_args($args{commandline});
 
     $log->tracef('Defaults %s, shortcuts %s, args %s', \%DEFAULTS, \%SHORTCUTS_FOR, \%args);
-    $self->from_env(); 
+    $self->from_env();
 
     $config->{config_path} //= $DEFAULTS{config_path};
     $self->from_file();
@@ -120,8 +130,15 @@ method define ($key, $v) {
 }
 
 method parse_subargs ($subarg, $root, $value) {
-    my @sublist = split '_', $subarg;
-    die 'no _' unless @sublist;
+    $subarg =~ s/(.*)[_|\.](configs?|instances?)(.*)/$2$3/;
+    die 'invalid service name' unless $2;
+
+    my $service_name = $1;
+    $service_name =~ s/_/\./g;
+    $root = $root->{$service_name} //= {};
+
+    my @sublist = split /_|\./, $subarg;
+    die 'config key is not formated correctly' unless @sublist;
     while (@sublist > 1) {
         my $level = shift @sublist;
         $root->{$level} //= {};
@@ -131,9 +148,10 @@ method parse_subargs ($subarg, $root, $value) {
 }
 
 method from_args ($commandline) {
+    return unless $commandline;
     my $error;
 
-    while (1) { 
+    while (1) {
         last unless $commandline->@* && ($commandline->[0] =~ /--?./);
 
         my $arg = shift $commandline->@*;
@@ -141,11 +159,11 @@ method from_args ($commandline) {
         ($arg, my $value) = split '=', $arg;
 
         # First match arg with expected keys
-        my $key = $DEFAULTS{$arg} ? $arg : $SHORTCUTS_FOR{$arg};
+        my $key = exists $DEFAULTS{$arg} ? $arg : $SHORTCUTS_FOR{$arg};
         if ($key) {
             $value = shift $commandline->@* unless $value;
             $config->{$key} = $value;
-        } elsif ($arg =~ s/services?_//) { # are we doing service config
+        } elsif ($arg =~ s/services?[_|\.]//) { # are we doing service config
             $value = shift $commandline->@* unless $value;
             try {
                 $self->parse_subargs($arg, $config->{services}, $value);
@@ -166,8 +184,8 @@ method from_args ($commandline) {
 }
 
 method from_env () {
-    $config->{$_} //= $ENV{'MYRIAD_' . uc($_)} for grep { exists $ENV{'MYRIAD_' . uc($_)} } keys %DEFAULTS;
-    map { 
+    $config->{$_} //= delete $ENV{'MYRIAD_' . uc($_)} for grep { exists $ENV{'MYRIAD_' . uc($_)} } keys %DEFAULTS;
+    map {
         $_ =~ s/(MYRIAD_SERVICES?_)//;
         $self->parse_subargs(lc($_), $config->{services}, $ENV{$1 . $_});
     } (grep {$_ =~ /MYRIAD_SERVICES?_/} keys %ENV);
@@ -181,22 +199,18 @@ method from_file () {
         })->@*;
 
         $log->debugf('override is %s', $override);
-        my %expanded = (sub {
-            my ($item, $prefix) = @_;
-            my $code = __SUB__;
-            $log->tracef('Checking %s with prefix %s', $item, $prefix);
-            # Recursive expansion for any nested data
-            return pairmap {
-                ref($b)
-                ? $code->(
-                    $b,
-                    join('_', $prefix // (), $a),
-                )
-                : ($a => $b)
-            } %$item
-        })->($override);
+
+        my %expanded = pairmap {
+                ref($b) ? $b->%* : ($a => $b)
+        } $override->%*;
 
         $config->{$_} //= $expanded{$_} for sort keys %expanded;
+
+        # Merge the services config
+        $config->{services}  = {
+            $expanded{services}->%*,
+            $config->{services}->%*,
+        } if $expanded{services};
     }
 }
 
@@ -204,21 +218,19 @@ async method service_config ($pkg, $service_name) {
     my $service_config = {};
     $service_name =~ s/\[(.*)\]$//;
     my $instance = $1;
-    my $available_config = $config->{services}->{$service_name}->{configs};
+    my $available_config = $config->{services}->value->{$service_name}->{configs};
 
     my $instance_overrides = {};
-    $instance_overrides = 
-        $config->{services}->{$service_name}->{instances}->{$instance}->{configs} if $instance;
-
+    $instance_overrides =
+        $config->{services}->value->{$service_name}->{instances}->{$instance}->{configs} if $instance;
     if(my $declared_config = $SERVICES_CONFIG{$pkg}) {
         for my $key (keys $declared_config->%*) {
-            my $value = await $self->from_storage($service_name, $instance, $key) ||
-                        $instance_overrides->{$key} ||
-                        $available_config->{$key} ||
-                        $declared_config->{$key}->{default} or
-                        die 'config required';
+            my $value = await $self->from_storage($service_name, $instance, $key);
+            $value //= $instance_overrides->{$key} ||
+                       $available_config->{$key} ||
+                       $declared_config->{$key}->{default} ||
+                       Myriad::Exception::Config::ConfigRequired->throw(reason => $key);
             $value = Myriad::Utils::Secure->new($value) if $declared_config->{$key}->{secure};
-
             $service_config->{$key} = Ryu::Observable->new($value);
         }
     }

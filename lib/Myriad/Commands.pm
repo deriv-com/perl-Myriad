@@ -60,7 +60,7 @@ async method service (@args) {
     my $service_custom_name = $myriad->config->service_name->as_string;
 
     die 'You cannot pass a service name and load multiple modules' if @modules > 1 and length $service_custom_name;
- 
+
     $cmd = {
         code => async sub {
             try {

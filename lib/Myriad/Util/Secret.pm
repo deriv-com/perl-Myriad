@@ -6,7 +6,7 @@ use warnings;
 # VERSION
 # AUTHORITY
 
-=head1 Name 
+=head1 Name
 
 Myriad::Util::Secret - To protect secrets from getting exposed accidentally.
 
@@ -20,18 +20,18 @@ Override the actual string value with "***"
 
 =cut
 
-use overload 
+use overload
     q{""} => sub { "***" },
-    fallback => 1; 
+    fallback => 1;
 
-sub new { 
-    my $class = shift; 
-    bless \(my $str = shift), $class 
+sub new {
+    my $class = shift;
+    bless \(my $str = shift), $class
 }
 
-sub secret_value { 
+sub secret_value {
     my ($self) = @_;
-    $$self 
+    $$self
 }
 
 1;

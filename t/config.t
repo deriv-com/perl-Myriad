@@ -24,11 +24,6 @@ subtest "Test order configuration applying preference" => sub {
     # Config file
     my $test_config_file = 't/config.yml';
     $config = Myriad::Config->new(commandline => ['--config_path', $test_config_file]);
-    # Check for multi level configurations
-    # AUTOLOAD will kick in and throw an error of unkwon config
-    like (exception {$config->key('multi_option')}, qr/unknown config key/, 'Multi level option parent is not set');
-    is ($config->key('opt1'), 1, 'Multi level option1 is set');
-    is ($config->key('opt2'), 2, 'Multi level option2 is set');
     # Remove config_path from defaults and check it separately
     my $config_file = delete $defaults{'config_path'};
     delete $defaults{transport_cluster};
@@ -69,7 +64,7 @@ subtest "Test other functionality" => sub {
     like($config->key('test'), qr/test_value/, 'Able to add new keys to config');
 
     # Test that we have updated @INC
-    push @before_inc, $ENV{'MYRIAD_LIBRARY_PATH'};
+    push @before_inc, '/test/path/included';
     cmp_set(\@INC, \@before_inc, 'Updated @INC with configured path');
 };
 

@@ -2,6 +2,7 @@ package Myriad::API;
 
 use Myriad::Class;
 
+use Myriad::Config;
 use Myriad::Service::Remote;
 use Myriad::Service::Storage;
 
@@ -71,10 +72,10 @@ Returns a L<Ryu::Observable> that hold the value of the configuration.
 
 method config ($key) {
     my $pkg = caller;
-    if(my $conf = $Myriad::Service::Config::CONFIG_REGISTRY->{$pkg}->{$key}->{holder}) {
-        return $config->{$conf};
+    if($Myriad::Config::SERVICES_CONFIG{$pkg}->{$key}) {
+        return $config->{$key};
     }
-    Myriad::Exception::Service::Config::UnregisteredConfig->throw(reason => "$key is not registred by service $service_name");
+    Myriad::Exception::Config::UnregisteredConfig->throw(reason => "$key is not registred by service $service_name");
 }
 
 1;
