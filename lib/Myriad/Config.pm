@@ -161,6 +161,8 @@ method from_args ($commandline) {
         # First match arg with expected keys
         my $key = exists $DEFAULTS{$arg} ? $arg : $SHORTCUTS_FOR{$arg};
         if ($key) {
+            # For flags (0|1) config will implement a naive parsing
+            $value = 1 if defined $DEFAULTS{$arg} && $DEFAULTS{$arg} eq 0;
             $value = shift $commandline->@* unless $value;
             $config->{$key} = $value;
         } elsif ($arg =~ s/services?[_|\.]//) { # are we doing service config
