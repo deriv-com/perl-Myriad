@@ -90,6 +90,7 @@ use IO::Async::SSL;
 use Net::Async::HTTP;
 
 use Myriad::Service::Implementation;
+use Myriad::Config;
 
 use Log::Any qw($log);
 use OpenTracing::Any qw($tracer);
@@ -106,16 +107,19 @@ sub import ($called_on, @args) {
         return;
     }
 
+    my $version = 1;
+    if(@args and $args[0] =~ /^:v([0-9]+)/) {
+        $version = $1;
+    }
+
     my $meta = Myriad::Class->import(
-        target => $pkg,
+        ":v$version",
+        target  => $pkg,
         extends => 'Myriad::Service::Implementation',
     );
 
-    # Helper functions which are used often enough to be valuable as a default
-#    Scalar::Util->export_to_level(1, $pkg, qw(refaddr blessed weaken));
-
     # Now we populate various slots, to be filled in when instantiating.
-    # Currently we have `api`, but might be helpful to provide `$storage`
+    # Currently we have `$api`, but might be helpful to provide `$storage`
     # and others directly here.
     $SLOT{$pkg} = {
         map { $_ => $meta->add_slot('$' . $_) } qw(
@@ -127,6 +131,19 @@ sub import ($called_on, @args) {
         no strict 'refs';
 
         push @{$pkg . '::ISA' }, 'Myriad::Service';
+
+        *{$pkg . '::config'} = sub {
+            my ($varname, %args) = @_;
+            die 'config name is required' unless $varname;
+
+            if ($args{default} && $args{secure}) {
+                die "Are you serious $varname should be secure but it has a default value -_-";
+            }
+
+            $Myriad::Config::SERVICES_CONFIG{$pkg}->{$varname} = \%args;
+
+            $log->tracef("registered config %s for service %s", $varname, $pkg);
+        }
     }
     return;
 }

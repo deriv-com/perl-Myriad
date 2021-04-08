@@ -61,36 +61,44 @@ async method service (@args) {
 
     die 'You cannot pass a service name and load multiple modules' if @modules > 1 and length $service_custom_name;
 
-    await fmap0(async sub {
-        my ($module) = @_;
-        $log->debugf('Loading %s', $module);
-        require_module($module);
-        $log->errorf('loaded %s but it cannot ->new?', $module) unless $module->can('new');
-        if ($service_custom_name eq '') {
-            await $myriad->add_service($module);
-        } else {
-            await $myriad->add_service($module, name => $service_custom_name);
-        }
-    }, foreach => \@modules, concurrent => 4);
-
     $cmd = {
         code => async sub {
-            await fmap0 {
-                my $service = shift;
-                try {
+            try {
+                await fmap0(async sub {
+                    my ($module) = @_;
+                    $log->debugf('Loading %s', $module);
+                    require_module($module);
+                    $log->errorf('loaded %s but it cannot ->new?', $module) unless $module->can('new');
+                    if ($service_custom_name eq '') {
+                        await $myriad->add_service($module);
+                    } else {
+                        await $myriad->add_service($module, name => $service_custom_name);
+                    }
+                }, foreach => \@modules, concurrent => 4);
+
+                await fmap0 {
+                    my $service = shift;
                     $log->infof('Starting service [%s]', $service->service_name);
-                    $service->start;
-                } catch($e) {
-                    $log->warnf('FAILED to start service %s | %s', $service->service_name, $e);
-                }
-            } foreach => [values $myriad->services->%*], concurrent => 4;
+                    $service->start->transform(fail => sub {
+                        return $service->service_name . ' : ' . shift;
+                    });
+                } foreach => [values $myriad->services->%*], concurrent => 4;
 
-            $self->start_components();
-
+                $self->start_components();
+            } catch($e) {
+                $log->warnf('Failed to start services - %s', $e);
+                await $myriad->shutdown;
+            }
         },
         params => {},
     };
 }
+
+=head2 remote_service
+
+
+
+=cut
 
 method remote_service {
     return Myriad::Service::Remote->new(
@@ -100,6 +108,12 @@ method remote_service {
         ) // die 'no service name found'
     );
 }
+
+=head2 rpc
+
+
+
+=cut
 
 async method rpc ($rpc, @args) {
     my $remote_service = $self->remote_service;
@@ -120,6 +134,12 @@ async method rpc ($rpc, @args) {
         params => { name => $rpc, args => \@args, remote_service => $remote_service}
     };
 }
+
+=head2 subscription
+
+
+
+=cut
 
 async method subscription ($stream, @args) {
     my $remote_service = $self->remote_service;
@@ -143,6 +163,12 @@ async method subscription ($stream, @args) {
 
 }
 
+=head2 storage
+
+
+
+=cut
+
 async method storage ($action, $key, $extra = undef) {
     my $remote_service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
     $cmd = {
@@ -158,6 +184,12 @@ async method storage ($action, $key, $extra = undef) {
         params => { action => $action, key => $key, extra => $extra, remote_service => $remote_service} };
 }
 
+=head2 start_components
+
+
+
+=cut
+
 method start_components ($components = ['rpc', 'subscription', 'rpc_client']) {
 #    my @components_started = map {
 #        my $component = $_;
@@ -172,6 +204,12 @@ method start_components ($components = ['rpc', 'subscription', 'rpc_client']) {
 #        }
 #    } @$components;
 }
+
+=head2 run_cmd
+
+
+
+=cut
 
 async method run_cmd () {
     await $cmd->{code}->($cmd->{params}) if exists $cmd->{code};

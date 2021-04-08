@@ -31,7 +31,7 @@ declare_exception UnknownClass => (
 
 use Myriad::API;
 
-has %rpc ;
+has %rpc;
 has %service_by_name;
 has %batch;
 has %emitter;
@@ -63,6 +63,7 @@ async method add_service (%args) {
     $Myriad::Service::SLOT{$pkg}{api}->value($srv) = Myriad::API->new(
         myriad => $myriad,
         service_name => $service_name,
+        config => await $myriad->config->service_config($pkg, $service_name),
     );
 
     {

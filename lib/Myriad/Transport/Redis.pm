@@ -23,9 +23,13 @@ It should also cover retry for stateless calls.
 
 use Myriad::Redis::Pending;
 
+use Net::Async::Redis;
 use Net::Async::Redis::Cluster;
 
 use List::Util qw(pairmap);
+
+# Cluster mode by default
+has $use_cluster = 1;
 
 has $redis_uri;
 has $redis;
@@ -47,6 +51,9 @@ method configure (%args) {
     if(exists $args{redis_uri}) {
         my $uri = delete $args{redis_uri};
         $redis_uri = ref($uri) ? $uri : URI->new($uri);
+    }
+    if(exists $args{cluster}) {
+        $use_cluster = delete $args{cluster};
     }
     $max_pool_count = exists $args{max_pool_count} ? delete $args{max_pool_count} : 10;
 
@@ -72,16 +79,22 @@ Number of items to allow per batch (pending / readgroup calls).
 method batch_count () { $batch_count }
 
 async method start {
-    await $redis->bootstrap(
-        host => $redis_uri->host,
-        port => $redis_uri->port,
-    );
+    $redis = await $self->redis;
+    return;
 }
 
+=head2 oldest_processed_id
+
+Check the last id that has been processed
+by B<all> the consumer groups in the given stream.
+
+=cut
+
 async method oldest_processed_id($stream) {
-    my ($v) = await $redis->xinfo(GROUPS => $stream);
+    my ($groups) = await $redis->xinfo(GROUPS => $stream);
     my $oldest;
-    for my $group (@$v) {
+
+    for my $group ($groups->@*) {
         # Use snake_case instead of kebab-case so that we can map cleanly to Perl conventions
         my %info = pairmap {
             (
@@ -92,26 +105,22 @@ async method oldest_processed_id($stream) {
         $log->tracef('Group info: %s', \%info);
 
         my $group_name = $info{name};
-        {
-            my ($v) = await $redis->xinfo(CONSUMERS => $stream, $group_name);
-            for my $consumer (@$v) {
-                my %info = pairmap { $a =~ tr/-/_/; ($a, $b) } @$consumer;
-                $log->tracef('Consumer info: %s', \%info);
-            }
-        }
+
         $log->tracef('Pending check where oldest was %s and last delivered %s', $oldest, $info{last_delivered_id});
         $oldest //= $info{last_delivered_id};
-        $oldest = $info{last_delivered_id} if $info{last_delivered_id} and compare_id($oldest, $info{last_delivered_id}) > 0;
-        {
-            my ($v) = await $redis->xpending($stream, $group_name);
-            my ($count, $first_id, $last_id, $consumers) = @$v;
-            $log->tracef('Pending info %s', $v);
-            $log->tracef('Pending from %s', $first_id);
-            $log->tracef('Pending check where oldest was %s and first %s', $oldest, $first_id);
-            $oldest //= $first_id;
-            $oldest = $first_id if defined($first_id) and compare_id($oldest, $first_id) > 0;
-        }
+        $oldest = $info{last_delivered_id} if $info{last_delivered_id} and $self->compare_id($oldest, $info{last_delivered_id}) > 0;
+
+        # Pending list might have items older than "last_delivered_id"
+        # If the get deleted we can't claim them back and they are lost forever.
+        my ($pending_info) = await $redis->xpending($stream, $group_name);
+        my ($count, $first_id, $last_id, $consumers) = $pending_info->@*;
+        $log->tracef('Pending info %s', $pending_info);
+        $log->tracef('Pending from %s', $first_id);
+        $log->tracef('Pending check where oldest was %s and first %s', $oldest, $first_id);
+        $oldest //= $first_id;
+        $oldest = $first_id if defined($first_id) and $self->compare_id($oldest, $first_id) > 0;
     }
+
     return $oldest;
 }
 
@@ -129,6 +138,7 @@ method compare_id($x, $y) {
     return 0 if $x eq $y;
     my @first = split /-/, $x, 2;
     my @second = split /-/, $y, 2;
+
     return $first[0] <=> $second[0]
         || $first[1] <=> $second[1];
 }
@@ -148,10 +158,6 @@ method next_id($id) {
 }
 
 method _add_to_loop(@) {
-    $self->add_child(
-        $redis = Net::Async::Redis::Cluster->new
-    );
-
     $self->add_child(
         $ryu = Ryu::Async->new
     )
@@ -201,9 +207,10 @@ async method read_from_stream (%args) {
 }
 
 async method stream_info ($stream) {
-    my ($v) = await $redis->xinfo(
+    my $v = await $redis->xinfo(
         STREAM => $stream
     );
+
     my %info = pairmap {
         (
             ($a =~ tr/-/_/r),
@@ -224,14 +231,13 @@ Clear up old entries from a stream when it grows too large.
 async method cleanup (%args) {
     my $stream = $args{stream};
     # Check on our status - can we clean up any old queue items?
-    my %info = await $self->stream_info($stream)->%*;
-    return unless $info{length} > $args{limit};
+    my ($info) = await $self->stream_info($stream);
+    return unless $info->{length} > $args{limit};
 
     # Track how far back our active stream list goes - anything older than this is fair game
     my $oldest = await $self->oldest_processed_id($stream);
     $log->debugf('Earliest ID to care about: %s', $oldest);
-
-    if ($oldest and $oldest ne '0-0' and compare_id($oldest, $info{first_entry}[0]) > 0) {
+    if ($oldest and $oldest ne '0-0' and $self->compare_id($oldest, $info->{first_entry}[0]) > 0) {
         # At this point we know we have some older items that can go. We'll need to finesse
         # the direction to search: for now, take the naïve but workable assumption that we
         # have an even distribution of values. This means we go forwards from the start if
@@ -244,11 +250,12 @@ async method cleanup (%args) {
         # estimate means we could apply Newton-Raphson, Runge-Kutta or similar methods to converge faster.
         my $direction = do {
             no warnings 'numeric';
-            ($oldest - $info{first_entry}[0]) > ($info{last_entry}[0] - $oldest)
+            ($oldest - $info->{first_entry}[0]) > ($info->{last_entry}[0] - $oldest)
                 ? 'xrevrange'
                 : 'xrange'
         };
         my $limit = 200;
+
         my $endpoint = $direction eq 'xrevrange' ? '+' : '-';
         my $total = 0;
         while (1) {
@@ -262,17 +269,16 @@ async method cleanup (%args) {
             --$total;
             $endpoint = $v->[-1][0];
         }
-        $total = $info{length} - $total if $direction eq 'xrange';
-
+        $total = $info->{length} - $total if $direction eq 'xrange';
         $log->tracef('Would trim to %d items', $total);
-        my ($before) = await $redis->memory_usage($stream);
-        # my ($trim) = await $redis->xtrim($stream, MAXLEN => '~', $total);
+
+#        my ($before) = await $redis->memory_usage($stream);
         my ($trim) = await $redis->xtrim($stream, MAXLEN => $total);
-        my ($after) = await $redis->memory_usage($stream);
-        $log->tracef('Size changed from %d to %d after trim which removed %d items', $before, $after, $trim);
+#        my ($after) = await $redis->memory_usage($stream);
+        $log->tracef('Size changed from %d to %d after trim which removed %d items', 1, 1, $trim);
     }
     else {
-        $log->tracef('No point in trimming: oldest is %s and this compares to %s', $oldest, $info{first_entry}[0]);
+        $log->tracef('No point in trimming: oldest is %s and this compares to %s', $oldest, $info->{first_entry}[0]);
     }
 }
 
@@ -433,6 +439,16 @@ async method xadd (@args) {
     return await $redis->xadd(@args);
 }
 
+=head2 stream_length
+
+Return the length of a given stream
+
+=cut
+
+async method stream_length ($stream) {
+    return await $redis->xlen($stream);
+}
+
 =head2 borrow_instance
 
 Returns a redis instance to be used by the L<Myriad::Storage::Implementation::Redis>
@@ -458,14 +474,7 @@ async method borrow_instance_from_pool {
         return await $self->loop->new_future->done($available_redis);
     } elsif ($pending_redis_count < $max_pool_count) {
         ++$pending_redis_count;
-        $self->add_child(
-            my $instance = Net::Async::Redis::Cluster->new
-        );
-        await $instance->bootstrap(
-            host => $redis_uri->host,
-            port => $redis_uri->port,
-        );
-        return await $self->loop->new_future->done($instance);
+        return await $self->redis;
     }
     push @$waiting_redis_pool, my $f = $self->loop->new_future;
     $log->warnf('All Redis instances are pending, added to waiting list. Current Redis count: %d/%d | Waiting count: %d', $pending_redis_count, $max_pool_count, 0 + $waiting_redis_pool->@*);
@@ -522,6 +531,37 @@ async method subscribe ($channel) {
     await $instance->subscribe($channel)->on_ready(sub {
         $self->return_instance_to_pool($instance);
     });
+}
+
+=head2 redis
+
+Resolves to a new L<Net::Async::Redis> or L<Net::Async::Redis::Cluster>
+instance, depending on the setting of C<$use_cluster>.
+
+=cut
+
+async method redis {
+    my $instance;
+    if($use_cluster) {
+        $instance = Net::Async::Redis::Cluster->new;
+        $self->add_child(
+            $instance
+        );
+        await $instance->bootstrap(
+            host => $redis_uri->host,
+            port => $redis_uri->port,
+        );
+    } else {
+        $instance = Net::Async::Redis->new(
+            host => $redis_uri->host,
+            port => $redis_uri->port,
+        );
+        $self->add_child(
+            $instance
+        );
+        await $instance->connect;
+    }
+    return $instance;
 }
 
 1;

@@ -4,11 +4,11 @@ requires 'indirect';
 requires 'multidimensional';
 requires 'bareword::filehandles';
 requires 'Syntax::Keyword::Dynamically', '>= 0.07';
-requires 'Syntax::Keyword::Try', '>= 0.21';
+requires 'Syntax::Keyword::Try', '>= 0.23';
 requires 'Future', '>= 0.47';
 requires 'Future::Queue';
 requires 'Future::AsyncAwait', '>= 0.49';
-requires 'Object::Pad', '>= 0.36';
+requires 'Object::Pad', '>= 0.37';
 requires 'Role::Tiny', '>= 2.002004';
 # Streams
 requires 'Ryu', '>= 2.007';

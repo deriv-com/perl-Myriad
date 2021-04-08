@@ -110,7 +110,7 @@ Timing information about RPC calls tagged by service, status and method name
 
 $metrics->make_timer( rpc_timing =>
    name => [ qw(myriad service rpc) ],
-   description => "Time taken to perocess the RPC request",
+   description => "Time taken to process the RPC request",
    labels => [qw(method status service)]
 );
 
@@ -122,7 +122,7 @@ Timing information about the batch subscriptions tagged by service, status and m
 
 $metrics->make_timer( batch_timing =>
    name => [ qw(myriad service batch) ],
-   description => "Time taken to perocess the RPC request",
+   description => "Time taken to process the RPC request",
    labels => [qw(method status service)]
 );
 
@@ -134,7 +134,7 @@ Timing information about events receivers tagged by service, status and method n
 
 $metrics->make_timer( receiver_timing =>
    name => [ qw(myriad service receiver) ],
-   description => "Time taken to perocess the received events",
+   description => "Time taken to process the received events",
    labels => [qw(method status service)]
 );
 
@@ -234,51 +234,53 @@ Perform the diagnostics check and start the service components (RPC, Batches, Su
 
 async method start {
     my $registry = $Myriad::REGISTRY;
+
     await $self->startup;
     my @pending;
-    try {
-        unless(await Future->wait_any(
-            $self->loop->timeout_future(after => 10),
-            $self->diagnostics(1),
-        )) {
-            $log->errorf("can't start %s diagnostics failed", $self->service_name);
-            return;
-        }
 
-        if(my $emitters = $registry->emitters_for(ref($self))) {
-            for my $method (sort keys $emitters->%*) {
-                $log->tracef('Found emitter %s as %s', $method, $emitters->{$method});
-                my $spec = $emitters->{$method};
-                my $chan = $spec->{args}{channel} // die 'expected a channel, but there was none to be found';
-                my $sink = $ryu->sink(
-                    label => "emitter:$chan",
-                );
-                await $self->subscription->create_from_source(
-                    source  => $sink->source->map(sub {
-                        $metrics->inc_counter('emitters_count', {method => $method, service => $service_name});
-                        return $_;
-                    }),
-                    channel => $chan,
-                    service => $service_name,
-                );
-                my $code = $spec->{code};
-                push @pending, $spec->{current} = $self->$code(
-                    $sink,
-                )->on_fail(sub {
-                    $log->fatalf('Emitter for %s failed - %s', $method, shift);
-                })->retain;
-            }
-        }
+    my $diag = await Future->wait_any(
+        $self->loop->timeout_future(after => 30),
+        $self->diagnostics(1),
+    );
 
-        if(my $receivers = $registry->receivers_for(ref($self))) {
-            for my $method (sort keys $receivers->%*) {
+    die "diagnostics for $service_name failed" unless $diag eq 'ok';
+
+    if(my $emitters = $registry->emitters_for(ref($self))) {
+        for my $method (sort keys $emitters->%*) {
+            $log->tracef('Found emitter %s as %s', $method, $emitters->{$method});
+            my $spec = $emitters->{$method};
+            my $chan = $spec->{args}{channel} // die 'expected a channel, but there was none to be found';
+            my $sink = $ryu->sink(
+                label => "emitter:$chan",
+            );
+            await $subscription->create_from_source(
+                source  => $sink->source->map(sub {
+                    $metrics->inc_counter('emitters_count', {method => $method, service => $service_name});
+                    return $_;
+                }),
+                channel => $chan,
+                service => $service_name,
+            );
+            my $code = $spec->{code};
+            push @pending, $spec->{current} = $self->$code(
+                $sink,
+            )->on_fail(sub {
+                $log->fatalf('Emitter for %s failed - %s', $method, shift);
+            })->retain;
+        }
+    }
+
+    if(my $receivers = $registry->receivers_for(ref($self))) {
+        for my $method (sort keys $receivers->%*) {
+            try {
                 $log->tracef('Found receiver %s as %s', $method, $receivers->{$method});
                 my $spec = $receivers->{$method};
                 my $chan = $spec->{args}{channel} // die 'expected a channel, but there was none to be found';
                 my $sink = $ryu->sink(
                     label => "receiver:$chan",
                 );
-                await $self->subscription->create_from_sink(
+                $log->tracef('Creating receiver from sink');
+                await $subscription->create_from_sink(
                     sink    => $sink,
                     channel => $chan,
                     client  => $service_name . '/' . $method,
@@ -287,65 +289,65 @@ async method start {
                 );
                 my $code = $spec->{code};
                 my $current = await $self->$code($sink->source);
+                $log->tracef('Completed setup for receiver');
 
                 die "Receivers method: $method should return a Ryu::Source"
                     unless blessed $current && $current->isa('Ryu::Source');
 
-                $current->map(sub {
+                $spec->{current} = $current->map(sub {
                     my $f = Future->wrap(shift);
                     $metrics->report_timer(receiver_timing => ($f->elapsed // 0), {method => $method, status => $f->state, service => $service_name});
                     return $f;
                 })->resolve->completed->retain;
 
-                push @pending, $spec->{current} = $current->completed->retain;
+                push @pending, $spec->{current};
+            } catch ($e) {
+                $log->errorf('Failed while setting up receiver: %s', $e);
             }
         }
-
-        if (my $batches = $registry->batches_for(ref($self))) {
-            for my $method (sort keys $batches->%*) {
-                $log->tracef('Starting batch process %s for %s', $method, ref($self));
-                my $code = $batches->{$method}{code};
-                my $sink = $ryu->sink(label => 'batch:' . $method);
-                await $self->subscription->create_from_source(
-                    source  => $sink->source,
-                    channel => $method,
-                    service => $service_name,
-                );
-                $active_batch{$method} = [
-                    $sink,
-                    $self->process_batch($method, $code, $sink)
-                ];
-            }
-        }
-
-        if (my $rpc_calls = $registry->rpc_for(ref($self))) {
-            for my $method (sort keys $rpc_calls->%*) {
-                my $spec = $rpc_calls->{$method};
-                my $sink = $ryu->sink(label => "rpc:$service_name:$method");
-                $self->rpc->create_from_sink(service => $service_name, method => $method, sink => $sink);
-
-                my $code = $spec->{code};
-                $spec->{current} = $sink->source->map(async sub {
-                    my $message = shift;
-                    try {
-                        my $response = await $self->$code($message->args->%*)->on_ready(sub {
-                            my $f = shift;
-                            $metrics->report_timer(rpc_timing => $f->elapsed, {method => $method, status => $f->state, service => $service_name});
-                        });
-                        await $self->rpc->reply_success($service_name, $message, $response);
-                    } catch ($e) {
-                        await $self->rpc->reply_error($service_name, $message, $e);
-                    }
-                })->resolve->completed;
-            }
-        }
-        $log->infof('Wait for %d startup tasks to complete', 0 + @pending);
-        # await Future->needs_all(@pending);
-        $log->infof('Done');
-    } catch ($e) {
-        $log->errorf('Could not finish diagnostics for service %s in time.', $self->service_name);
-        die $e;
     }
+
+    if (my $batches = $registry->batches_for(ref($self))) {
+        for my $method (sort keys $batches->%*) {
+            $log->tracef('Starting batch process %s for %s', $method, ref($self));
+            my $code = $batches->{$method}{code};
+            my $sink = $ryu->sink(label => 'batch:' . $method);
+            await $subscription->create_from_source(
+                source  => $sink->source,
+                channel => $method,
+                service => $service_name,
+            );
+            $active_batch{$method} = [
+                $sink,
+                $self->process_batch($method, $code, $sink)
+            ];
+        }
+    }
+
+    if (my $rpc_calls = $registry->rpc_for(ref($self))) {
+        for my $method (sort keys $rpc_calls->%*) {
+            my $spec = $rpc_calls->{$method};
+            my $sink = $ryu->sink(label => "rpc:$service_name:$method");
+            $rpc->create_from_sink(service => $service_name, method => $method, sink => $sink);
+
+            my $code = $spec->{code};
+            $spec->{current} = $sink->source->map(async sub {
+                my $message = shift;
+                try {
+                    my $response = await $self->$code($message->args->%*)->on_ready(sub {
+                        my $f = shift;
+                        $metrics->report_timer(rpc_timing => $f->elapsed, {method => $method, status => $f->state, service => $service_name});
+                    });
+                    await $rpc->reply_success($service_name, $message, $response);
+                } catch ($e) {
+                    await $rpc->reply_error($service_name, $message, $e);
+                }
+            })->resolve->completed;
+        }
+    }
+    $log->infof('Wait for %d startup tasks to complete', 0 + @pending);
+    # await Future->needs_all(@pending);
+    $log->infof('Done');
 
 };
 

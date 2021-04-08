@@ -27,8 +27,11 @@ Myriad::Class - common pragmata for L<Myriad> core modules
 
 =head1 DESCRIPTION
 
-Since this is a framework, by default it attempts to enforce a common standard on all microservice
-modules. The following Perl language features and modules are applied:
+Since L<Myriad> is a framework, by default it attempts to enforce a common
+standard on all microservice modules. This same standard is used in most of
+the modules which comprise L<Myriad> itself.
+
+The following Perl language features and modules are applied:
 
 =over 4
 
@@ -85,6 +88,14 @@ This also makes available a L<Log::Any> instance in the C<$log> package variable
 and for L<OpenTracing::Any> support you get C<$tracer> as an L<OpenTracing::Tracer>
 instance.
 
+It's very likely that future versions will bring in new functionality or
+enable/disable a different featureset. This behaviour will be controlled through
+version tags:
+
+ use Myriad::Class qw(:v1);
+
+with the default being C<:v1>.
+
 =cut
 
 no indirect qw(fatal);
@@ -106,7 +117,16 @@ use OpenTracing::Any qw($tracer);
 use Metrics::Any;
 
 sub import {
-    my ($called_on, %args) = @_;
+    my $called_on = shift;
+
+    # Unused, but we'll support it for now.
+    my $version = 1;
+    if(@_ and $_[0] =~ /^:v([0-9]+)/) {
+        $version = $1;
+        shift;
+    }
+    my %args = @_;
+
     my $class = __PACKAGE__;
     my $pkg = $args{target} // caller(0);
 
@@ -156,6 +176,7 @@ sub import {
         # here because it sometimes returns an empty list, which would be
         # dangerous - my %hash = (key => trim($value)) for example.
         *{$pkg . '::trim'} = sub ($txt) {
+            return undef unless defined $txt;
             $txt =~ s{^\s+}{};
             $txt =~ s{\s+$}{};
             return $txt;
@@ -174,7 +195,14 @@ sub import {
     # but can be seen in action in this test:
     # https://metacpan.org/source/PEVANS/Object-Pad-0.21/t/70mop-create-class.t#L30
     Object::Pad->import_into($pkg);
-    my $meta = Object::Pad->begin_class($pkg, ($args{extends} ? (extends => $args{extends}) : ()));
+    my $meta = Object::Pad->begin_class(
+        $pkg,
+        (
+            $args{extends}
+            ? (extends => $args{extends})
+            : ()
+        )
+    );
 
     {
         no strict 'refs';
@@ -191,6 +219,8 @@ sub import {
 }
 
 1;
+
+__END__
 
 =head1 AUTHOR
 

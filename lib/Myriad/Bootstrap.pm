@@ -63,6 +63,7 @@ our %ALLOWED_MODULES = map {
 
 our %constant;
 
+# See perldoc perlport for the difference between this and \r\n
 my $CRLF = "\x0D\x0A";
 
 =head1 METHODS - Class
@@ -201,7 +202,7 @@ sub boot {
             close $inotify_child_pipe;
 
             local $SIG{HUP}= sub {
-                say "$pid - inotify process termintated";
+                say "$pid - inotify process terminated";
                 exit 0;
             };
 
@@ -276,7 +277,7 @@ sub boot {
             ACTIVE:
             while ($active) {
                 $active = 0 unless check_messages_in_pipe($inotify_child_pipe, sub {
-                    say "$$ - File has been detected reloading..";
+                    say "$$ - File change has been detected, reloading..";
                     kill QUIT => $pid;
                     # wait for the process to finish
                     waitpid $pid, 0;
@@ -319,21 +320,23 @@ sub boot {
                 }
             };
 
-            # Support coderef or package name
-            if(ref $target) {
-                $target->(%args);
-            } else {
-                require Module::Load;
-                Module::Load::load($target);
-                my $module = $target->new;
-                $module->configure_from_argv(@ARGV)->await;
-                $module->run()->await;
-            }
-
-            if (my $error = $@) {
+            eval {
+                # Support coderef or package name
+                if(ref $target) {
+                    $target->(%args);
+                } else {
+                    require Module::Load;
+                    Module::Load::load($target);
+                    my $module = $target->new;
+                    $module->configure_from_argv(@ARGV)->await;
+                    $module->run()->await;
+                }
+                1;
+            } or do {
+                my $error = $@;
                 $error =~ s/\n/\n\t/g;
                 print "$$ - target code/module exited unexpectedly due:\n\t$error";
-            }
+            };
 
             exit 0;
         }
@@ -341,6 +344,8 @@ sub boot {
 }
 
 1;
+
+__END__
 
 =head1 AUTHOR
 
