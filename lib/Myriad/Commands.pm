@@ -62,18 +62,31 @@ async method service (@args) {
 
     die 'You cannot pass a service name and load multiple modules' if @modules > 1 and length $service_custom_name;
 
+    for my $module (@modules) {
+        $log->debugf('Loading %s', $module);
+        try {
+            require_module($module);
+            die 'loaded ' . $module . ' but it cannot ->new?' unless $module->can('new');
+        } catch ($e) {
+            Future::Exception->throw(sprintf 'Service module %s not found', $module) if $e =~ /Can't locate/;
+            Future::Exception->throw(sprintf 'Failed to load module for service %s - %s', $module, $e);
+        }
+    }
+
     $cmd = {
         code => async sub {
             try {
                 await fmap0(async sub {
                     my ($module) = @_;
-                    $log->debugf('Loading %s', $module);
-                    require_module($module);
-                    $log->errorf('loaded %s but it cannot ->new?', $module) unless $module->can('new');
-                    if ($service_custom_name eq '') {
-                        await $myriad->add_service($module);
-                    } else {
-                        await $myriad->add_service($module, name => $service_custom_name);
+                    $log->debugf('Preparing %s', $module);
+                    try {
+                        if ($service_custom_name eq '') {
+                            await $myriad->add_service($module);
+                        } else {
+                            await $myriad->add_service($module, name => $service_custom_name);
+                        }
+                    } catch ($e) {
+                        Future::Exception->throw(sprintf 'Failed to add service %s - %s', $module, $e);
                     }
                 }, foreach => \@modules, concurrent => 4);
 
