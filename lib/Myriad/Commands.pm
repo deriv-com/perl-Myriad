@@ -1,9 +1,10 @@
 package Myriad::Commands;
 
-use Myriad::Util::UUID;
-
 use Myriad::Class;
+
 use Unicode::UTF8 qw(decode_utf8);
+
+use Myriad::Util::UUID;
 
 # VERSION
 # AUTHORITY
