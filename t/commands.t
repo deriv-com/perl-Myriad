@@ -33,7 +33,7 @@ subtest "service command" => sub {
     # Myriad module is required for Command creation but only used in Service command
     my $myriad_module = Test::MockModule->new('Myriad');
     my ( @added_services_modules, @add_services_by_name );
-    $myriad_module->mock('add_service', async sub{
+    $myriad_module->mock('add_service', async sub {
         my ($self, $module, %args) = @_;
         # Calling of this sub means Service command has been executed succesfully
         push @added_services_modules, $module;
@@ -59,7 +59,7 @@ subtest "service command" => sub {
 
     # Wrong Service(module) name
     like( exception { wait_for_future( $command->service('Ta-wrong') )->get } , qr/unsupported/, 'Died when passing wrong format name');
-    like( exception { wait_for_future( $command->service('Ta_wrong')->get()->{code}->() )->get() } , qr/.*/, 'Died when passing module that does not exist');
+    like( exception { wait_for_future( $command->service('Ta_wrong') )->get } , qr/not found/, 'Died when passing module that does not exist');
 
     # Running multiple services
     wait_for_future( $command->service('Ta::')->get->{code}->() )->get;
