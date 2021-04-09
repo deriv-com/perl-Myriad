@@ -193,11 +193,8 @@ async method read_from_stream (%args) {
     my $batch = $delivery->[0];
     if ($batch) {
         my  ($stream, $data) = $batch->@*;
-        use Data::Dumper;
-        warn Dumper($data);
         return map {
-            my $item = shift;
-            my ($id, $args) = $item->@*;
+            my ($id, $args) = $_->@*;
             $log->tracef('Item from stream %s is ID %s and args %s', $stream, $id, $args);
             return {stream => $stream, id => $id, data => $args}
         } $data->@*;

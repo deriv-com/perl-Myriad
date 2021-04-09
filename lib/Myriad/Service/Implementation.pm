@@ -84,9 +84,9 @@ method rpc () { $myriad->rpc }
 
 =head2 subscription
 
-method subscription () { $myriad->subscription }
-
 =cut
+
+method subscription () { $myriad->subscription }
 
 =head2 service_name
 
@@ -226,24 +226,15 @@ async method process_batch($k, $code, $src) {
     }
 }
 
-=head2 start
+=head2 load
 
-Perform the diagnostics check and start the service components (RPC, Batches, Subscriptions ..etc).
+To wire the service with Myriad's component 
+before it actually starts work
 
 =cut
 
-async method start {
+async method load () {
     my $registry = $Myriad::REGISTRY;
-
-    await $self->startup;
-    my @pending;
-
-    my $diag = await Future->wait_any(
-        $self->loop->timeout_future(after => 30),
-        $self->diagnostics(1),
-    );
-
-    die "diagnostics for $service_name failed" unless $diag eq 'ok';
 
     if(my $emitters = $registry->emitters_for(ref($self))) {
         for my $method (sort keys $emitters->%*) {
@@ -253,16 +244,19 @@ async method start {
             my $sink = $ryu->sink(
                 label => "emitter:$chan",
             );
-            await $subscription->create_from_source(
-                source  => $sink->source->map(sub {
+
+            $spec->{src} = $sink->source->map(sub {
                     $metrics->inc_counter('emitters_count', {method => $method, service => $service_name});
                     return $_;
-                }),
+            });
+
+            await $self->subscription->create_from_source(
+                source  => $spec->{src}->pause,
                 channel => $chan,
                 service => $service_name,
             );
             my $code = $spec->{code};
-            push @pending, $spec->{current} = $self->$code(
+            $spec->{current} = $self->$code(
                 $sink,
             )->on_fail(sub {
                 $log->fatalf('Emitter for %s failed - %s', $method, shift);
@@ -276,11 +270,12 @@ async method start {
                 $log->tracef('Found receiver %s as %s', $method, $receivers->{$method});
                 my $spec = $receivers->{$method};
                 my $chan = $spec->{args}{channel} // die 'expected a channel, but there was none to be found';
-                my $sink = $ryu->sink(
+                my $sink = $spec->{sink} = $ryu->sink(
                     label => "receiver:$chan",
                 );
+                $sink->pause;
                 $log->tracef('Creating receiver from sink');
-                await $subscription->create_from_sink(
+                await $self->subscription->create_from_sink(
                     sink    => $sink,
                     channel => $chan,
                     client  => $service_name . '/' . $method,
@@ -300,7 +295,6 @@ async method start {
                     return $f;
                 })->resolve->completed->retain;
 
-                push @pending, $spec->{current};
             } catch ($e) {
                 $log->errorf('Failed while setting up receiver: %s', $e);
             }
@@ -311,8 +305,9 @@ async method start {
         for my $method (sort keys $batches->%*) {
             $log->tracef('Starting batch process %s for %s', $method, ref($self));
             my $code = $batches->{$method}{code};
-            my $sink = $ryu->sink(label => 'batch:' . $method);
-            await $subscription->create_from_source(
+            my $sink = $batches->{$method}{sink} = $ryu->sink(label => 'batch:' . $method);
+            $sink->pause;
+            await $self->subscription->create_from_source(
                 source  => $sink->source,
                 channel => $method,
                 service => $service_name,
@@ -327,8 +322,9 @@ async method start {
     if (my $rpc_calls = $registry->rpc_for(ref($self))) {
         for my $method (sort keys $rpc_calls->%*) {
             my $spec = $rpc_calls->{$method};
-            my $sink = $ryu->sink(label => "rpc:$service_name:$method");
-            $rpc->create_from_sink(service => $service_name, method => $method, sink => $sink);
+            my $sink = $spec->{sink} = $ryu->sink(label => "rpc:$service_name:$method");
+            $sink->pause;
+            $self->rpc->create_from_sink(service => $service_name, method => $method, sink => $sink);
 
             my $code = $spec->{code};
             $spec->{current} = $sink->source->map(async sub {
@@ -338,15 +334,51 @@ async method start {
                         my $f = shift;
                         $metrics->report_timer(rpc_timing => $f->elapsed, {method => $method, status => $f->state, service => $service_name});
                     });
-                    await $rpc->reply_success($service_name, $message, $response);
+                    await $self->rpc->reply_success($service_name, $message, $response);
                 } catch ($e) {
-                    await $rpc->reply_error($service_name, $message, $e);
+                    await $self->rpc->reply_error($service_name, $message, $e);
                 }
             })->resolve->completed;
         }
     }
-    $log->infof('Wait for %d startup tasks to complete', 0 + @pending);
-    # await Future->needs_all(@pending);
+}
+
+=head2 start
+
+Perform the diagnostics check and start the service
+
+=cut
+
+async method start {
+
+    await $self->startup;
+
+    my $diag = await Future->wait_any(
+        $self->loop->timeout_future(after => 30),
+        $self->diagnostics(1),
+    );
+
+    die "diagnostics for $service_name failed" unless $diag eq 'ok';
+
+    # Since everything is ready now we let the service commence work
+    my $registry = $Myriad::REGISTRY;
+
+    if(my $emitters = $registry->emitters_for(ref($self))) {
+        $emitters->{$_}->{src}->resume for (keys $emitters->%*);
+    }
+
+    if(my $receivers = $registry->receivers_for(ref($self))) {
+        $receivers->{$_}->{sink}->resume for (keys $receivers->%*);
+    }
+
+    if (my $batches = $registry->batches_for(ref($self))) {
+        $batches->{$_}{sink}->resume for (keys $batches->%*);
+    }
+
+    if (my $rpc_calls = $registry->rpc_for(ref($self))) {
+        $rpc_calls->{$_}->{sink}->resume for (keys $rpc_calls->%*);
+    }
+
     $log->infof('Done');
 
 };

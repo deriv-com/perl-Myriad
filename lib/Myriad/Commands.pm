@@ -62,6 +62,8 @@ async method service (@args) {
 
     die 'You cannot pass a service name and load multiple modules' if @modules > 1 and length $service_custom_name;
 
+    # Load modules to compile
+
     for my $module (@modules) {
         $log->debugf('Loading %s', $module);
         try {
@@ -73,23 +75,25 @@ async method service (@args) {
         }
     }
 
+    # Load services into Myriad but don't start them yet
+
+    await fmap0(async sub {
+        my ($module) = @_;
+        $log->debugf('Preparing %s', $module);
+        try {
+            if ($service_custom_name eq '') {
+                await $myriad->add_service($module);
+            } else {
+                await $myriad->add_service($module, name => $service_custom_name);
+            }
+        } catch ($e) {
+            Future::Exception->throw(sprintf 'Failed to add service %s - %s', $module, $e);
+        }
+    }, foreach => \@modules, concurrent => 4);
+
     $cmd = {
         code => async sub {
-            try {
-                await fmap0(async sub {
-                    my ($module) = @_;
-                    $log->debugf('Preparing %s', $module);
-                    try {
-                        if ($service_custom_name eq '') {
-                            await $myriad->add_service($module);
-                        } else {
-                            await $myriad->add_service($module, name => $service_custom_name);
-                        }
-                    } catch ($e) {
-                        Future::Exception->throw(sprintf 'Failed to add service %s - %s', $module, $e);
-                    }
-                }, foreach => \@modules, concurrent => 4);
-
+            try { 
                 await fmap0 {
                     my $service = shift;
                     $log->infof('Starting service [%s]', $service->service_name);
@@ -98,7 +102,6 @@ async method service (@args) {
                     });
                 } foreach => [values $myriad->services->%*], concurrent => 4;
 
-                $self->start_components();
             } catch($e) {
                 $log->warnf('Failed to start services - %s', $e);
                 await $myriad->shutdown;
@@ -109,8 +112,6 @@ async method service (@args) {
 }
 
 =head2 remote_service
-
-
 
 =cut
 
@@ -125,33 +126,28 @@ method remote_service {
 
 =head2 rpc
 
-
-
 =cut
 
 async method rpc ($rpc, @args) {
     my $remote_service = $self->remote_service;
+    die 'RPC args should be passed as (key value) pairs' unless @args % 2 == 0;
     $cmd = {
         code => async sub {
             my $params = shift;
-            my ($remote_service, $command, $args) = map { $params->{$_} } qw(remote_service name args);
-
-            $self->start_components(['rpc_client']);
+            my ($remote_service, $rpc, $args) = map { $params->{$_} } qw(remote_service rpc args);
             try {
-                my $response = await $remote_service->call_rpc($command, @$args);
+                my $response = await $remote_service->call_rpc($rpc, @$args);
                 $log->infof('RPC response is %s', $response);
             } catch ($e) {
                 $log->warnf('RPC command failed due: %s', $e);
             }
             await $myriad->shutdown;
         },
-        params => { name => $rpc, args => \@args, remote_service => $remote_service}
+        params => { rpc => $rpc, args => \@args, remote_service => $remote_service}
     };
 }
 
 =head2 subscription
-
-
 
 =cut
 
@@ -161,15 +157,12 @@ async method subscription ($stream, @args) {
         code => async sub {
             my $params = shift;
             my ($remote_service, $stream, $args) = map { $params->{$_} } qw(remote_service stream args);
-            $self->start_components(['subscription']);
-
             $log->infof('Subscribing to: %s | %s', $remote_service->service_name, $stream);
             my $uuid = Myriad::Util::UUID::uuid();
             $remote_service->subscribe($stream, "$0/$uuid")->each(sub {
-                my $e = shift;
-                my %info = ($e->@*);
+                my $info = shift;
                 use Data::Dumper;
-                $log->infof('DATA: %s', decode_utf8(Dumper($info{data})));
+                $log->infof('DATA: %s', decode_utf8(Dumper($info->{data})));
             })->completed;
         },
         params => { stream => $stream, args => \@args, remote_service => $remote_service}
@@ -178,8 +171,6 @@ async method subscription ($stream, @args) {
 }
 
 =head2 storage
-
-
 
 =cut
 
@@ -198,30 +189,7 @@ async method storage ($action, $key, $extra = undef) {
         params => { action => $action, key => $key, extra => $extra, remote_service => $remote_service} };
 }
 
-=head2 start_components
-
-
-
-=cut
-
-method start_components ($components = ['rpc', 'subscription', 'rpc_client']) {
-#    my @components_started = map {
-#        my $component = $_;
-#        try {
-#            # We need retain to make it persists and handle responses.
-#            $myriad->$component->start->retain;
-#            $log->debugf('Started Component: %s', $component);
-#
-#        } catch ($e) {
-#            $log->warnf("%s failed due %s", $component, $e);
-#            $myriad->shutdown_future->fail($e);
-#        }
-#    } @$components;
-}
-
 =head2 run_cmd
-
-
 
 =cut
 

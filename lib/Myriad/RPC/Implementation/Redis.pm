@@ -43,7 +43,7 @@ method whoami { $whoami }
 has $rpc_methods;
 has $streams_list;
 
-has $iteration_future;
+has $running;
 
 sub service_name_from_stream ($stream) {
     my $pattern = RPC_SUFFIX . '$';
@@ -62,13 +62,8 @@ method configure (%args) {
 }
 
 async method start () {
-
-    await fmap0 {
-            my $stream = stream_name_from_service(shift);
-            $self->redis->create_group($stream,$self->group_name);
-    } foreach => [keys $rpc_methods->%*], concurrent => 8;
-
-    await $self->listener;
+    $self->listen;
+    await $running;
 }
 
 method create_from_sink (%args) {
@@ -76,22 +71,32 @@ method create_from_sink (%args) {
     my $method = $args{method} // die 'need a method name';
     my $service = $args{service} // die 'need a service name';
 
-    $rpc_methods->{stream_name_from_service($service)}->{$method} = $sink;
-    push $streams_list->@*, stream_name_from_service($service);
+    $rpc_methods->{$service}->{$method} = $sink;
+    push $streams_list->@*, {name => stream_name_from_service($service), group => 0};
 }
 
 async method stop () {
-        $iteration_future->done unless $iteration_future->is_ready;
+    $running->done unless $running->is_ready;
 }
 
-async method listener () {
-    $iteration_future //= do {
+async method create_group ($stream) {
+    unless ($stream->{group}) {
+        await $self->redis->create_group($stream->{name},$self->group_name);
+        $stream->{group} = 1;
+    }
+}
+
+async method listen () {
+    return $running //= (async sub {
         while (1) {
             if ($streams_list && $streams_list->@*) {
                 my $stream = shift $streams_list->@*;
                 push $streams_list->@*, $stream;
+
+                await $self->create_group($stream);
+
                 my @items = await $self->redis->read_from_stream(
-                    stream => $stream,
+                    stream => $stream->{name},
                     group => $self->group_name,
                     client => $self->whoami
                 );
@@ -119,50 +124,8 @@ async method listener () {
                 await $self->loop->delay_future(after => 0.001);
             }
         }
-    }
+    })->();
 }
-=pod
-        # ordering is not important
-        my @streams = map {stream_name_from_service($_)} keys $rpc_methods->%*;
-        my %stream_config = (
-            group  => $self->group_name,
-            client => $self->whoami
-        );
-
-        my $incoming_request = $self->redis->iterate(streams => \@streams, %stream_config);
-
-        # xpending doesn't accept multiple streams like xreadgroup
-        for my $stream (@streams) {
-            $incoming_request->merge(
-                $self->redis->pending(stream => $stream, %stream_config)
-            );
-        }
-
-        await $incoming_request
-            ->map(sub {
-                my $item = $_;
-                push $item->{data}->@*, ('transport_id', $item->{id});
-                my $service = service_name_from_stream($item->{stream});
-                try {
-                    return { service => $service, message => Myriad::RPC::Message::from_hash($item->{data}->@*)};
-                } catch ($error) {
-                    use Data::Dumper;
-                    warn Dumper($error);
-                    $error = Myriad::Exception::InternalError->new($error) unless blessed($error) and $error->isa('Myriad::Exception');
-                    return { service => $service, error => $error, id => $item->{id} }
-                }
-            })->map(async sub {
-                if(my $error = $_->{error}) {
-                   
-                } else {
-                    my $message = $_->{message};
-                    my $service  = $_->{service};
-                    
-                }
-        })->resolve->completed;
-    }
-}
-=cut
 
 async method reply ($service, $message) {
     my $stream = stream_name_from_service($service);

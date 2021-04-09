@@ -19,9 +19,6 @@ has $redis;
 
 has $uuid;
 
-# Group mapping
-has $group;
-
 # A list of all sources that emits events to Redis
 # will need to keep track of them to block them when
 # the stream size is more than what we think it should be
@@ -47,23 +44,26 @@ async method create_from_source (%args) {
 
     my $stream = $service . '/' . $args{channel};
 
-    push @emitters, {stream => $stream, source => $src, max_len => $args{max_len} // MAX_ALLOWED_STREAM_LENGTH};
-
-    $src->map(sub {
-        $log->tracef('sub has an event! %s', $_);
-        return $redis->xadd(
-            encode_utf8($stream) => '*',
-            data => encode_json_utf8($_),
-        );
-    })->ordered_futures(
-        low => 100,
-        high => 5000,
-    )->completed
-     ->on_fail(sub {
-        $log->warnf("Redis XADD command failed for stream %s", $stream);
-        $should_shutdown->fail(
-            "Failed to publish subscription data for $stream - " . shift
-        ) unless $should_shutdown->is_ready;
+    $src->unblocked->then(sub {
+        # The streams will be checked later by "check_for_overflow" to avoid unblocking the source by mistake
+        # we will make "check_for_overflow" aware about this stream after the service has started
+        push @emitters, {stream => $stream, source => $src, max_len => $args{max_len} // MAX_ALLOWED_STREAM_LENGTH};
+        return $src->map(sub {
+            $log->tracef('sub has an event! %s', $_);
+            return $redis->xadd(
+                encode_utf8($stream) => '*',
+                data => encode_json_utf8($_),
+            );
+        })->ordered_futures(
+            low => 100,
+            high => 5000,
+        )->completed
+         ->on_fail(sub {
+            $log->warnf("Redis XADD command failed for stream %s", $stream);
+            $should_shutdown->fail(
+                "Failed to publish subscription data for $stream - " . shift
+            ) unless $should_shutdown->is_ready;
+        })
     })->retain;
     return;
 }
@@ -76,7 +76,8 @@ async method create_from_sink (%args) {
     push @receivers, {
         key => $stream,
         client => $args{client},
-        sink => $sink
+        sink => $sink,
+        group => 0,
     };
 }
 
@@ -95,56 +96,55 @@ async method stop {
     $should_shutdown->done() unless $should_shutdown->is_ready;
 }
 
+
+async method create_group($receiver) {
+    unless ($receiver->{group}) {
+        await $redis->create_group($receiver->{key}, $uuid);
+        $receiver->{group} = 1;
+    }
+}
+
 async method receive_items {
     $log->tracef('Start loop for receiving items');
     while (1) {
         if(@receivers) {
             my $item = shift @receivers;
             push @receivers, $item;
-            $log->tracef('Will readgroup on %s', $item);
+
             my $stream = $item->{key};
             my $sink = $item->{sink};
             my $client = $item->{client};
 
-            unless(exists $group->{$stream}{$item->{client}}) {
-                try {
-                    $log->tracef('Creating new group for stream %s client %s', $stream, $item->{client});
-                    await $redis->create_group($stream, $item->{client}, '0');
-                 } catch {
-                    die $@ unless $@ =~ /^BUSYGROUP/;
-                }
-                $group->{$stream}{$item->{client}} = 1;
+            try {
+                await Future->needs_any(
+                    $self->loop->timeout_future(after => 0.5),
+                    $sink->unblocked,
+                );
+            } catch {
+                $log->tracef("skipped stream %s because sink is blocked", $stream);
+                next
             }
 
-            my ($streams) = await $redis->xreadgroup(
-                BLOCK   => 2500,
-                GROUP   => $client, $uuid,
-                COUNT   => 10, # $self->batch_count,
-                STREAMS => (
-                    $stream, '>'
-                )
+            $log->tracef('Will readgroup on %s', $item);
+            await $self->create_group($item);
+
+            my @events = await $redis->read_from_stream(
+                    stream => $stream,
+                    group => $uuid,
+                    client => $client
             );
 
-            $log->tracef('Read group %s', $streams);
-
-            for my $delivery ($streams->@*) {
-                my ($stream, $data) = $delivery->@*;
-                for my $item ($data->@*) {
-                    my ($id, $args) = $item->@*;
-                    $log->tracef(
-                        'Item from stream %s is ID %s and args %s',
-                        $stream,
-                        $id,
-                        $args
-                    );
-                    if($args) {
-                        push @$args, ("transport_id", $id);
-                        $args->[1] = decode_json_utf8($args->[1]);
-                        $sink->source->emit($args);
-                        await $redis->ack($stream, $client, $id);
-                    }
+            for my $event (@events) {
+                try {
+                    my $event_data = $event->{data}->[1];
+                    $sink->source->emit({data => decode_json_utf8($event_data)});
+                } catch($e) {
+                    warn $e;
+                    $log->tracef("An error happned while decoding event data for stream %s message: %s , error: %s",
+                    $stream, $event->{data}, $e);
                 }
-           }
+                await $redis->ack($stream, $client, $event->{id});
+            }
         } else {
             $log->tracef('No receivers, waiting for a few seconds');
             await $self->loop->delay_future(after => 5);
@@ -173,7 +173,7 @@ async method check_for_overflow () {
                     }
                 }
             } catch ($e) {
-                warn $e;
+                $log->warnf("An error ocurred while trying to check on stream %s status - %s", $emitter->{stream}, $e);
             }
         }
 
