@@ -228,7 +228,7 @@ async method process_batch($k, $code, $src) {
 
 =head2 load
 
-To wire the service with Myriad's component 
+To wire the service with Myriad's component
 before it actually starts work
 
 =cut
@@ -241,7 +241,7 @@ async method load () {
             $log->tracef('Found emitter %s as %s', $method, $emitters->{$method});
             my $spec = $emitters->{$method};
             my $chan = $spec->{args}{channel} // die 'expected a channel, but there was none to be found';
-            my $sink = $ryu->sink(
+            my $sink = $spec->{sink} = $ryu->sink(
                 label => "emitter:$chan",
             );
 
@@ -255,12 +255,6 @@ async method load () {
                 channel => $chan,
                 service => $service_name,
             );
-            my $code = $spec->{code};
-            $spec->{current} = $self->$code(
-                $sink,
-            )->on_fail(sub {
-                $log->fatalf('Emitter for %s failed - %s', $method, shift);
-            })->retain;
         }
     }
 
@@ -282,19 +276,6 @@ async method load () {
                     from    => $spec->{args}{service},
                     service => $service_name,
                 );
-                my $code = $spec->{code};
-                my $current = await $self->$code($sink->source);
-                $log->tracef('Completed setup for receiver');
-
-                die "Receivers method: $method should return a Ryu::Source"
-                    unless blessed $current && $current->isa('Ryu::Source');
-
-                $spec->{current} = $current->map(sub {
-                    my $f = Future->wrap(shift);
-                    $metrics->report_timer(receiver_timing => ($f->elapsed // 0), {method => $method, status => $f->state, service => $service_name});
-                    return $f;
-                })->resolve->completed->retain;
-
             } catch ($e) {
                 $log->errorf('Failed while setting up receiver: %s', $e);
             }
@@ -312,10 +293,6 @@ async method load () {
                 channel => $method,
                 service => $service_name,
             );
-            $active_batch{$method} = [
-                $sink,
-                $self->process_batch($method, $code, $sink)
-            ];
         }
     }
 
@@ -350,7 +327,6 @@ Perform the diagnostics check and start the service
 =cut
 
 async method start {
-
     await $self->startup;
 
     my $diag = await Future->wait_any(
@@ -362,17 +338,56 @@ async method start {
 
     # Since everything is ready now we let the service commence work
     my $registry = $Myriad::REGISTRY;
-
     if(my $emitters = $registry->emitters_for(ref($self))) {
-        $emitters->{$_}->{src}->resume for (keys $emitters->%*);
+        for my $method (sort keys $emitters->%*) {
+            $log->tracef('Starting emitter %s as %s', $method, $emitters->{$method});
+            my $spec = $emitters->{$method};
+            my $code = $spec->{code};
+            $spec->{current} = $self->$code(
+                $spec->{sink},
+            )->on_fail(sub {
+                    $log->fatalf('Emitter for %s failed - %s', $method, shift);
+            })->retain;
+            $spec->{src}->resume;
+        }
     }
 
     if(my $receivers = $registry->receivers_for(ref($self))) {
-        $receivers->{$_}->{sink}->resume for (keys $receivers->%*);
+        for my $method (sort keys $receivers->%*) {
+            try {
+                $log->tracef('Starting receiver %s as %s', $method, $receivers->{$method});
+                my $spec = $receivers->{$method};
+                my $code = $spec->{code};
+                my $current = await $self->$code($spec->{sink}->source);
+                $log->tracef('Completed setup for receiver');
+
+                die "Receivers method: $method should return a Ryu::Source"
+                    unless blessed $current && $current->isa('Ryu::Source');
+
+                $spec->{current} =  $current->map(sub {
+                    my $f = Future->wrap(shift);
+                    $metrics->report_timer(receiver_timing => ($f->elapsed // 0), {method => $method, status => $f->state, service => $service_name});
+                    return $f;
+                })->resolve->completed->retain;
+                $spec->{sink}->resume;
+            } catch ($e) {
+                $log->errorf('Failed while setarting up receiver: %s', $e);
+            }
+        }
     }
 
     if (my $batches = $registry->batches_for(ref($self))) {
-        $batches->{$_}{sink}->resume for (keys $batches->%*);
+        for my $method (sort keys $batches->%*) {
+            $log->tracef('Starting batch process %s for %s', $method, ref($self));
+            my $code = $batches->{$method}{code};
+
+            $active_batch{$method} = [
+                $batches->{$method}{sink},
+                $self->process_batch($method, $code, $batches->{$method}{sink})
+            ];
+
+            $batches->{$method}{sink}->resume;
+        }
     }
 
     if (my $rpc_calls = $registry->rpc_for(ref($self))) {

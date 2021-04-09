@@ -93,7 +93,7 @@ async method service (@args) {
 
     $cmd = {
         code => async sub {
-            try { 
+            try {
                 await fmap0 {
                     my $service = shift;
                     $log->infof('Starting service [%s]', $service->service_name);
