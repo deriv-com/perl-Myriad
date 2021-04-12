@@ -26,6 +26,7 @@ use YAML::XS;
 use List::Util qw(pairmap);
 use Ryu::Observable;
 use Myriad::Storage;
+use URI;
 
 use Myriad::Exception::Builder category => 'config';
 
@@ -112,6 +113,12 @@ BUILD (%args) {
 
     # Populate transports with the default transport if they are not already
     # configured by the developer
+    my $transport_as_uri = URI->new($config->{transport});
+    if ($transport_as_uri->has_recognized_scheme) {
+        my $transport_type = $transport_as_uri->scheme;
+        $config->{"transport_$transport_type"} = $transport_as_uri;
+        $config->{transport} = $transport_as_uri->scheme;
+    }
 
     $config->{$_} //= $config->{transport} for qw(rpc_transport subscription_transport storage_transport);
 
