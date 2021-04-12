@@ -26,6 +26,7 @@ use YAML::XS;
 use List::Util qw(pairmap);
 use Ryu::Observable;
 use Myriad::Storage;
+use URI;
 
 use Myriad::Exception::Builder category => 'config';
 
