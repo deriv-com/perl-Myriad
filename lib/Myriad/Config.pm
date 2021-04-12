@@ -65,13 +65,13 @@ our %DEFAULTS = (
     service_name           => '',
 );
 
-=head2 SHORTCUTS_FOR
+=head2 FULLNAME_FOR
 
-The C<< %SHORTCUTS_FOR >> hash allows commandline shortcuts for common parameters.
+The C<< %FULLNAME_FOR >> hash maps commandline shortcuts for common parameters.
 
 =cut
 
-our %SHORTCUTS_FOR = (
+our %FULLNAME_FOR = (
     c   => 'config_path',
     l   => 'log_level',
     lib => 'library_path',
@@ -101,13 +101,13 @@ BUILD (%args) {
     # - config file
     # - defaults
 
-    $self->from_args($args{commandline});
+    $self->lookup_from_args($args{commandline});
 
-    $log->tracef('Defaults %s, shortcuts %s, args %s', \%DEFAULTS, \%SHORTCUTS_FOR, \%args);
-    $self->from_env();
+    $log->tracef('Defaults %s, shortcuts %s, args %s', \%DEFAULTS, \%FULLNAME_FOR, \%args);
+    $self->lookup_from_env();
 
     $config->{config_path} //= $DEFAULTS{config_path};
-    $self->from_file();
+    $self->lookup_from_file();
 
     $config->{$_} //= $DEFAULTS{$_} for keys %DEFAULTS;
 
@@ -136,6 +136,36 @@ method define ($key, $v) {
     $config->{$key} = $DEFAULTS{$key} = Ryu::Observable->new($v);
 }
 
+=head2 parse_subargs
+
+A helper to resolve the correct service config
+
+input is expected to look like <service_name>_[configs|instances].<key>
+
+and this sub will set the correct path to key with the provided value.
+
+Example:
+
+dummy_service.configs.password
+
+will end up in
+
+$config->{services}->{dummy_service}->{configs}->{password}
+
+it takes:
+
+=over 4
+
+=item * C<subarg> - the arguments as passed by the user.
+
+=item * C<root> - the level in which we should add the sub arg, we start from $config->{services}.
+
+=item * C<value> - the value that we should assign after resolving the config path.
+
+=back
+
+=cut
+
 method parse_subargs ($subarg, $root, $value) {
     $subarg =~ s/(.*)[_|\.](configs?|instances?)(.*)/$2$3/;
     die 'invalid service name' unless $2;
@@ -154,7 +184,24 @@ method parse_subargs ($subarg, $root, $value) {
     $root->{$sublist[0]} = $value;
 }
 
-method from_args ($commandline) {
+=head2 lookup_from_args
+
+Parse the arguments provided from the command line.
+
+There are many modules that can parse command lines arguments
+but in our case we have unknown arguments - the services configs - that
+might be passed by the user or might not and they are on top of that nested.
+
+This sub simply start looking for a match for the arg at hand in C<%DEFAULTS>
+then it searches in the shortcuts map and lastly it tries to parse it as a subarg.
+
+Currently this sub takes into account flags (0|1) configs and config written as:
+config=value
+
+
+=cut
+
+method lookup_from_args ($commandline) {
     return unless $commandline;
     my $error;
 
@@ -166,7 +213,7 @@ method from_args ($commandline) {
         ($arg, my $value) = split '=', $arg;
 
         # First match arg with expected keys
-        my $key = exists $DEFAULTS{$arg} ? $arg : $SHORTCUTS_FOR{$arg};
+        my $key = exists $DEFAULTS{$arg} ? $arg : $FULLNAME_FOR{$arg};
         if ($key) {
             # For flags (0|1) config will implement a naive parsing
             $value = 1 if defined $DEFAULTS{$arg} && $DEFAULTS{$arg} eq 0;
@@ -192,15 +239,31 @@ method from_args ($commandline) {
     }
 }
 
-method from_env () {
+=head2 lookup_from_env
+
+Tries to find environments variables that start with MYRIAD_* and parse them.
+
+=cut
+
+method lookup_from_env () {
     $config->{$_} //= delete $ENV{'MYRIAD_' . uc($_)} for grep { exists $ENV{'MYRIAD_' . uc($_)} } keys %DEFAULTS;
     map {
-        $_ =~ s/(MYRIAD_SERVICES?_)//;
+        s/(MYRIAD_SERVICES?_)//;
         $self->parse_subargs(lc($_), $config->{services}, $ENV{$1 . $_});
     } (grep {$_ =~ /MYRIAD_SERVICES?_/} keys %ENV);
 }
 
-method from_file () {
+=head2 lookup_from_file
+
+Fill the config from the config file
+
+this sub doesn't do much currently since the config
+structure is modelled exactly like how it should be in the file
+so it just read the file.
+
+=cut
+
+method lookup_from_file () {
     if(-r $config->{config_path}) {
         my ($override) = Config::Any->load_files({
             files   => [ $config->{config_path} ],
@@ -222,6 +285,28 @@ method from_file () {
         } if $expanded{services};
     }
 }
+
+=head2 service_config
+
+Takes a service base package and its current name
+and tries to resolve its config from:
+
+1. The framework storage itself (i.e Redis or Postgres ..etc).
+2. From the config parsed earlier (cmd, env, file).
+
+and if it fails to find a required config it will throw an error.
+
+it takes
+
+=over 4
+
+=item * C<pkg> - The package name of the service, will be used to lookup for generic config
+
+=item * C<service_name> - The current service name either from the registry or as it bassed by the user, useful for instances config
+
+=back
+
+=cut
 
 async method service_config ($pkg, $service_name) {
     my $service_config = {};
@@ -246,6 +331,24 @@ async method service_config ($pkg, $service_name) {
 
     return $service_config;
 }
+
+=head2 from_storage
+
+Tries to find the config key in the storage using L<Myriad::Storage>.
+
+it takes
+
+=over 4
+
+=item * C<service_name> - The service name.
+
+=item * C<instance> - If the service has many instances (e.g demo, production) this should the identifier.
+
+=item * C<key> - The required config key (e.g password, username ..etc).
+
+=back
+
+=cut
 
 async method from_storage ($service_name, $instance, $key) {
     my $storage = $Myriad::Storage::STORAGE;
