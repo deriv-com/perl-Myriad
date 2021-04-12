@@ -368,7 +368,11 @@ async method start {
                     my $f = Future->wrap(shift);
                     $metrics->report_timer(receiver_timing => ($f->elapsed // 0), {method => $method, status => $f->state, service => $service_name});
                     return $f;
-                })->resolve->completed->retain;
+                })->resolve->completed->retain->on_fail(sub {
+                    my $error = shift;
+                    $log->errorf("Reciever %s failed while processing messages - %s", $method, $error);
+                    $spec->{sink}->source->fail($error);
+                });
                 $spec->{sink}->resume;
             } catch ($e) {
                 $log->errorf('Failed while setarting up receiver: %s', $e);
