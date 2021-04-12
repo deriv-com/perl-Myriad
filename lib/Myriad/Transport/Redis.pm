@@ -1,5 +1,7 @@
 package Myriad::Transport::Redis;
 
+use Class::Method::Modifiers qw(:all);
+use Sub::Util qw(subname);
 use Myriad::Class extends => qw(IO::Async::Notifier);
 
 # VERSION
@@ -77,6 +79,20 @@ Number of items to allow per batch (pending / readgroup calls).
 =cut
 
 method batch_count () { $batch_count }
+
+
+#inject the root namespace before every command
+
+install_modifier('Net::Async::Redis::Commands', 
+                 'around', (map {s/\s/_/; lc($_)} keys %Net::Async::Redis::Commands::KEY_FINDER),
+                 sub {
+                    my $keys = \%Net::Async::Redis::Commands::KEY_FINDER;
+                    my $original_method = shift;
+                    my $self = shift;
+                    my @args = map { $_ =~ /^(storage|config|service|)\./ ? "myriad.$_" : $_} @_;
+                    return $original_method->($self, @args);
+                 }
+                );
 
 async method start {
     $redis = await $self->redis;

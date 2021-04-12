@@ -45,7 +45,7 @@ async method create_from_source (%args) {
     my $src = delete $args{source} or die 'need a source';
     my $service = delete $args{service} or die 'need a service';
 
-    my $stream = $service . '/' . $args{channel};
+    my $stream = "service.$service/$args{channel}";
 
     push @emitters, {stream => $stream, source => $src, max_len => $args{max_len} // MAX_ALLOWED_STREAM_LENGTH};
 
@@ -71,7 +71,7 @@ async method create_from_source (%args) {
 async method create_from_sink (%args) {
     my $sink = delete $args{sink} or die 'need a sink';
     my $remote_service = $args{from} || $args{service};
-    my $stream = $remote_service . '/' . $args{channel};
+    my $stream = "service.$remote_service/$args{channel}";
     $log->tracef('created sub thing from sink');
     push @receivers, {
         key => $stream,
@@ -79,7 +79,6 @@ async method create_from_sink (%args) {
         sink => $sink
     };
 }
-
 
 async method start {
     $should_shutdown //= $self->loop->new_future(label => 'subscription::redis::shutdown');
