@@ -111,6 +111,7 @@ async method receive_items {
             my $item = shift @receivers;
             push @receivers, $item;
 
+            $log->tracef('Will readgroup on %s', $item->{key});
             my $stream = $item->{key};
             my $sink = $item->{sink};
             my $client = $item->{client};

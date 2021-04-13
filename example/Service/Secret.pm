@@ -11,7 +11,7 @@ has $check_event_handler = Ryu::Source->new;
 has $ids = {};
 
 async method diagnostics ($level) {
-    return 1;
+    return 'ok';
 }
 
 async method check : RPC (%args) {

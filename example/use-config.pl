@@ -3,6 +3,8 @@ package Serivce::Example::Config;
 use strict;
 use warnings;
 
+use Myriad::Service;
+
 config 'required_key';
 config 'optional_key', default => 'option';
 config 'secret', secure => 1;
@@ -20,3 +22,5 @@ async method startup () {
     # This will throw
     my $unknown = $api->config('unknown');
 }
+
+1;
