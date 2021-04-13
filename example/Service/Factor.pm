@@ -6,7 +6,7 @@ has $factor = 0;
 has $players_id = {};
 
 async method diagnostics ($level) {
-    return 1;
+    return 'ok';
 }
 
 async method secret_checks : Receiver(service => 'example.service.secret') ($sink) {
