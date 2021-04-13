@@ -55,17 +55,20 @@ async method add_service (%args) {
     $srv = $srv->new(
         %args,
         name => $service_name,
-        rpc => $myriad->rpc,
-        subscription => $myriad->subscription,
+        myriad => $myriad,
     ) unless blessed($srv) and $srv->isa('Myriad::Service');
 
     # Inject an `$api` instance so that this service can talk
     # to storage and the outside world
-    $Myriad::Service::SLOT{$pkg}{api}->value($srv) = Myriad::API->new(
-        myriad => $myriad,
-        service_name => $service_name,
-        config => await $myriad->config->service_config($pkg, $service_name),
-    );
+    # also make sure that storage is initiated
+    $myriad->storage;
+    $myriad->on_start(async sub {
+        $Myriad::Service::SLOT{$pkg}{api}->value($srv) = Myriad::API->new(
+            myriad => $myriad,
+            service_name => $service_name,
+            config => await $myriad->config->service_config($pkg, $service_name),
+        );
+    });
 
     {
         no strict 'refs';
@@ -76,10 +79,11 @@ async method add_service (%args) {
     $batch{$pkg} ||= {};
     $emitter{$pkg} ||= {};
     $receiver{$pkg} ||= {};
-    $log->tracef('Going to add service %s', $service_name);
+    $log->tracef('Going to load service %s', $service_name);
     $self->loop->add(
         $srv
     );
+    await $srv->load();
     my $k = refaddr($srv);
     weaken($service_by_name{$service_name} = $srv);
     weaken($myriad->services->{$k} = $srv);

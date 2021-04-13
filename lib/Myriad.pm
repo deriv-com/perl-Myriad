@@ -364,6 +364,12 @@ method rpc () {
             )
         );
 
+        $self->on_start(async sub {
+            $rpc->start->retain->on_fail(sub {
+                $self->shutdown_future->fail(shift);
+            });
+        });
+
         $self->on_shutdown(async sub {
             await $rpc->stop;
         });
@@ -386,6 +392,10 @@ method rpc_client () {
                 myriad => $self,
             )
         );
+
+        $rpc_client->start->retain->on_fail(sub {
+            $self->shutdown_future->fail(shift);
+        });
 
         $self->on_shutdown(async sub {
             await $rpc_client->stop;
@@ -425,6 +435,12 @@ method subscription () {
             )
         );
 
+        $self->on_start(async sub {
+            $subscription->start->retain->on_fail(sub {
+                $self->shutdown_future->fail(shift);
+            });
+        });
+
         $self->on_shutdown(async sub {
             await $subscription->stop;
         });
@@ -445,6 +461,7 @@ method storage () {
             myriad => $self,
         );
     }
+    $storage
 }
 
 =head2 registry
@@ -629,12 +646,10 @@ async method run () {
         }))
     }
 
-    $self->storage;
-
-    # Run the startup tasks
-    await Future->needs_all(
-        map { $_->() } splice $startup_tasks->@*
-    );
+    # Run the startup tasks, order is imporatant
+    for my $task ($startup_tasks->@*) {
+        await $task->();
+    }
 
     # Set shutdown future before starting commands.
     $shutdown //= $self->loop->new_future->set_label('shutdown');

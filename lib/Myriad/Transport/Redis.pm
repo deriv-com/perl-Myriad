@@ -175,44 +175,32 @@ Returns a L<Ryu::Source> which emits L<Myriad::Redis::Pending> items.
 
 =cut
 
-method iterate (%args) {
-    my $src = $self->source;
-    my $streams = $args{streams};
+async method read_from_stream (%args) {
+    my $stream = $args{stream};
     my $group = $args{group};
     my $client = $args{client};
-    Future->wait_any(
-        $src->completed->without_cancel,
-        (async sub {
-            while (1) {
-                await $src->unblocked;
-                my ($batch) = await $self->xreadgroup(
-                    BLOCK   => $self->wait_time,
-                    GROUP   => $group, $client,
-                    COUNT   => $self->batch_count,
-                    STREAMS => $streams->@*, map {'>'} $streams->@*,
-                );
-                $log->tracef('Read group %s', $batch);
-                for my $delivery ($batch->@*) {
-                    my  ($stream, $data) = $delivery->@*;
-                    for my $item ($data->@*) {
-                        my ($id, $args) = $item->@*;
-                        $log->tracef(
-                            'Item from stream %s is ID %s and args %s',
-                            $stream,
-                            $id,
-                            $args
-                        );
-                        if($args) {
-                            $src->emit({stream => $stream, id => $id, data => $args});
-                        }
-                    }
-                }
-            }
-        })->()->without_cancel
-    )->on_fail(sub {
-        $src->fail(shift);
-    })->retain;
-    $src;
+
+    my ($delivery) = await $self->xreadgroup(
+        BLOCK   => $self->wait_time,
+        GROUP   => $group, $client,
+        COUNT   => $self->batch_count,
+        STREAMS => ($stream, '>'),
+    );
+
+    $log->tracef('Read group %s', $delivery);
+
+    # We are strictly reading for one stream
+    my $batch = $delivery->[0];
+    if ($batch) {
+        my  ($stream, $data) = $batch->@*;
+        return map {
+            my ($id, $args) = $_->@*;
+            $log->tracef('Item from stream %s is ID %s and args %s', $stream, $id, $args);
+            return {stream => $stream, id => $id, data => $args}
+        } $data->@*;
+    }
+
+    return ();
 }
 
 async method stream_info ($stream) {
