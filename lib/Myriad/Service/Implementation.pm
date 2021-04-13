@@ -340,7 +340,7 @@ async method start {
     my $registry = $Myriad::REGISTRY;
     if(my $emitters = $registry->emitters_for(ref($self))) {
         for my $method (sort keys $emitters->%*) {
-            $log->tracef('Starting emitter %s as %s', $method, $emitters->{$method});
+            $log->tracef('Starting emitter %s as %s', $method, $emitters->{$method}->{channel});
             my $spec = $emitters->{$method};
             my $code = $spec->{code};
             $spec->{current} = $self->$code(
@@ -355,7 +355,7 @@ async method start {
     if(my $receivers = $registry->receivers_for(ref($self))) {
         for my $method (sort keys $receivers->%*) {
             try {
-                $log->tracef('Starting receiver %s as %s', $method, $receivers->{$method});
+                $log->tracef('Starting receiver %s as %s', $method, $receivers->{$method}->{channel});
                 my $spec = $receivers->{$method};
                 my $code = $spec->{code};
                 my $current = await $self->$code($spec->{sink}->source);

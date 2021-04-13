@@ -1,31 +1,65 @@
 use strict;
 use warnings;
 
+use Future::AsyncAwait;
 use Test::More;
 use Myriad;
-plan skip_all => 'it is not useful and will fix it later';
-my @received;
+my @received_from_emitter;
+my @received_from_batch;
 
-package Example::Service {
+package Example::Sender {
     use Myriad::Service;
-    async method simple_emitter : Emitter(
-        channel => 'example'
-    ) ($sink, $api, $args) {
-        $sink->from([1..10]);
+    my $sent = 0;
+
+    async method simple_emitter : Emitter() ($sink) {
+        $sink->emit({event => 1});
     }
-    async method simple_receiver : Receiver(
-        channel => 'example'
-    ) ($src, $api, $args) {
-        $src->each(sub { push @received, $_ });
+
+    async method simple_batch : Batch () {
+        my $arr = [];
+        $arr =  [{event => 1}, {event => 2}] unless $sent;
+        $sent = 1;
+        return $arr;
     }
 }
 
+package Example::Receiver {
+    use Myriad::Service;
+    
+    async method receiver_from_emitter : 
+        Receiver( service => 'Example::Sender',
+                  channel => 'simple_emitter') ($src) {
+        return $src->map(sub {
+            push @received_from_emitter, shift
+        });
+    }
+
+    async method receiver_from_batch : 
+        Receiver( service => 'Example::Sender',
+                  channel => 'simple_batch') ($src) {
+        return $src->map(sub {
+            push @received_from_batch, shift
+        });
+    }
+
+}
+
 my $myriad = new_ok('Myriad');
-$myriad->add_service(
-    'Example::Service',
-    name    => 'example',
-)->get;
-isa_ok(my $srv = $myriad->service_by_name('example'), 'Myriad::Service');
+$myriad->configure_from_argv("--transport", "perl", "service")->get;
+
+$myriad->add_service('Example::Receiver')->get;
+$myriad->add_service('Example::Sender')->get;
+
+$myriad->run->retain;
+
+ok($myriad->subscription, 'subscription is initiated');
+
+is(scalar $myriad->subscription->receivers->@*, 2, 'We have correct number of receivers detected');
+
+await $myriad->loop->delay_future(after => 0.4);
+
+is(@received_from_emitter, 1, 'we have received correct number of messages from emitter');
+is(@received_from_batch,   2, 'we have received correct number of messages from batch');
 
 done_testing;
 

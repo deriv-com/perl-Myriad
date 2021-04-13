@@ -20,6 +20,8 @@ BUILD {
     $receivers = [];
 }
 
+method receivers { $receivers }
+
 method _add_to_loop ($loop) {
     $stopped = $loop->new_future(label => 'subscription::redis::stopped');
 }
@@ -52,11 +54,6 @@ async method create_from_sink (%args) {
 
 
 async method start {
-    if(!$receivers->@*) {
-        $stopped->done;
-        return;
-    }
-
     for my $subscription ($receivers->@*) {
         try {
             await $transport->create_consumer_group($subscription->{channel}, 'subscriber', 0, 1);
@@ -68,6 +65,17 @@ async method start {
     while (1) {
         my $subscription = shift $receivers->@*;
         push  $receivers->@*, $subscription;
+
+        try {
+            await Future->wait_any(
+                $self->loop->timeout_future(after => 0.5),
+                $subscription->{sink}->unblocked,
+            );
+        } catch {
+            $log->tracef("skipped stream %s because sink is blocked", $subscription->{channel});
+            next
+        }
+
         my %messages = await $transport->read_from_stream_by_consumer($subscription->{channel}, 'subscriber', 'consumer');
         for my $event_id (keys %messages) {
             $subscription->{sink}->emit($messages{$event_id});
