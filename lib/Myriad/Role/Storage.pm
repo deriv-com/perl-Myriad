@@ -55,13 +55,6 @@ our @READ_METHODS = qw(get observe hash_get hash_keys hash_values hash_exists ha
 requires $_ for @WRITE_METHODS;
 requires $_ for @READ_METHODS;
 
-around @READ_METHODS, @WRITE_METHODS => sub {
-    my $original_method = shift;
-    my $self = shift;
-    my $original_key = shift;
-    return $self->$original_method("storage.$original_key", @_);
-};
-
 =head2 get
 
 Takes the following parameters:

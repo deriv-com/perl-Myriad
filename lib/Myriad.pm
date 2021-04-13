@@ -366,7 +366,7 @@ method rpc () {
 
         $self->on_start(async sub {
             $rpc->start->retain->on_fail(sub {
-                $self->shutdown_future->fail(shift);
+                $self->shutdown_future->fail(shift) unless $self->shutdown_future->is_ready;
             });
         });
 
