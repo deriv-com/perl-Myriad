@@ -54,7 +54,8 @@ method storage { $storage };
 method local_service_name { $local_service_name // 'local' };
 
 BUILD (%args) {
-    $prefix = delete $args{prefix} // die 'need a prefix';
+    my $service_prefix = delete $args{prefix} // die 'need a prefix';
+    $prefix = "service.$service_prefix";
     $storage = delete $args{storage} // die 'need a storage instance';
     $local_service_name = delete $args{local_service_name};
 }
@@ -77,7 +78,7 @@ Returns the modified key.
 =cut
 
 method apply_prefix ($k) {
-    return $prefix . '.' . $k;
+    return $prefix . '/' . $k;
 }
 
 1;

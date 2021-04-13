@@ -42,7 +42,7 @@ async method create_from_source (%args) {
     my $src = delete $args{source} or die 'need a source';
     my $service = delete $args{service} or die 'need a service';
 
-    my $stream = $service . '/' . $args{channel};
+    my $stream = "service.subscriptions.$service/$args{channel}";
 
     $src->unblocked->then(sub {
         # The streams will be checked later by "check_for_overflow" to avoid unblocking the source by mistake
@@ -71,7 +71,7 @@ async method create_from_source (%args) {
 async method create_from_sink (%args) {
     my $sink = delete $args{sink} or die 'need a sink';
     my $remote_service = $args{from} || $args{service};
-    my $stream = $remote_service . '/' . $args{channel};
+    my $stream = "service.subscriptions.$remote_service/$args{channel}";
     $log->tracef('created sub thing from sink');
     push @receivers, {
         key => $stream,
@@ -80,7 +80,6 @@ async method create_from_sink (%args) {
         group => 0,
     };
 }
-
 
 async method start {
     $should_shutdown //= $self->loop->new_future(label => 'subscription::redis::shutdown');
@@ -126,7 +125,6 @@ async method receive_items {
                 next
             }
 
-            $log->tracef('Will readgroup on %s', $item);
             await $self->create_group($item);
 
             my @events = await $redis->read_from_stream(
@@ -140,7 +138,6 @@ async method receive_items {
                     my $event_data = $event->{data}->[1];
                     $sink->source->emit({data => decode_json_utf8($event_data)});
                 } catch($e) {
-                    warn $e;
                     $log->tracef("An error happned while decoding event data for stream %s message: %s , error: %s",
                     $stream, $event->{data}, $e);
                 }

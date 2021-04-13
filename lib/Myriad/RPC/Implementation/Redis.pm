@@ -14,6 +14,7 @@ use Myriad::Class extends => qw(IO::Async::Notifier);
 use Future::Utils qw(fmap0);
 
 use constant RPC_SUFFIX => '/rpc';
+use constant RPC_PREFIX => 'service';
 use Exporter qw(import);
 our @EXPORT_OK = qw(stream_name_from_service);
 
@@ -46,13 +47,13 @@ has $streams_list;
 has $running;
 
 sub service_name_from_stream ($stream) {
-    my $pattern = RPC_SUFFIX . '$';
-    $stream =~ s/$pattern//;
+    my $pattern = RPC_PREFIX . '\.(.*)' . RPC_SUFFIX . '$';
+    $stream =~ s/$pattern/$1/;
     return $stream;
 }
 
 sub stream_name_from_service ($service) {
-    return $service . RPC_SUFFIX;
+    return RPC_PREFIX . ".$service" . RPC_SUFFIX;
 }
 
 method configure (%args) {

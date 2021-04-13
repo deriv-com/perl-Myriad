@@ -1,5 +1,7 @@
 package Myriad::Transport::Redis;
 
+use Class::Method::Modifiers qw(:all);
+use Sub::Util qw(subname);
 use Myriad::Class extends => qw(IO::Async::Notifier);
 
 # VERSION
@@ -39,7 +41,7 @@ has $pending_redis_count = 0;
 has $wait_time = 15_000;
 has $batch_count = 50;
 has $max_pool_count;
-
+has $prefix;
 has $ryu;
 
 BUILD {
@@ -56,7 +58,7 @@ method configure (%args) {
         $use_cluster = delete $args{cluster};
     }
     $max_pool_count = exists $args{max_pool_count} ? delete $args{max_pool_count} : 10;
-
+    $prefix //= exists $args{prefix} ? delete $args{prefix} : 'myriad';
     return $self->next::method(%args);
 }
 
@@ -83,6 +85,24 @@ async method start {
     return;
 }
 
+
+=head2 apply_prefix
+
+=cut
+
+method apply_prefix($key) {
+    $key =~ /^$prefix\./ ? $key : "$prefix.$key";
+}
+
+=head2 remove_prefix
+
+=cut
+
+method remove_prefix($key) {
+    $key =~ s/^$prefix\.//;
+    return $key;
+}
+
 =head2 oldest_processed_id
 
 Check the last id that has been processed
@@ -91,6 +111,7 @@ by B<all> the consumer groups in the given stream.
 =cut
 
 async method oldest_processed_id($stream) {
+    $stream = $self->apply_prefix($stream);
     my ($groups) = await $redis->xinfo(GROUPS => $stream);
     my $oldest;
 
@@ -176,7 +197,7 @@ Returns a L<Ryu::Source> which emits L<Myriad::Redis::Pending> items.
 =cut
 
 async method read_from_stream (%args) {
-    my $stream = $args{stream};
+    my $stream = $self->apply_prefix($args{stream});
     my $group = $args{group};
     my $client = $args{client};
 
@@ -196,7 +217,7 @@ async method read_from_stream (%args) {
         return map {
             my ($id, $args) = $_->@*;
             $log->tracef('Item from stream %s is ID %s and args %s', $stream, $id, $args);
-            return {stream => $stream, id => $id, data => $args}
+            return {stream => $self->remove_prefix($stream), id => $id, data => $args}
         } $data->@*;
     }
 
@@ -204,6 +225,7 @@ async method read_from_stream (%args) {
 }
 
 async method stream_info ($stream) {
+    $self->apply_prefix($stream);
     my $v = await $redis->xinfo(
         STREAM => $stream
     );
@@ -226,7 +248,7 @@ Clear up old entries from a stream when it grows too large.
 =cut
 
 async method cleanup (%args) {
-    my $stream = $args{stream};
+    my $stream = $self->apply_prefix($args{stream});
     # Check on our status - can we clean up any old queue items?
     my ($info) = await $self->stream_info($stream);
     return unless $info->{length} > $args{limit};
@@ -301,7 +323,7 @@ Returns a L<Ryu::Source> for the pending items in this stream.
 
 method pending (%args) {
     my $src = $self->source;
-    my $stream = $args{stream};
+    my $stream = $self->apply_prefix($args{stream});
     my $group = $args{group};
     my $client = $args{client};
     my $instance;
@@ -341,46 +363,6 @@ method pending (%args) {
     $src;
 }
 
-=head2 publish
-
-Publish a message through a Redis channel (pub/sub system)
-
-=over 4
-
-=item * C<channel> - The channel name.
-
-=item * C<message> - The message we want to publish (string).
-
-=back
-
-=cut
-
-async method publish ($channel, $message) {
-    await $redis->publish($channel, "$message");
-}
-
-
-=head2 ack
-
-Acknowledge a message from a Redis stream.
-
-=over 4
-
-=item * C<stream> - The stream name.
-
-=item * C<group> - The group name.
-
-=item * C<message_id> - The id of the message we want to acknowledge.
-
-=back
-
-=cut
-
-async method ack ($stream, $group, $message_id) {
-    await $redis->xack($stream, $group, $message_id);
-}
-
-
 =head2 create_group
 
 Create a Redis consumer group if it does NOT exist.
@@ -402,7 +384,7 @@ by default it's `$` which means the last message.
 
 async method create_group ($stream, $group, $start_from = '$') {
     try {
-        await $redis->xgroup('CREATE', $stream, $group, $start_from, 'MKSTREAM');
+        await $redis->xgroup('CREATE', $self->apply_prefix($stream), $group, $start_from, 'MKSTREAM');
     } catch ($e) {
         if($e =~ /BUSYGROUP/){
             return;
@@ -429,11 +411,7 @@ This currently just execute C<XPENDING> without any filtering.
 =cut
 
 async method pending_messages_info($stream, $group) {
-    await $redis->xpending($stream, $group);
-}
-
-async method xadd (@args) {
-    return await $redis->xadd(@args);
+    await $redis->xpending($self->apply_prefix($stream), $group);
 }
 
 =head2 stream_length
@@ -443,18 +421,7 @@ Return the length of a given stream
 =cut
 
 async method stream_length ($stream) {
-    return await $redis->xlen($stream);
-}
-
-=head2 borrow_instance
-
-Returns a redis instance to be used by the L<Myriad::Storage::Implementation::Redis>
-as an action instance.
-
-=cut
-
-method borrow_instance () {
-    return $redis;
+    return await $redis->xlen($self->apply_prefix($stream));
 }
 
 =head2 borrow_instance_from_pool
@@ -476,7 +443,6 @@ async method borrow_instance_from_pool {
     push @$waiting_redis_pool, my $f = $self->loop->new_future;
     $log->warnf('All Redis instances are pending, added to waiting list. Current Redis count: %d/%d | Waiting count: %d', $pending_redis_count, $max_pool_count, 0 + $waiting_redis_pool->@*);
     return await $f;
-
 }
 
 =head2 return_instance_to_pool
@@ -503,31 +469,6 @@ method return_instance_to_pool ($instance) {
         $log->tracef('Returning instance to pool, Redis used/available now %d/%d', $pending_redis_count, 0 + $redis_pool->@*);
         $pending_redis_count--;
     }
-}
-
-async method xreadgroup (@args) {
-    my $instance = await $self->borrow_instance_from_pool;
-    my ($batch) =  await $instance->xreadgroup(@args)->on_ready(sub {
-        $self->return_instance_to_pool($instance);
-    });
-    return ($batch);
-}
-
-async method xgroup (@args) {
-    return await $redis->xgroup(@args);
-}
-
-=head2 subscribe
-
-Subscribe to a redis channel.
-
-=cut
-
-async method subscribe ($channel) {
-    my $instance = await $self->borrow_instance_from_pool;
-    await $instance->subscribe($channel)->on_ready(sub {
-        $self->return_instance_to_pool($instance);
-    });
 }
 
 =head2 redis
@@ -559,6 +500,105 @@ async method redis {
         await $instance->connect;
     }
     return $instance;
+}
+
+async method xreadgroup (@args) {
+    my $instance = await $self->borrow_instance_from_pool;
+    my ($batch) =  await $instance->xreadgroup(@args)->on_ready(sub {
+        $self->return_instance_to_pool($instance);
+    });
+    return ($batch);
+}
+
+async method xadd ($stream, @args) {
+    return await $redis->xadd($self->apply_prefix($stream), @args);
+}
+
+=head2 ack
+
+Acknowledge a message from a Redis stream.
+
+=over 4
+
+=item * C<stream> - The stream name.
+
+=item * C<group> - The group name.
+
+=item * C<message_id> - The id of the message we want to acknowledge.
+
+=back
+
+=cut
+
+async method ack ($stream, $group, $message_id) {
+    await $redis->xack($self->apply_prefix($stream), $group, $message_id);
+}
+
+=head2 publish
+
+Publish a message through a Redis channel (pub/sub system)
+
+=over 4
+
+=item * C<channel> - The channel name.
+
+=item * C<message> - The message we want to publish (string).
+
+=back
+
+=cut
+
+async method publish ($channel, $message) {
+    await $redis->publish($self->apply_prefix($channel), "$message");
+}
+
+=head2 subscribe
+
+Subscribe to a redis channel.
+
+=cut
+
+async method subscribe ($channel) {
+    my $instance = await $self->borrow_instance_from_pool;
+    await $instance->subscribe($self->apply_prefix($channel))->on_ready(sub {
+        $self->return_instance_to_pool($instance);
+    });
+}
+
+async method get($key) {
+    await $redis->get($self->apply_prefix($key));
+}
+
+async method set ($key, $v) {
+    await $redis->set($self->apply_prefix($key), $v);
+}
+
+async method getset($key, $v) {
+    await $redis->set($self->apply_prefix($key), $v);
+}
+
+async method rpush($key, @v) {
+    await $redis->rpush($self->apply_prefix($key), @v);
+}
+
+async method lpush($key, @v) {
+    await $redis->lpush($self->apply_prefix($key), @v);
+}
+
+async method rpop($key) {
+    await $redis->rpop($self->apply_prefix($key));
+}
+
+async method lpop($key) {
+    await $redis->lpop($self->apply_prefix($key));
+}
+
+async method hset ($k, $hash_key, $v) {
+    await $redis->hset($k, $self->apply_prefix($hash_key), $v);
+}
+
+async method hget($k, $hash_key) {
+    await $redis->hget($k, $self->apply_prefix($hash_key));
 }
 
 1;

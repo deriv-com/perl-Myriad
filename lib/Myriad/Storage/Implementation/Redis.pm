@@ -9,6 +9,8 @@ use warnings;
 use Future::AsyncAwait;
 use Object::Pad;
 
+use constant STORAGE_PREFIX => 'storage';
+
 class Myriad::Storage::Implementation::Redis;
 
 use experimental qw(signatures);
@@ -34,6 +36,16 @@ BUILD (%args) {
     $redis = delete $args{redis} // die 'need a Transport instance';
 }
 
+=head2 apply_prefix
+
+Add the storage prefix to the key before sending it to Redis
+
+=cut
+
+method apply_prefix($key) {
+    return STORAGE_PREFIX . '.' . $key;
+}
+
 =head2 get
 
 Takes the following parameters:
@@ -49,7 +61,7 @@ Returns a L<Future> which will resolve to the corresponding value, or C<undef> i
 =cut
 
 async method get ($k) {
-    await $redis->borrow_instance->get($k);
+    await $redis->get($self->apply_prefix($k));
 }
 
 =head2 set
@@ -73,7 +85,7 @@ Returns a L<Future> which will resolve on completion.
 
 async method set ($k, $v) {
     die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
-    await $redis->borrow_instance->set($k => $v);
+    await $redis->set($self->apply_prefix($k) => $v);
 }
 
 =head2 getset
@@ -97,7 +109,7 @@ Returns a L<Future> which will resolve to the original value on completion.
 
 async method getset ($k, $v) {
     die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
-    return await $redis->borrow_instance->getset($k => $v);
+    return await $redis->getset($self->apply_prefix($k) => $v);
 }
 
 =head2 observe
@@ -109,10 +121,7 @@ Returns a L<Ryu::Source> which will emit the current and all subsequent values.
 =cut
 
 method observe ($k) {
-    my $instance = $redis->borrow_instance_from_pool;
-    return $instance->subscribe($k)->on_ready(sub {
-        $redis->return_instance_to_pool($instance);
-    });
+    return $redis->subscribe($self->apply_prefix($k));
 }
 
 =head2 push
@@ -133,7 +142,7 @@ Returns a L<Future> which will resolve to .
 
 async method push ($k, @v) {
     die 'value cannot be a reference for ' . $k . ' - ' . ref($_) for grep { ref } @v;
-    await $redis->borrow_instance->rpush($k, @v);
+    await $redis->rpush($self->apply_prefix($k), @v);
 }
 
 =head2 unshift
@@ -152,7 +161,7 @@ Returns a L<Future> which will resolve to .
 
 async method unshift ($k, @v) {
     die 'value cannot be a reference for ' . $k . ' - ' . ref($_) for grep { ref } @v;
-    await $redis->borrow_instance->lpush($k, @v);
+    await $redis->lpush($self->apply_prefix($k), @v);
 }
 
 =head2 pop
@@ -170,7 +179,7 @@ Returns a L<Future> which will resolve to .
 =cut
 
 async method pop ($k) {
-    await $redis->borrow_instance->rpop($k);
+    await $redis->rpop($self->apply_prefix($k));
 }
 
 =head2 shift
@@ -188,7 +197,7 @@ Returns a L<Future> which will resolve to .
 =cut
 
 async method shift ($k) {
-    await $redis->borrow_instance->lpop($k);
+    await $redis->lpop($self->apply_prefix($k));
 }
 
 =head2 hash_set
@@ -207,7 +216,7 @@ Returns a L<Future> which will resolve to .
 
 async method hash_set ($k, $hash_key, $v) {
     die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
-    await $redis->borrow_instance->hset($k, $hash_key, $v);
+    await $redis->hset($k, $self->apply_prefix($hash_key), $v);
 }
 
 =head2 hash_get
@@ -225,7 +234,7 @@ Returns a L<Future> which will resolve to the scalar value for this key.
 =cut
 
 async method hash_get ($k, $hash_key) {
-    await $redis->borrow_instance->hget($k, $hash_key);
+    await $redis->hget($k, $self->apply_prefix($hash_key));
 }
 
 =head2 hash_add

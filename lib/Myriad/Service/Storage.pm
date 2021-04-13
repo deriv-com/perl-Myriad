@@ -50,7 +50,8 @@ method storage { $storage }
 method prefix { $prefix }
 
 BUILD (%args) {
-    $prefix = delete $args{prefix} // die 'need a prefix';
+    my $service_prefix = delete $args{prefix} // die 'need a prefix';
+    $prefix = "service.$service_prefix";
     $storage = delete $args{storage} // die 'need a storage instance';
 }
 
@@ -72,7 +73,7 @@ Returns the modified key.
 =cut
 
 method apply_prefix ($k) {
-    return $prefix . '.' . $k;
+    return $prefix . '/' . $k;
 }
 
 1;

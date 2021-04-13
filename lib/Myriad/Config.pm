@@ -354,8 +354,7 @@ async method from_storage ($service_name, $instance, $key) {
     my $storage = $Myriad::Storage::STORAGE;
     if ($storage) {
         $service_name .= "[$instance]" if $instance;
-        # Todo: Once we enable root namespace we should change this
-        await $storage->get("myriad.config.service.$service_name.$key");
+        await $storage->get("config.service.$service_name.$key");
     }
 }
 
