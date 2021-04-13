@@ -111,7 +111,6 @@ subtest "Adding Service" => sub {
     like($registry->make_service_name('Testing::Service'), qr/$service_name/, "Service name is set correctly");
 
     my $srv_meta = $service->META;
-    isa_ok($srv_meta->get_slot('$api')->value($service), 'Myriad::API', "API instance been injected in Service");
     # Calling empty <component>_for for an added service will not trigger exception. reveiver and emitter in this case.
     my ($rpc, $batch, $receiver, $emitter) = map {my $meth = component_for_method($_); $registry->$meth('Testing::Service')} qw(rpc batch receiver emitter);
     cmp_deeply([map {keys %$_ } ($rpc, $batch, $receiver, $emitter)], ['inc_test', 'batch_test'], 'Registry components configured after service adding');

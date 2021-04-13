@@ -125,34 +125,4 @@ sub mock_component {
 
 }
 
-subtest "rpc command" => sub {
-    is(exception {
-        my $myriad = Myriad->new;
-        my $svc_pkg_name = 'Test::Service::Mocked';
-        $myriad->META->get_slot('$config')->value($myriad) = Myriad::Config->new( commandline => ['--service_name', $svc_pkg_name] );
-        my $command = new_ok('Myriad::Commands'=> ['myriad', $myriad]);
-        mock_component('rpc_client', 'call_rpc', 'rpc_client_test');
-        ok(wait_for_future( $command->rpc($test_cmd, value => 1) )->get, 'Command has been added');
-
-        is $started_components{'rpc_client'}, undef, 'Component RPC not yet started';
-        # Results will be printed as log.
-        my $working_cmd = wait_for_future($command->run_cmd)->get;
-
-        ok($started_components{'rpc_client'}, 'Component RPC started');
-        is($calls{$test_cmd}, 1, 'called correct command');
-        # Check what service is called
-        is($_->{svc}, $myriad->registry->make_service_name($svc_pkg_name), "Correct service name passed") for $rmt_svc_cmd_called->{call_rpc}->@*;
-        like( $working_cmd->result, qr/shutdown called/, 'RPC command called shutdown' );
-
-
-        ok(wait_for_future( $command->rpc('not_an_rpc', value => 1) )->get, 'Wrong command has been added');
-        my $fail_cmd = wait_for_future($command->run_cmd)->get;
-        is($calls{'not_an_rpc'}, 1, 'called correct command');
-        like($working_cmd->result, qr/shutdown called/, 'RPC command called shutdown');
-
-        is($shutdown_count, 2, "Shutdown called 2 times because we passed 2 commands");
-    }, undef, 'no problems running RPC commands');
-    done_testing;
-};
-
 done_testing;
