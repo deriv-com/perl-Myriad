@@ -32,7 +32,6 @@ try {
     );
     await $myriad->configure_from_argv(@ARGV);
     await $myriad->run;
-    $log->infof('Ending Myriad on %s pid %d at %s', $hostname, $$, Time::Moment->now->to_string);
 } catch ($e) {
     $log->errorf('%s failed due to %s', $0, $e);
 }
