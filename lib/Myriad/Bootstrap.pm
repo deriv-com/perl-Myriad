@@ -264,7 +264,10 @@ sub boot {
                 delete @found{keys %ALLOWED_MODULES};
 
                 my $loaded_modules = join ',', sort keys %found;
-                die "excessive module loading detected: $loaded_modules" if $loaded_modules;
+                if ($loaded_modules) {
+                    kill QUIT => $_ for @children_pids;
+                    die "excessive module loading detected: $loaded_modules";
+                }
             }
 
             local $SIG{HUP} = sub {
