@@ -205,7 +205,7 @@ async method process_batch($k, $code, $src) {
         try {
             $data = await $self->$code()->on_ready(sub {
                 my $f = shift;
-                $metrics->report_timer(batch_timing => $f->elapsed, {method => $k, status => $f->state, service => $service_name});
+                $metrics->report_timer(batch_timing => $f->elapsed // 0, {method => $k, status => $f->state, service => $service_name});
             });
         } catch ($e) {
             $log->warnf("Batch iteration for %s failed - %s", $k, $e);
@@ -309,7 +309,7 @@ async method load () {
                 try {
                     my $response = await $self->$code($message->args->%*)->on_ready(sub {
                         my $f = shift;
-                        $metrics->report_timer(rpc_timing => $f->elapsed, {method => $method, status => $f->state, service => $service_name});
+                        $metrics->report_timer(rpc_timing => $f->elapsed // 0, {method => $method, status => $f->state, service => $service_name});
                     });
                     await $self->rpc->reply_success($service_name, $message, $response);
                 } catch ($e) {
@@ -340,7 +340,7 @@ async method start {
     my $registry = $Myriad::REGISTRY;
     if(my $emitters = $registry->emitters_for(ref($self))) {
         for my $method (sort keys $emitters->%*) {
-            $log->tracef('Starting emitter %s as %s', $method, $emitters->{$method});
+            $log->tracef('Starting emitter %s as %s', $method, $emitters->{$method}->{channel});
             my $spec = $emitters->{$method};
             my $code = $spec->{code};
             $spec->{current} = $self->$code(
@@ -355,7 +355,7 @@ async method start {
     if(my $receivers = $registry->receivers_for(ref($self))) {
         for my $method (sort keys $receivers->%*) {
             try {
-                $log->tracef('Starting receiver %s as %s', $method, $receivers->{$method});
+                $log->tracef('Starting receiver %s as %s', $method, $receivers->{$method}->{channel});
                 my $spec = $receivers->{$method};
                 my $code = $spec->{code};
                 my $current = await $self->$code($spec->{sink}->source);

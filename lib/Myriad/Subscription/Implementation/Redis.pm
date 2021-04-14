@@ -116,7 +116,7 @@ async method receive_items {
             my $client = $item->{client};
 
             try {
-                await Future->needs_any(
+                await Future->wait_any(
                     $self->loop->timeout_future(after => 0.5),
                     $sink->unblocked,
                 );

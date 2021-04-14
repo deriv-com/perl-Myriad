@@ -646,9 +646,14 @@ async method run () {
         }))
     }
 
-    # Run the startup tasks, order is imporatant
-    for my $task ($startup_tasks->@*) {
-        await $task->();
+    try {
+        # Run the startup tasks, order is imporatant
+        for my $task ($startup_tasks->@*) {
+            await $task->();
+        }
+    } catch ($e) {
+        $log->warnf("Startup tasks failed - %s", $e);
+        $self->shutdown->await;
     }
 
     # Set shutdown future before starting commands.

@@ -50,37 +50,37 @@ Start waiting for new requests to fill in the internal requests queue.
 =cut
 
 async method start () {
-    if(!$services_list) {
-        $should_shutdown = Future->done();
-        return;
-    }
-
     $should_shutdown //= $self->loop->new_future(label => 'rpc::perl::shutdown_future')->without_cancel;
-    for my $service ($services_list->@*) {
-        await $transport->create_consumer_group($service, $self->group_name, 0, 1);
-    }
 
     while (1) {
-        my $service = shift $services_list->@*;
-        push $services_list->@*, $service;
+        if ($services_list && $services_list->@*) {
+            my $service = shift $services_list->@*;
+            push $services_list->@*, $service;
 
-        my %messages = await $transport->read_from_stream_by_consumer($service, $self->group_name, hostname());
-        for my $id (sort keys %messages) {
-            my $message;
             try {
-                $messages{$id}->{transport_id} = $id;
-                $message = Myriad::RPC::Message::from_hash($messages{$id}->%*);
-                if (my $sink = $rpc_methods->{$service}->{$message->rpc}) {
-                    $sink->emit($message);
-                } else {
-                    Myriad::Exception::RPC::MethodNotFound->throw(reason => $message->rpc);
+                 await $transport->create_consumer_group($service, $self->group_name, 0, 1);
+            } catch {
+                $log->tracef("Group alrady exists");
+            }
+
+            my %messages = await $transport->read_from_stream_by_consumer($service, $self->group_name, hostname());
+            for my $id (sort keys %messages) {
+                my $message;
+                try {
+                    $messages{$id}->{transport_id} = $id;
+                    $message = Myriad::RPC::Message::from_hash($messages{$id}->%*);
+                    if (my $sink = $rpc_methods->{$service}->{$message->rpc}) {
+                        $sink->emit($message);
+                    } else {
+                        Myriad::Exception::RPC::MethodNotFound->throw(reason => $message->rpc);
+                    }
+                } catch ($e isa Myriad::Exception::RPC::BadEncoding) {
+                    $log->warnf('Recived a dead message that we cannot parse, going to drop it.');
+                    $log->tracef("message was: %s", $messages{$id});
+                    await $self->drop($service, $id);
+                } catch ($e) {
+                    await $self->reply_error($service, $message, $e);
                 }
-            } catch ($e isa Myriad::Exception::RPC::BadEncoding) {
-                $log->warnf('Recived a dead message that we cannot parse, going to drop it.');
-                $log->tracef("message was: %s", $messages{$id});
-                await $self->drop($service, $id);
-            } catch ($e) {
-                await $self->reply_error($service, $message, $e);
             }
         }
         await Future::wait_any($should_shutdown, $self->loop->delay_future(after => 0.1));
