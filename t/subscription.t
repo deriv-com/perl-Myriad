@@ -25,8 +25,7 @@ package Example::Sender {
 
 package Example::Receiver {
     use Myriad::Service;
-    
-    async method receiver_from_emitter : 
+    async method receiver_from_emitter :
         Receiver( service => 'Example::Sender',
                   channel => 'simple_emitter') ($src) {
         return $src->map(sub {
@@ -34,7 +33,7 @@ package Example::Receiver {
         });
     }
 
-    async method receiver_from_batch : 
+    async method receiver_from_batch :
         Receiver( service => 'Example::Sender',
                   channel => 'simple_batch') ($src) {
         return $src->map(sub {
@@ -56,7 +55,8 @@ ok($myriad->subscription, 'subscription is initiated');
 
 is(scalar $myriad->subscription->receivers->@*, 2, 'We have correct number of receivers detected');
 
-await $myriad->loop->delay_future(after => 0.4);
+# we need 4 steps to publish the events
+$myriad->loop->loop_once for 0..4;
 
 is(@received_from_emitter, 1, 'we have received correct number of messages from emitter');
 is(@received_from_batch,   2, 'we have received correct number of messages from batch');

@@ -42,23 +42,9 @@ $sink->source->map(async sub {
 })->resolve()->completed->retain();
 
 $rpc->create_from_sink(method => 'test', sink => $sink, service => 'test::service');
-$rpc->start()->retain;
-
-subtest 'it should return method not found' => sub {
-    (async sub {
-
-        my $response = $loop->new_future;
-        $message_args->{rpc} = 'not_found';
-
-        my $sub  = await $transport->subscribe('client');
-        await $transport->add_to_stream('test::service', $message_args->%*);
-        await $sub->take(1)->each(sub {
-            my $message = shift;
-            like($message, qr/Method not found/, 'rpc not found was returned');
-        })->completed;
-
-    })->()->get();
-};
+$rpc->start->retain->on_fail(sub {
+    die shift;
+});
 
 subtest 'it should propagate the message correctly' => sub {
     (async sub {
