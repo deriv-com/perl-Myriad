@@ -127,7 +127,7 @@ subtest  "Run and shutdown behaviour" => sub {
         $myriad->run,
     ))->get;
 
-    is($shutdown_task_called, 2, 'both shutdown operations has been called successfully');
+    is($shutdown_task_called, 3, 'both shutdown operations has been called successfully');
 
 };
 done_testing;
