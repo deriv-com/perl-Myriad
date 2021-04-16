@@ -8,7 +8,7 @@ use ExtUtils::MakeMaker;
 
 my %WriteMakefileArgs = (
   "ABSTRACT" => "async microservice framework",
-  "AUTHOR" => "Binary Group Services Ltd <BINARY\@cpan.org>",
+  "AUTHOR" => "Deriv Services Ltd <DERIV\@cpan.org>",
   "CONFIGURE_REQUIRES" => {
     "ExtUtils::MakeMaker" => 0
   },
