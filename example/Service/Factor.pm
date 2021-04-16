@@ -3,13 +3,14 @@ package example::Service::Factor;
 use Myriad::Service;
 
 has $factor = 0;
-has $players_id = {};
+has $players_id;
 
 async method diagnostics ($level) {
     return 'ok';
 }
 
 async method secret_checks : Receiver(service => 'example.service.secret') ($sink) {
+    $players_id ||= {};
     return $sink->map(
         async sub {
             my $e = shift;
@@ -32,19 +33,18 @@ async method secret_checks : Receiver(service => 'example.service.secret') ($sin
                 my $player_id = $data->{id};
                 my $trials = await $secret_storage->hash_get('current_players',$player_id);
 
-                # since there is no hash_conut implemented yet.
+                # since there is no hash_count implemented yet.
                 $players_id->{$player_id} = 1;
 
-                $log->trace('TRIALS: %s, MILT: %s', $trials, scalar keys %$players_id);
+                $log->tracef('TRIALS: %s, MILT: %s', $trials, scalar keys %$players_id);
                 $factor += $trials;
                 $factor *= 2 for keys %$players_id;
 
             }
-                $log->infof('Setting factor %d', $factor);
-                await $api->storage->set('factor', $factor);
+            $log->infof('Setting factor %d', $factor);
+            await $api->storage->set('factor', $factor);
         }
     )->resolve;
-
 }
 
 1;

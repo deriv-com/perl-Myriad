@@ -7,7 +7,7 @@ use Future::Utils qw( fmap_void );
 has $secret = $ENV{'SECRET'};
 has $check_event_handler = Ryu::Source->new;
 
-#temporarly until we add more operations to storage.
+# temporarily until we add more operations to storage.
 has $ids = {};
 
 async method diagnostics ($level) {
@@ -69,4 +69,5 @@ async method secret_checks : Emitter() ($source){
         $source->emit($event);
     });
 }
+
 1;
