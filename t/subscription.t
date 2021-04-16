@@ -44,10 +44,12 @@ package Example::Receiver {
 }
 
 my $myriad = new_ok('Myriad');
-$myriad->configure_from_argv("--transport", "perl", "service")->get;
+await $myriad->configure_from_argv(
+    qw(--transport perl --log_level error service)
+);
 
-$myriad->add_service('Example::Receiver')->get;
-$myriad->add_service('Example::Sender')->get;
+await $myriad->add_service('Example::Receiver');
+await $myriad->add_service('Example::Sender');
 
 $myriad->run->retain;
 
