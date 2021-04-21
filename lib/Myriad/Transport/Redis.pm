@@ -41,6 +41,7 @@ has $pending_redis_count = 0;
 has $wait_time = 15_000;
 has $batch_count = 50;
 has $max_pool_count;
+has $clientside_cache_size = 0;
 has $prefix;
 has $ryu;
 
@@ -59,6 +60,7 @@ method configure (%args) {
     }
     $max_pool_count = exists $args{max_pool_count} ? delete $args{max_pool_count} : 10;
     $prefix //= exists $args{prefix} ? delete $args{prefix} : 'myriad';
+    $clientside_cache_size = delete $args{client_side_cache_size} if exists $args{client_side_cache_size};
     return $self->next::method(%args);
 }
 
@@ -481,7 +483,9 @@ instance, depending on the setting of C<$use_cluster>.
 async method redis {
     my $instance;
     if($use_cluster) {
-        $instance = Net::Async::Redis::Cluster->new;
+        $instance = Net::Async::Redis::Cluster->new(
+            client_side_cache_size => $clientside_cache_size,
+        );
         $self->add_child(
             $instance
         );
@@ -493,6 +497,7 @@ async method redis {
         $instance = Net::Async::Redis->new(
             host => $redis_uri->host,
             port => $redis_uri->port,
+            client_side_cache_size => $clientside_cache_size,
         );
         $self->add_child(
             $instance
@@ -599,6 +604,27 @@ async method hset ($k, $hash_key, $v) {
 
 async method hget($k, $hash_key) {
     await $redis->hget($k, $self->apply_prefix($hash_key));
+}
+
+async method watch_keyspace($pattern) {
+    my $instance = await $self->borrow_instance_from_pool;
+    my $sub;
+    if ($clientside_cache_size > 0) {
+        $sub = $instance->clientside_cache_events;
+    } else {
+        $sub = await $instance->watch_keyspace($self->apply_prefix($pattern));
+
+        $sub = $sub->events->map(sub {
+            $_->{channel} =~ s/__key.*:$prefix\.//;
+            return $_;
+        });
+    }
+
+    $sub->on_ready(sub {
+        $self->return_instance_to_pool($instance);
+    });
+
+    return $sub;
 }
 
 1;

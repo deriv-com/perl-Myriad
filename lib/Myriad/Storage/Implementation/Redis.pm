@@ -124,6 +124,22 @@ method observe ($k) {
     return $redis->subscribe($self->apply_prefix($k));
 }
 
+=head2 observe_namespace
+
+Observe and entire namespace.
+
+=cut
+
+async method watch_keyspace ($keyspace) {
+    my $sub = await $redis->watch_keyspace($self->apply_prefix($keyspace));
+    my $pattern = STORAGE_PREFIX . '\.';
+    return $sub->map(sub {
+        warn 'hiiiiiiiiiiiiiiiiiii';
+        $_->{channel} =~ s/$pattern//;
+        return $_;
+    });
+}
+
 =head2 push
 
 Takes the following parameters:

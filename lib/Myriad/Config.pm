@@ -27,6 +27,7 @@ use List::Util qw(pairmap);
 use Ryu::Observable;
 use Myriad::Storage;
 use URI;
+use Myriad::Util::Secret;
 
 use Myriad::Exception::Builder category => 'config';
 
@@ -53,6 +54,7 @@ alternative.
 our %DEFAULTS = (
     config_path            => 'config.yml',
     transport_redis        => 'redis://localhost:6379',
+    transport_redis_cache  => '',
     transport_cluster      => 0,
     log_level              => 'info',
     library_path           => '',
@@ -88,9 +90,19 @@ A registry of configs defined by the services using the C<< config  >> helper.
 
 our %SERVICES_CONFIG;
 
+=head2 ACTIVE_SERVICES_CONFIG
+
+A collection of L<Ryu::Observable> to notify services about updates on the configs values
+
+=cut
+
+our %ACTIVE_SERVICES_CONFIG;
+
 # Our configuration so far. Populated via L</BUILD>,
 # can be updated by other mechanisms later.
 has $config;
+
+has $config_updates_src;
 
 BUILD (%args) {
     $config //= {};
@@ -116,7 +128,7 @@ BUILD (%args) {
     my $transport_as_uri = URI->new($config->{transport});
     if ($transport_as_uri->has_recognized_scheme) {
         my $transport_type = $transport_as_uri->scheme;
-        $config->{"transport_$transport_type"} = $transport_as_uri;
+        $config->{"transport_$transport_type"} = $transport_as_uri->as_string;
         $config->{transport} = $transport_as_uri->scheme;
     }
 
@@ -124,7 +136,7 @@ BUILD (%args) {
 
     push @INC, split /,:/, $config->{library_path} if $config->{library_path};
 
-    $config->{$_} = Ryu::Observable->new($config->{$_}) for grep { not ref $_ } keys %$config;
+    $config->{$_} = Ryu::Observable->new($config->{$_}) for grep { not ref $config->{$_} } keys %$config;
 
     $log->debugf("Config is %s", $config);
 }
@@ -309,14 +321,14 @@ it takes
 =cut
 
 async method service_config ($pkg, $service_name) {
-    my $service_config = {};
+    my $service_config = ($ACTIVE_SERVICES_CONFIG{$service_name} //= {});
     $service_name =~ s/\[(.*)\]$//;
     my $instance = $1;
-    my $available_config = $config->{services}->value->{$service_name}->{configs};
+    my $available_config = $config->{services}->{$service_name}->{configs};
 
     my $instance_overrides = {};
     $instance_overrides =
-        $config->{services}->value->{$service_name}->{instances}->{$instance}->{configs} if $instance;
+        $config->{services}->{$service_name}->{instances}->{$instance}->{configs} if $instance;
     if(my $declared_config = $SERVICES_CONFIG{$pkg}) {
         for my $key (keys $declared_config->%*) {
             my $value = await $self->from_storage($service_name, $instance, $key);
@@ -324,7 +336,7 @@ async method service_config ($pkg, $service_name) {
                        $available_config->{$key} ||
                        $declared_config->{$key}->{default} ||
                        Myriad::Exception::Config::ConfigRequired->throw(reason => $key);
-            $value = Myriad::Utils::Secure->new($value) if $declared_config->{$key}->{secure};
+            $value = Myriad::Util::Secret->new($value) if $declared_config->{$key}->{secure};
             $service_config->{$key} = Ryu::Observable->new($value);
         }
     }
@@ -354,7 +366,43 @@ async method from_storage ($service_name, $instance, $key) {
     my $storage = $Myriad::Storage::STORAGE;
     if ($storage) {
         $service_name .= "[$instance]" if $instance;
-        await $storage->get("config.service.$service_name.$key");
+        await $storage->get("config.service.$service_name/$key");
+    }
+}
+
+async method listen_for_updates () {
+    my $storage = $Myriad::Storage::STORAGE;
+    if ($storage) {
+        my $sub = await $storage->watch_keyspace('config*');
+        $sub->map(async sub {
+            my $message = shift;
+            my $channel = $message->channel;
+            $channel =~ s/config\.?//;
+            if ($message->payload eq 'set') {
+               if($channel =~ s/service\.(.*)\///) {
+                    my $service_name = $1;
+                    if (my $service_config = $ACTIVE_SERVICES_CONFIG{$service_name}) {
+                        my $updated_value = await $storage->get($message->channel);
+                        if ($service_config->{$channel}->value->isa('Myriad::Util::Secret')) {
+                            $updated_value = Myriad::Util::Secret->new($updated_value);
+                        }
+                        $service_config->{$channel}->set($updated_value);
+                        $log->tracef('Detected an update for service % config key: %s, new value: %s', $service_name, $message->channel, $updated_value);
+                    }
+               } else { 
+                    $channel =~ s/\///;
+                    if (my $key = $config->{$channel}) {
+                        my $updated_value = await $storage->get($message->channel);
+                        $key->set($updated_value);
+                        $log->tracef('Detected an update for config key: %s, new value: %s', $message->channel, $updated_value);
+                    }
+               }
+            }
+        })->resolve->completed->retain->on_fail(sub {
+            $log->warnf('Config: config updates listener failed - %s', shift);
+        });
+    } else {
+        $log->warnf('Config: Storage is not initiated, cannot listen to configs updates');
     }
 }
 
