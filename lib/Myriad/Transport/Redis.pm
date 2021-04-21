@@ -614,9 +614,9 @@ async method watch_keyspace($pattern) {
     } else {
         $sub = await $instance->watch_keyspace($self->apply_prefix($pattern));
 
-        $sub = $sub->events->map(sub {
+        $sub = $sub->map(sub {
             $_->{channel} =~ s/__key.*:$prefix\.//;
-            return $_;
+            return $_->{channel};
         });
     }
 

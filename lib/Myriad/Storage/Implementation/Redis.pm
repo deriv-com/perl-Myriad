@@ -134,7 +134,7 @@ async method watch_keyspace ($keyspace) {
     my $sub = await $redis->watch_keyspace($self->apply_prefix($keyspace));
     my $pattern = STORAGE_PREFIX . '\.';
     return $sub->map(sub { 
-        $_->{channel} =~ s/$pattern//;
+        $_ =~ s/$pattern//;
         return $_;
     });
 }
