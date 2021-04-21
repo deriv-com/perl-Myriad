@@ -322,8 +322,7 @@ it takes
 
 async method service_config ($pkg, $service_name) {
     my $service_config = {};
-    $service_name =~ s/\[(.*)\]$//;
-    my $instance = $1;
+    my $instance = $service_name =~ s/\[(.*)\]$// && $1;
     my $available_config = $config->{services}->{$service_name}->{configs};
 
     my $instance_overrides = {};
