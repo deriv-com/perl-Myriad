@@ -389,22 +389,27 @@ async method from_storage ($service_name, $instance, $key) {
 async method listen_for_updates () {
     my $storage = $Myriad::Storage::STORAGE;
     if ($storage) {
-        my $sub = await $storage->watch_keyspace('config*');
-        $sub->map(async sub {
-            my $key = shift;
-            if(my $observable = $ACTIVE_SERVICES_CONFIG{$key}) {
-                my $updated_value = await $storage->get($key);
-                if ($observable->value->isa('Myriad::Util::Secret')) {
-                    $updated_value = Myriad::Util::Secret->new($updated_value);
+        try {
+            # This step might throw
+            my $sub = await $storage->watch_keyspace('config*');
+            $sub->map(async sub {
+                my $key = shift;
+                if(my $observable = $ACTIVE_SERVICES_CONFIG{$key}) {
+                    my $updated_value = await $storage->get($key);
+                    if ($observable->value->isa('Myriad::Util::Secret')) {
+                        $updated_value = Myriad::Util::Secret->new($updated_value);
+                    }
+                    $observable->set($updated_value);
+                    $log->tracef('Detected an update for config key: %s, new value: %s', $key, $updated_value);
                 }
-                $observable->set($updated_value);
-                $log->tracef('Detected an update for config key: %s, new value: %s', $key, $updated_value);
-            }
-        })->resolve->completed->retain->on_fail(sub {
-            $log->warnf('Config: config updates listener failed - %s', shift);
-        });
+            })->resolve->completed->retain->on_fail(sub {
+                $log->warnf('Config: config updates listener failed - %s', shift);
+            });
+        } catch {
+            $log->trace('Config: transport do not support keyspace notifications');
+        }
     } else {
-        $log->warnf('Config: Storage is not initiated, cannot listen to configs updates');
+        $log->warn('Config: Storage is not initiated, cannot listen to configs updates');
     }
 }
 
