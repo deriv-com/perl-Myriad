@@ -607,22 +607,27 @@ async method hget($k, $hash_key) {
 }
 
 async method watch_keyspace($pattern) {
-    my $instance = await $self->borrow_instance_from_pool;
     my $sub;
     if ($clientside_cache_size > 0) {
-        $sub = $instance->clientside_cache_events;
+        # Net::Async::Redis will handl the connection in this case
+        $sub = $redis->clientside_cache_events->map(sub {
+            $_ =~ s/$prefix\.//;
+            return $_;
+        });
     } else {
+        # Keyspace notification is a psubscribe
+        my $instance = await $self->borrow_instance_from_pool;
         $sub = await $instance->watch_keyspace($self->apply_prefix($pattern));
 
-        $sub = $sub->map(sub {
+        $sub = $sub->events->map(sub {
             $_->{channel} =~ s/__key.*:$prefix\.//;
             return $_->{channel};
         });
-    }
 
-    $sub->on_ready(sub {
-        $self->return_instance_to_pool($instance);
-    });
+        $sub->on_ready(sub {
+            $self->return_instance_to_pool($instance);
+        });
+    }
 
     return $sub;
 }
