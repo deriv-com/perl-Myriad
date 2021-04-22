@@ -155,11 +155,11 @@ async method subscription ($stream, @args) {
     my $remote_service = $self->remote_service;
     my $uuid = Myriad::Util::UUID::uuid();
     my $subscription = await $remote_service->subscribe($stream, "$0/$uuid");
+    $log->infof('Subscribing to: %s | %s', $remote_service->service_name, $stream);
     $cmd = {
         code => async sub {
             my $params = shift;
             my ($subscription, $args) = map { $params->{$_} } qw(subscription args);
-            $log->infof('Subscribing to: %s | %s', $remote_service->service_name, $stream);
             $subscription->each(sub {
                 my $info = shift;
                 use Data::Dumper;
