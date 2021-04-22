@@ -153,19 +153,20 @@ async method rpc ($rpc, @args) {
 
 async method subscription ($stream, @args) {
     my $remote_service = $self->remote_service;
+    my $uuid = Myriad::Util::UUID::uuid();
+    my $subscription = await $remote_service->subscribe($stream, "$0/$uuid");
     $cmd = {
         code => async sub {
             my $params = shift;
-            my ($remote_service, $stream, $args) = map { $params->{$_} } qw(remote_service stream args);
+            my ($subscription, $args) = map { $params->{$_} } qw(subscription args);
             $log->infof('Subscribing to: %s | %s', $remote_service->service_name, $stream);
-            my $uuid = Myriad::Util::UUID::uuid();
-            $remote_service->subscribe($stream, "$0/$uuid")->each(sub {
+            $subscription->each(sub {
                 my $info = shift;
                 use Data::Dumper;
                 $log->infof('DATA: %s', decode_utf8(Dumper($info->{data})));
             })->completed;
         },
-        params => { stream => $stream, args => \@args, remote_service => $remote_service}
+        params => { subscription => $subscription, args => \@args}
     };
 
 }
