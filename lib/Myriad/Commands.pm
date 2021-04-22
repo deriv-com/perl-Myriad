@@ -182,10 +182,14 @@ async method storage ($action, $key, $extra = undef) {
             my $params = shift;
             my ($remote_service, $action, $key, $extra) = map { $params->{$_} } qw(remote_service action key extra);
 
-            my $response = await $remote_service->storage->$action($key, defined $extra? $extra : () );
-            $log->infof('Storage resposne is: %s', $response);
-            await $myriad->shutdown;
+            try {
+                my $response = await $remote_service->storage->$action($key, defined $extra? $extra : () );
+                $log->infof('Storage resposne is: %s', $response);
+            } catch ($e) {
+                $log->warnf('Error: %s', $e);
+            }
 
+            await $myriad->shutdown;
         },
         params => { action => $action, key => $key, extra => $extra, remote_service => $remote_service} };
 }
