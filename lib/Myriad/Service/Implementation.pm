@@ -196,16 +196,22 @@ method _add_to_loop($loop) {
 
 =cut
 
-async method process_batch($k, $code, $src) {
+async method process_batch ($k, $code, $src) {
     my $backoff;
     $log->tracef('Start batch processing for %s', $k);
     while (1) {
         await $src->unblocked;
         my $data = [];
         try {
-            $data = await $self->$code()->on_ready(sub {
+            $data = await $self->$code->on_ready(sub {
                 my $f = shift;
-                $metrics->report_timer(batch_timing => $f->elapsed // 0, {method => $k, status => $f->state, service => $service_name});
+                $metrics->report_timer(
+                    batch_timing => $f->elapsed // 0, {
+                        method => $k,
+                        status => $f->state,
+                        service => $service_name
+                    }
+                );
             });
         } catch ($e) {
             $log->warnf("Batch iteration for %s failed - %s", $k, $e);
@@ -214,9 +220,8 @@ async method process_batch($k, $code, $src) {
             $backoff = 0;
             $src->emit($_) for $data->@*;
             # Defer next processing, give other events a chance
-            await $self->loop->delay_future(after => 0);
-        }
-        else {
+            await $self->loop->later;
+        } else {
             $backoff = min(MAX_EXPONENTIAL_BACKOFF, ($backoff || 0.02) * 2);
             $log->tracef('Batch for %s returned no results, delaying for %dms before retry', $k, $backoff * 1000.0);
             await $self->loop->delay_future(
