@@ -608,7 +608,7 @@ async method hget($k, $hash_key) {
 
 async method watch_keyspace($pattern) {
     my $sub;
-    if ($clientside_cache_size > 0) {
+    if ($clientside_cache_size) {
         # Net::Async::Redis will handl the connection in this case
         $sub = $redis->clientside_cache_events->map(sub {
             $_ =~ s/$prefix\.//;
