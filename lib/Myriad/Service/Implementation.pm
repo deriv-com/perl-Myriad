@@ -392,7 +392,7 @@ async method start {
     if (my $batches = $registry->batches_for(ref($self))) {
         for my $method (sort keys $batches->%*) {
             $log->tracef('Starting batch process %s for %s', $method, ref($self));
-            my $code = $batches->{$method}{code};
+            my $code = delete $batches->{$method}{code};
 
             $active_batch{$method} = [
                 $batches->{$method}{sink},
