@@ -199,7 +199,11 @@ method _add_to_loop($loop) {
 async method process_batch ($k, $code, $src) {
     my $backoff;
     $log->tracef('Start batch processing for %s', $k);
+    my $idx = 0;
+    require Devel::MAT::Dumper;
     while (1) {
+        Devel::MAT::Dumper::dump("batch-${idx}.pmat");
+        ++$idx;
         await $src->unblocked;
         my $data = [];
         try {
