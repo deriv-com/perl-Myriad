@@ -41,7 +41,7 @@ a concrete implementation - instead, see classes such as:
 
 =item * L<Myriad::Storage::Implementation::Redis>
 
-=item * L<Myriad::Storage::Implementation::Perl>
+=item * L<Myriad::Storage::Implementation::Memory>
 
 =back
 

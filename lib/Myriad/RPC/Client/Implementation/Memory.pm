@@ -1,4 +1,4 @@
-package Myriad::RPC::Client::Implementation::Perl;
+package Myriad::RPC::Client::Implementation::Memory;
 
 # VERSION
 # AUTHORITY
