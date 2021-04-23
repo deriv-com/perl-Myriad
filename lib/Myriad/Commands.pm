@@ -159,7 +159,7 @@ async method subscription ($stream, @args) {
     $cmd = {
         code => async sub {
             my $params = shift;
-            my ($subscription, $args) = map { $params->{$_} } qw(subscription args);
+            my ($subscription, $args) = @{$params}{qw(subscription args)};
             $subscription->each(sub {
                 my $info = shift;
                 use Data::Dumper;
