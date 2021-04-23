@@ -1,4 +1,4 @@
-package Myriad::RPC::Implementation::Perl;
+package Myriad::RPC::Implementation::Memory;
 
 use strict;
 use warnings;
@@ -19,7 +19,7 @@ use Myriad::Class extends => qw(IO::Async::Notifier);
 
 =head1 NAME
 
-Myriad::RPC::Implementation::Perl - microservice RPC in-memory implementation.
+Myriad::RPC::Implementation::Memory - microservice RPC in-memory implementation.
 
 =head1 DESCRIPTION
 
@@ -50,7 +50,7 @@ Start waiting for new requests to fill in the internal requests queue.
 =cut
 
 async method start () {
-    $should_shutdown //= $self->loop->new_future(label => 'rpc::perl::shutdown_future')->without_cancel;
+    $should_shutdown //= $self->loop->new_future(label => 'rpc::memory::shutdown_future')->without_cancel;
 
     while (1) {
         if ($services_list && $services_list->@*) {

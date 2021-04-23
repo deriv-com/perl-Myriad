@@ -30,7 +30,7 @@ a concrete implementation - instead, see classes such as:
 
 =item * L<Myriad::RPC::Implementation::Redis>
 
-=item * L<Myriad::RPC::Implementation::Perl>
+=item * L<Myriad::RPC::Implementation::Memory>
 
 =back
 

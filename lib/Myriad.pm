@@ -69,7 +69,7 @@ For storage implementations, we have:
 
 =item * L<Myriad::Storage::PostgreSQL>
 
-=item * L<Myriad::Storage::Perl>
+=item * L<Myriad::Storage::Memory>
 
 =back
 
@@ -87,7 +87,7 @@ Details on the request are in L<Myriad::RPC::Request> and the response to be sen
 
 =item * L<Myriad::RPC::PostgreSQL>
 
-=item * L<Myriad::RPC::Perl>
+=item * L<Myriad::RPC::Memory>
 
 =back
 
@@ -105,7 +105,7 @@ Subscription implementations include:
 
 =item * L<Myriad::Subscription::PostgreSQL>
 
-=item * L<Myriad::Subscription::Perl>
+=item * L<Myriad::Subscription::Memory>
 
 =back
 
@@ -123,7 +123,7 @@ Each of these implementations is supposed to separate out the logic from the act
 
 =item * L<Myriad::Transport::PostgreSQL>
 
-=item * L<Myriad::Transport::Perl>
+=item * L<Myriad::Transport::Memory>
 
 =back
 
@@ -167,7 +167,7 @@ use Myriad::RPC::Client;
 use Myriad::Storage;
 use Myriad::Subscription;
 use Myriad::Transport::HTTP;
-use Myriad::Transport::Perl;
+use Myriad::Transport::Memory;
 use Myriad::Transport::Redis;
 
 use Log::Any::Adapter;
@@ -201,8 +201,8 @@ has $commands;
 # really be abstracted away by the ::Transport and
 # storage/rpc/subscription abstractions
 has $redis;
-# The Perl transport instance
-has $perl_transport;
+# The in-memory "transport" instance
+has $memory_transport;
 # The Myriad::RPC instance to serve RPC requests for
 # the services in this process
 has $rpc;
@@ -305,6 +305,10 @@ async method configure_from_argv (@args) {
             last;
         }
     }
+
+    $self->on_start(async sub {
+        await $config->listen_for_updates;
+    });
 }
 
 method config () { $config }
@@ -334,20 +338,20 @@ method redis () {
     $redis
 }
 
-=head2 perl_transport
+=head2 memory_transport
 
-The L<Myriad::Transport::Perl> instance.
+The L<Myriad::Transport::Memory> instance.
 
 =cut
 
-method perl_transport () {
-    unless ($perl_transport) {
+method memory_transport () {
+    unless ($memory_transport) {
         $loop->add(
-            $perl_transport = Myriad::Transport::Perl->new()
+            $memory_transport = Myriad::Transport::Memory->new()
         );
     }
 
-    $perl_transport;
+    $memory_transport;
 }
 
 =head2 rpc
@@ -653,8 +657,7 @@ async method run () {
             await $task->();
         }
     } catch ($e) {
-        $log->warnf("Startup tasks failed - %s", $e);
-        $self->shutdown->await;
+        die "Startup tasks failed - $e";
     }
 
     # Set shutdown future before starting commands.
