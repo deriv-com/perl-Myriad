@@ -123,6 +123,17 @@ method observe ($k) {
     die 'no observation';
 }
 
+
+=head2 watch_keyspace
+
+Returns update about keyspace
+
+=cut
+
+async method watch_keyspace {
+    die 'no watch_keyspace';
+}
+
 =head2 push
 
 Takes the following parameters:

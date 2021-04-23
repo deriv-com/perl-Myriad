@@ -305,6 +305,10 @@ async method configure_from_argv (@args) {
             last;
         }
     }
+
+    $self->on_start(async sub {
+        await $config->listen_for_updates;
+    });
 }
 
 method config () { $config }
@@ -322,6 +326,7 @@ method redis () {
                 $config ? (
                     redis_uri => $config->transport_redis->as_string,
                     cluster   => ($config->transport_cluster->as_string ? 1 : 0),
+                    client_side_cache_size => $config->transport_redis_cache->as_number,
                 ) : ()
             )
         );
@@ -652,8 +657,7 @@ async method run () {
             await $task->();
         }
     } catch ($e) {
-        $log->warnf("Startup tasks failed - %s", $e);
-        $self->shutdown->await;
+        die "Startup tasks failed - $e";
     }
 
     # Set shutdown future before starting commands.
