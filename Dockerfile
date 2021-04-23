@@ -6,7 +6,10 @@ ONBUILD COPY . /app/
 ONBUILD RUN prepare-apt-cpan.sh \
  && dzil authordeps | cpanm -n
 
-RUN dzil install \
+# Since we only support Docker on Linux here, we can enforce the `::linux` module
+# installation and that'll give us the more efficient EPoll loop.
+RUN cpanm IO::Async::Loop::linux \
+ && dzil install \
  && dzil clean \
  && git clean -fd \
  && apt purge --autoremove -y \
