@@ -201,9 +201,9 @@ async method process_batch($name, $code, $sink) {
     $log->tracef('Start batch processing for %s', $name);
     while (1) {
         await $sink->unblocked;
-        my $data = [];
+       my $data = [];
         try {
-            $data = await $self->$code()->on_ready(sub {
+            $data = await $self->$code->on_ready(sub {
                 my $f = shift;
                 $metrics->report_timer(batch_timing => $f->elapsed // 0, {method => $name, status => $f->state, service => $self->service_name});
             });
@@ -214,9 +214,8 @@ async method process_batch($name, $code, $sink) {
             $backoff = 0;
             $sink->emit($_) for $data->@*;
             # Defer next processing, give other events a chance
-            await $self->loop->delay_future(after => 0);
-        }
-        else {
+            await $self->loop->later;
+        } else {
             $backoff = min(MAX_EXPONENTIAL_BACKOFF, ($backoff || 0.02) * 2);
             $log->tracef('Batch for %s returned no results, delaying for %dms before retry', $name, $backoff * 1000.0);
             await $self->loop->delay_future(
@@ -384,7 +383,6 @@ async method start {
         for my $method (sort keys $batches->%*) {
             $log->tracef('Starting batch process %s for %s', $method, ref($self));
             my $spec = $batches->{$method};
-
             $spec->{current} = $self->process_batch(
                 $method,
                 $spec->{code},
