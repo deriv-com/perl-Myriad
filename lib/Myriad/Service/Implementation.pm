@@ -196,29 +196,29 @@ method _add_to_loop($loop) {
 
 =cut
 
-async method process_batch($k, $code, $src) {
+async method process_batch($name, $code, $sink) {
     my $backoff;
-    $log->tracef('Start batch processing for %s', $k);
+    $log->tracef('Start batch processing for %s', $name);
     while (1) {
-        await $src->unblocked;
+        await $sink->unblocked;
         my $data = [];
         try {
             $data = await $self->$code()->on_ready(sub {
                 my $f = shift;
-                $metrics->report_timer(batch_timing => $f->elapsed // 0, {method => $k, status => $f->state, service => $service_name});
+                $metrics->report_timer(batch_timing => $f->elapsed // 0, {method => $name, status => $f->state, service => $self->service_name});
             });
         } catch ($e) {
-            $log->warnf("Batch iteration for %s failed - %s", $k, $e);
+            $log->warnf("Batch iteration for %s failed - %s", $name, $e);
         }
         if ($data->@*) {
             $backoff = 0;
-            $src->emit($_) for $data->@*;
+            $sink->emit($_) for $data->@*;
             # Defer next processing, give other events a chance
             await $self->loop->delay_future(after => 0);
         }
         else {
             $backoff = min(MAX_EXPONENTIAL_BACKOFF, ($backoff || 0.02) * 2);
-            $log->tracef('Batch for %s returned no results, delaying for %dms before retry', $k, $backoff * 1000.0);
+            $log->tracef('Batch for %s returned no results, delaying for %dms before retry', $name, $backoff * 1000.0);
             await $self->loop->delay_future(
                 after => $backoff
             );
@@ -383,14 +383,15 @@ async method start {
     if (my $batches = $registry->batches_for(ref($self))) {
         for my $method (sort keys $batches->%*) {
             $log->tracef('Starting batch process %s for %s', $method, ref($self));
-            my $code = $batches->{$method}{code};
+            my $spec = $batches->{$method};
 
-            $active_batch{$method} = [
-                $batches->{$method}{sink},
-                $self->process_batch($method, $code, $batches->{$method}{sink})
-            ];
+            $spec->{current} = $self->process_batch(
+                $method,
+                $spec->{code},
+                $spec->{sink},
+            );
 
-            $batches->{$method}{sink}->resume;
+            $spec->{sink}->resume;
         }
     }
 
