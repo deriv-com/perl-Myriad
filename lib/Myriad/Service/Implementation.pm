@@ -161,7 +161,6 @@ Populate internal configuration.
 method configure (%args) {
     $service_name //= (delete $args{name} || die 'need a service name');
     Scalar::Util::weaken($myriad = delete $args{myriad}) if exists $args{myriad};
-    weaken($myriad = delete $args{myriad}) if exists $args{myriad};
     $self->next::method(%args);
 }
 
@@ -203,9 +202,9 @@ async method process_batch($name, $code, $sink) {
         await $sink->unblocked;
        my $data = [];
         try {
-            $data = await $self->$code->on_ready(sub {
+            $data = await $code->()->on_ready(sub {
                 my $f = shift;
-                $metrics->report_timer(batch_timing => $f->elapsed // 0, {method => $name, status => $f->state, service => $self->service_name});
+                 $metrics->report_timer(batch_timing => $f->elapsed // 0, {method => $name, status => $f->state, service => $self->service_name});
             });
         } catch ($e) {
             $log->warnf("Batch iteration for %s failed - %s", $name, $e);
@@ -284,7 +283,6 @@ async method load () {
     if (my $batches = $registry->batches_for(ref($self))) {
         for my $method (sort keys $batches->%*) {
             $log->tracef('Starting batch process %s for %s', $method, ref($self));
-            my $code = $batches->{$method}{code};
             my $sink = $batches->{$method}{sink} = $ryu->sink(label => 'batch:' . $method);
             $sink->pause;
             await $self->subscription->create_from_source(
@@ -383,9 +381,10 @@ async method start {
         for my $method (sort keys $batches->%*) {
             $log->tracef('Starting batch process %s for %s', $method, ref($self));
             my $spec = $batches->{$method};
+            my $weak_method = "curry::weak::$method";
             $spec->{current} = $self->process_batch(
                 $method,
-                $spec->{code},
+                $self->$weak_method,
                 $spec->{sink},
             );
 
