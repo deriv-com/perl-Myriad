@@ -183,7 +183,7 @@ async method storage ($action, $key, $extra = undef) {
             my ($remote_service, $action, $key, $extra) = map { $params->{$_} } qw(remote_service action key extra);
 
             try {
-                my $response = await $remote_service->storage->$action($key, defined $extra? $extra : () );
+                my $response = await $remote_service->storage->$action($key, $extra // () );
                 $log->infof('Storage resposne is: %s', $response);
             } catch ($e) {
                 $log->warnf('Error: %s', $e);
@@ -213,4 +213,3 @@ See L<Myriad/CONTRIBUTORS> for full details.
 =head1 LICENSE
 
 Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
-
