@@ -1,4 +1,4 @@
-package Myriad::Subscription::Implementation::Perl;
+package Myriad::Subscription::Implementation::Memory;
 
 # VERSION
 # AUTHORITY
@@ -95,4 +95,16 @@ async method stop {
 }
 
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Deriv Group Services Ltd. C<< DERIV@cpan.org >>.
+
+See L<Myriad/CONTRIBUTORS> for full details.
+
+=head1 LICENSE
+
+Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
 

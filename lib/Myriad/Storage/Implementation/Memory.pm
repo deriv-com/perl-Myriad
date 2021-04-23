@@ -1,4 +1,4 @@
-package Myriad::Storage::Implementation::Perl;
+package Myriad::Storage::Implementation::Memory;
 
 use strict;
 use warnings;
@@ -9,7 +9,7 @@ use warnings;
 use Future::AsyncAwait;
 use Object::Pad;
 
-class Myriad::Storage::Implementation::Perl extends IO::Async::Notifier;
+class Myriad::Storage::Implementation::Memory extends IO::Async::Notifier;
 
 use parent qw(Myriad::Util::Defer);
 
@@ -19,7 +19,7 @@ use experimental qw(signatures);
 
 =head1 NAME
 
-Myriad::Storage::Implementation::Perl - microservice storage abstraction
+Myriad::Storage::Implementation::Memory - microservice storage abstraction
 
 =head1 SYNOPSIS
 

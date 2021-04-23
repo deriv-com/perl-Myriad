@@ -32,7 +32,7 @@ a concrete implementation - instead, see classes such as:
 
 =item * L<Myriad::Subscription::Implementation::Redis>
 
-=item * L<Myriad::Subscription::Implementation::Perl>
+=item * L<Myriad::Subscription::Implementation::Memory>
 
 =back
 
