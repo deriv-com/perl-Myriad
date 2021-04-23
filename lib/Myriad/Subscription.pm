@@ -51,10 +51,10 @@ sub new {
         return Myriad::Subscription::Implementation::Redis->new(
             redis   => $myriad->redis,
         );
-    } elsif ($transport eq 'perl') {
-        require Myriad::Subscription::Implementation::Perl;
-        return Myriad::Subscription::Implementation::Perl->new(
-            transport => $myriad->perl_transport
+    } elsif ($transport eq 'memory' or $transport eq 'perl') {
+        require Myriad::Subscription::Implementation::Memory;
+        return Myriad::Subscription::Implementation::Memory->new(
+            transport => $myriad->memory_transport
         );
     } else {
         Myriad::Exception::Subscription::UnknownTransport->throw();

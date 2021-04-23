@@ -68,9 +68,9 @@ sub new {
         $STORAGE = Myriad::Storage::Implementation::Redis->new(
             redis   => $myriad->redis,
         );
-    } elsif ($transport eq 'perl') {
-        require Myriad::Storage::Implementation::Perl;
-        $STORAGE = Myriad::Storage::Implementation::Perl->new();
+    } elsif ($transport eq 'memory' or $transport eq 'perl') {
+        require Myriad::Storage::Implementation::Memory;
+        $STORAGE = Myriad::Storage::Implementation::Memory->new();
     } else {
         Myriad::Exception::Storage::UnKnownTransport->throw();
     }
