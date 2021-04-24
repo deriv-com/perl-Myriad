@@ -48,7 +48,7 @@ For storage implementations, we have:
 
 - [Myriad::Storage::Redis](https://metacpan.org/pod/Myriad%3A%3AStorage%3A%3ARedis)
 - [Myriad::Storage::PostgreSQL](https://metacpan.org/pod/Myriad%3A%3AStorage%3A%3APostgreSQL)
-- [Myriad::Storage::Perl](https://metacpan.org/pod/Myriad%3A%3AStorage%3A%3APerl)
+- [Myriad::Storage::Memory](https://metacpan.org/pod/Myriad%3A%3AStorage%3A%3AMemory)
 
 Additional transport mechanisms may be available, see CPAN for details.
 
@@ -60,7 +60,7 @@ Details on the request are in [Myriad::RPC::Request](https://metacpan.org/pod/My
 
 - [Myriad::RPC::Redis](https://metacpan.org/pod/Myriad%3A%3ARPC%3A%3ARedis)
 - [Myriad::RPC::PostgreSQL](https://metacpan.org/pod/Myriad%3A%3ARPC%3A%3APostgreSQL)
-- [Myriad::RPC::Perl](https://metacpan.org/pod/Myriad%3A%3ARPC%3A%3APerl)
+- [Myriad::RPC::Memory](https://metacpan.org/pod/Myriad%3A%3ARPC%3A%3AMemory)
 
 Additional transport mechanisms may be available, see CPAN for details.
 
@@ -72,7 +72,7 @@ Subscription implementations include:
 
 - [Myriad::Subscription::Redis](https://metacpan.org/pod/Myriad%3A%3ASubscription%3A%3ARedis)
 - [Myriad::Subscription::PostgreSQL](https://metacpan.org/pod/Myriad%3A%3ASubscription%3A%3APostgreSQL)
-- [Myriad::Subscription::Perl](https://metacpan.org/pod/Myriad%3A%3ASubscription%3A%3APerl)
+- [Myriad::Subscription::Memory](https://metacpan.org/pod/Myriad%3A%3ASubscription%3A%3AMemory)
 
 Additional transport mechanisms may be available, see CPAN for details.
 
@@ -84,7 +84,7 @@ Each of these implementations is supposed to separate out the logic from the act
 
 - [Myriad::Transport::Redis](https://metacpan.org/pod/Myriad%3A%3ATransport%3A%3ARedis)
 - [Myriad::Transport::PostgreSQL](https://metacpan.org/pod/Myriad%3A%3ATransport%3A%3APostgreSQL)
-- [Myriad::Transport::Perl](https://metacpan.org/pod/Myriad%3A%3ATransport%3A%3APerl)
+- [Myriad::Transport::Memory](https://metacpan.org/pod/Myriad%3A%3ATransport%3A%3AMemory)
 
 which deal with the lower-level interaction with the protocol, connection management and so on. More details on that
 can be found in [Myriad::Transport](https://metacpan.org/pod/Myriad%3A%3ATransport) - but it's typically only useful for people working on the [Myriad](https://metacpan.org/pod/Myriad) implementation itself.
@@ -126,9 +126,9 @@ modules under that immediate namespace will be loaded
 
 The [Net::Async::Redis](https://metacpan.org/pod/Net%3A%3AAsync%3A%3ARedis) (or compatible) instance used for service coördination.
 
-## perl\_transport
+## memory\_transport
 
-The [Myriad::Transport::Perl](https://metacpan.org/pod/Myriad%3A%3ATransport%3A%3APerl) instance.
+The [Myriad::Transport::Memory](https://metacpan.org/pod/Myriad%3A%3ATransport%3A%3AMemory) instance.
 
 ## rpc
 
