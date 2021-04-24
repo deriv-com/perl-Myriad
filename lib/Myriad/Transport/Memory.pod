@@ -3,8 +3,8 @@
 =for comment POD_DERIVED_INDEX_GENERATED
 
 The following documentation is automatically generated.  Please do not edit
-this file, but rather the original, inline with Myriad::Transport::Perl
-at lib/Myriad/Transport/Perl.pm
+this file, but rather the original, inline with Myriad::Transport::Memory
+at lib/Myriad/Transport/Memory.pm
 (on the system that originally ran this).
 If you do edit this file, and don't want your changes to be removed, make
 sure you change the first line.
@@ -13,11 +13,11 @@ sure you change the first line.
 
 =head1 NAME
 
-Myriad::Transport::Perl - In-Memory data layer that mimics Redis behaviour..
+Myriad::Transport::Memory - In-Memory data layer that mimics Redis behaviour..
 
 =head1 SYNOPSIS
 
-  my $transport = Myriad::Transport::Perl->new();
+  my $transport = Myriad::Transport::Memory->new();
 
   $transport->publish('channel_name', 'event...');
 

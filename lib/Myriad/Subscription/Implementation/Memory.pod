@@ -3,8 +3,8 @@
 =for comment POD_DERIVED_INDEX_GENERATED
 
 The following documentation is automatically generated.  Please do not edit
-this file, but rather the original, inline with Myriad::Subscription::Implementation::Perl
-at lib/Myriad/Subscription/Implementation/Perl.pm
+this file, but rather the original, inline with Myriad::Subscription::Implementation::Memory
+at lib/Myriad/Subscription/Implementation/Memory.pm
 (on the system that originally ran this).
 If you do edit this file, and don't want your changes to be removed, make
 sure you change the first line.
@@ -24,4 +24,14 @@ L<add_child|IO::Async::Notifier/add_child>, L<adopt_future|IO::Async::Notifier/a
 L<BUILDARGS|Object::Pad::UNIVERSAL/BUILDARGS>
 
 =back
+
+=head1 AUTHOR
+
+Deriv Group Services Ltd. C<DERIV@cpan.org>.
+
+See L<Myriad/CONTRIBUTORS> for full details.
+
+=head1 LICENSE
+
+Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
 

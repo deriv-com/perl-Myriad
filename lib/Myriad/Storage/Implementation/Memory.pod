@@ -3,8 +3,8 @@
 =for comment POD_DERIVED_INDEX_GENERATED
 
 The following documentation is automatically generated.  Please do not edit
-this file, but rather the original, inline with Myriad::Storage::Implementation::Perl
-at lib/Myriad/Storage/Implementation/Perl.pm
+this file, but rather the original, inline with Myriad::Storage::Implementation::Memory
+at lib/Myriad/Storage/Implementation/Memory.pm
 (on the system that originally ran this).
 If you do edit this file, and don't want your changes to be removed, make
 sure you change the first line.
@@ -13,7 +13,7 @@ sure you change the first line.
 
 =head1 NAME
 
-Myriad::Storage::Implementation::Perl - microservice storage abstraction
+Myriad::Storage::Implementation::Memory - microservice storage abstraction
 
 =head1 SYNOPSIS
 
@@ -75,6 +75,10 @@ Returns a L<Future> which will resolve on completion.
 Observe a specific key.
 
 Returns a L<Ryu::Source> which will emit the current and all subsequent values.
+
+=head2 watch_keyspace
+
+Returns update about keyspace
 
 =head2 push
 

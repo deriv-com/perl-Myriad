@@ -1,6 +1,6 @@
-package Myriad::Transport::Perl;
+package Myriad::Transport::Memory;
 
-our $VERSION = '0.001'; # VERSION
+our $VERSION = '0.002'; # VERSION
 # AUTHORTIY
 
 use strict;
@@ -8,11 +8,11 @@ use warnings;
 
 =head1 NAME
 
-Myriad::Transport::Perl - In-Memory data layer that mimics Redis behaviour..
+Myriad::Transport::Memory - In-Memory data layer that mimics Redis behaviour..
 
 =head1 SYNOPSIS
 
-  my $transport = Myriad::Transport::Perl->new();
+  my $transport = Myriad::Transport::Memory->new();
 
   $transport->publish('channel_name', 'event...');
 
@@ -23,7 +23,7 @@ Myriad::Transport::Perl - In-Memory data layer that mimics Redis behaviour..
 use Ryu::Async;
 
 use Myriad::Class extends => qw(IO::Async::Notifier);
-use Myriad::Exception::Builder category => 'perl_transport';
+use Myriad::Exception::Builder category => 'memory_transport';
 
 has $ryu;
 has $streams;
@@ -132,8 +132,8 @@ Creates a consumer group for a given stream.
 
 async method create_consumer_group ($stream_name, $group_name, $offset = 0, $make_stream = 0) {
     await $self->create_stream($stream_name) if $make_stream;
-    my $stream = $streams->{$stream_name} // Myriad::Exception::Transport::Perl::StreamNotFound->throw(reason => 'Stream should exist before creating new consumer group');
-    Myriad::Exception::Transport::Perl::GroupExists->throw() if exists $stream->{groups}{$group_name};
+    my $stream = $streams->{$stream_name} // Myriad::Exception::Transport::Memory::StreamNotFound->throw(reason => 'Stream should exist before creating new consumer group');
+    Myriad::Exception::Transport::Memory::GroupExists->throw() if exists $stream->{groups}{$group_name};
     $stream->{groups}->{$group_name} = {pendings => {}, cursor => $offset};
 }
 
@@ -304,8 +304,8 @@ async method subscribe ($channel_name) {
 }
 
 method get_stream_group ($stream_name, $group_name) {
-    my $stream = $streams->{$stream_name} // Myriad::Exception::Transport::Perl::StreamNotFound->throw();
-    my $group = $stream->{groups}->{$group_name} // Myriad::Exception::Transport::Perl::GroupNotFound->throw();
+    my $stream = $streams->{$stream_name} // Myriad::Exception::Transport::Memory::StreamNotFound->throw();
+    my $group = $stream->{groups}->{$group_name} // Myriad::Exception::Transport::Memory::GroupNotFound->throw();
     return ($stream, $group);
 }
 

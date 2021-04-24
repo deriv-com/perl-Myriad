@@ -3,49 +3,13 @@
 =for comment POD_DERIVED_INDEX_GENERATED
 
 The following documentation is automatically generated.  Please do not edit
-this file, but rather the original, inline with Myriad::RPC::Implementation::Perl
-at lib/Myriad/RPC/Implementation/Perl.pm
+this file, but rather the original, inline with Myriad::RPC::Client::Implementation::Memory
+at lib/Myriad/RPC/Client/Implementation/Memory.pm
 (on the system that originally ran this).
 If you do edit this file, and don't want your changes to be removed, make
 sure you change the first line.
 
 =cut
-
-=head1 NAME
-
-Myriad::RPC::Implementation::Perl - microservice RPC in-memory implementation.
-
-=head1 DESCRIPTION
-
-=head1 METHODS
-
-=head2 start
-
-Start waiting for new requests to fill in the internal requests queue.
-
-=head2 create_from_sink
-
-Register and RPC call and save a reference to its L<Ryu::Sink>.
-
-=head2 stop
-
-Gracefully stop the RPC processing.
-
-=head2 reply_success
-
-Reply to the requester with a success message.
-
-In this implementation it's done by resolving the L<Future> calling C<done>.
-
-=head2 reply_error
-
-Reply to the requester with a failure message.
-
-In this implementation it's done by resolving the L<Future> calling C<fail>.
-
-=head2 drop
-
-Drop the request because we can't reply to the requester.
 
 =head1 INHERITED METHODS
 
@@ -60,14 +24,4 @@ L<add_child|IO::Async::Notifier/add_child>, L<adopt_future|IO::Async::Notifier/a
 L<BUILDARGS|Object::Pad::UNIVERSAL/BUILDARGS>
 
 =back
-
-=head1 AUTHOR
-
-Deriv Group Services Ltd. C<DERIV@cpan.org>.
-
-See L<Myriad/CONTRIBUTORS> for full details.
-
-=head1 LICENSE
-
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
 
