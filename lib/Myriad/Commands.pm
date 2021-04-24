@@ -162,8 +162,7 @@ async method subscription ($stream, @args) {
             my ($subscription, $args) = @{$params}{qw(subscription args)};
             $subscription->each(sub {
                 my $info = shift;
-                use Data::Dumper;
-                $log->infof('DATA: %s', decode_utf8(Dumper($info->{data})));
+                $log->infof('Subscription event received: %s', $info->{data});
             })->completed;
         },
         params => { subscription => $subscription, args => \@args}
