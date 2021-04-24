@@ -374,7 +374,7 @@ method rpc () {
                 my ($self, $reason) = @_;
                 $self->shutdown_future->fail($reason)
                     unless $self->shutdown_future->is_ready;
-            });
+            }));
             return;
         });
 
