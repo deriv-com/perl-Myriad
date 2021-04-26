@@ -326,7 +326,7 @@ method redis () {
                 $config ? (
                     redis_uri              => $config->transport_redis->as_string,
                     cluster                => ($config->transport_cluster->as_string ? 1 : 0),
-                    client_side_cache_size => $config->transport_redis_cache->as_number,
+                    client_side_cache_size => ($config->transport_redis_cache->as_string || 0),
                 ) : ()
             )
         );
@@ -608,6 +608,7 @@ Prepare for logging.
 
 method setup_logging () {
     my $level = $config->log_level;
+    STDERR->autoflush(1);
     $level->subscribe(my $code = sub {
         Log::Any::Adapter->import(
             qw(Stderr),
