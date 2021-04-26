@@ -101,7 +101,7 @@ method apply_prefix($key) {
 =cut
 
 method remove_prefix($key) {
-    $key =~ s/^$prefix\.//;
+    $key =~ s/^\Q$prefix\E\.//;
     return $key;
 }
 
