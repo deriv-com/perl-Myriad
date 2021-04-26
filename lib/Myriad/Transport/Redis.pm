@@ -11,12 +11,21 @@ use Myriad::Class extends => qw(IO::Async::Notifier);
 
 We expect to expose:
 
-- stream handling functionality, including claiming/pending
-- get/set and observables
-- sorted sets
-- hyperloglog existence
-- simple queues via lists
-- pub/sub
+=over 4
+
+=item * stream handling functionality, including claiming/pending
+
+=item * get/set and observables
+
+=item * sorted sets
+
+=item * hyperloglog existence
+
+=item * simple queues via lists
+
+=item * pub/sub
+
+=back
 
 This module is responsible for namespacing, connection handling and clustering.
 It should also cover retry for stateless calls.
