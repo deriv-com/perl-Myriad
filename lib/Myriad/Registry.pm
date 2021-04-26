@@ -47,7 +47,6 @@ Returns the service instance.
 
 async method add_service (%args) {
     my $srv = delete $args{service};
-    weaken(my $myriad = delete $args{myriad});
 
     my $pkg = blessed($srv) ? ref $srv : $srv;
     my $service_name = delete $args{name} // $self->make_service_name($pkg);
@@ -55,19 +54,16 @@ async method add_service (%args) {
     $srv = $srv->new(
         %args,
         name => $service_name,
-        rpc => sub { $myriad->rpc },
-        subscription => sub { $myriad->subscription },
     ) unless blessed($srv) and $srv->isa('Myriad::Service');
 
     # Inject an `$api` instance so that this service can talk
     # to storage and the outside world
     # also make sure that storage is initiated
-    $myriad->storage;
-    $myriad->on_start(async sub {
+    $Myriad::INSTANCE->storage;
+    $Myriad::INSTANCE->on_start(async sub {
         $Myriad::Service::SLOT{$pkg}{api}->value($srv) = Myriad::API->new(
-            myriad => $myriad,
             service_name => $service_name,
-            config => await $myriad->config->service_config($pkg, $service_name),
+            config => await $Myriad::INSTANCE->config->service_config($pkg, $service_name),
         );
     });
 
@@ -87,7 +83,7 @@ async method add_service (%args) {
     await $srv->load();
     my $k = refaddr($srv);
     weaken($service_by_name{$service_name} = $srv);
-    weaken($myriad->services->{$k} = $srv);
+    weaken($Myriad::INSTANCE->services->{$k} = $srv);
 
     return;
 }

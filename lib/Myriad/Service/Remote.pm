@@ -18,21 +18,20 @@ Myriad::Service::Remote - abstraction to access other services over the network.
 
 =cut
 
+use Myriad;
 use Myriad::Class;
 use Myriad::Service::Storage::Remote;
 
-has $myriad;
 has $service_name;
 has $local_service_name;
-has $storage;
+has $remote_service_storage;
 
 BUILD(%args) {
-    weaken($myriad = delete $args{myriad});
     $service_name = delete $args{service_name} // die 'need a service name';
     $local_service_name = delete $args{local_service_name};
-    $storage = Myriad::Service::Storage::Remote->new(
+    $remote_service_storage = Myriad::Service::Storage::Remote->new(
         prefix             => $service_name,
-        storage            => $myriad->storage,
+        storage            => $Myriad::INSTANCE->storage,
         local_service_name => $local_service_name
     );
 }
@@ -46,7 +45,7 @@ the remote service public storage.
 
 =cut
 
-method storage { $storage }
+method storage { $remote_service_storage }
 
 =head2 call_rpc
 
@@ -65,7 +64,7 @@ it takes
 =cut
 
 async method call_rpc ($rpc, %args) {
-    await $myriad->rpc_client->call_rpc($service_name, $rpc, %args);
+    await $Myriad::INSTANCE->rpc_client->call_rpc($service_name, $rpc, %args);
 }
 
 =head2 subscribe
@@ -81,8 +80,8 @@ it subscribes to a channel in the remote service.
 =cut
 
 async method subscribe ($channel, $client = "remote_service") {
-   my $sink = $myriad->ryu->sink;
-   await $myriad->subscription->create_from_sink(
+   my $sink = $Myriad::INSATANCE->ryu->sink;
+   await $Myriad::INSTANCE->subscription->create_from_sink(
         sink => $sink,
         service => $service_name,
         client => $client,

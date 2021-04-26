@@ -29,9 +29,7 @@ has $myriad;
 has $cmd;
 
 BUILD (%args) {
-    weaken(
-        $myriad = $args{myriad} // die 'needs a Myriad parent object'
-    );
+    weaken($myriad = $Myriad::INSTANCE);
 }
 
 =head2 service

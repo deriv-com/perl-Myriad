@@ -176,6 +176,8 @@ use Net::Async::OpenTracing;
 use Metrics::Any::Adapter qw(DogStatsd);
 
 our $REGISTRY;
+our $INSTANCE;
+
 BEGIN {
     $REGISTRY = Myriad::Registry->new;
 }
@@ -239,6 +241,7 @@ has $ryu;
 BUILD {
     $startup_tasks = [ ];
     $shutdown_tasks = [ ];
+    $INSTANCE = $self;
 }
 
 =head2 loop
@@ -491,7 +494,6 @@ Returns the service instance.
 async method add_service ($srv, %args) {
     return await $self->registry->add_service(
         service      => $srv,
-        myriad       => $self,
         %args
     );
 }

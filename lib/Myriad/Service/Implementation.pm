@@ -51,9 +51,6 @@ sub MODIFY_CODE_ATTRIBUTES {
 }
 
 has $ryu;
-has $rpc;
-has $subscription;
-has $storage;
 has $service_name;
 has %active_batch;
 
@@ -73,13 +70,13 @@ method ryu () { $ryu }
 
 =cut
 
-method rpc () { $rpc //= $self->{rpc}->() }
+method rpc () { $Myriad::INSTANCE->rpc }
 
 =head2 subscription
 
 =cut
 
-method subscription () { $subscription //= $self->{subscription}->() }
+method subscription () { $Myriad::INSTANCE->subscription }
 
 =head2 service_name
 
@@ -153,8 +150,6 @@ Populate internal configuration.
 
 method configure (%args) {
     $service_name //= (delete $args{name} || die 'need a service name');
-    $self->{rpc} = delete $args{rpc} if $args{rpc};
-    $self->{subscription} = delete $args{subscription} if $args{subscription};
     $self->next::method(%args);
 }
 
@@ -200,7 +195,7 @@ async method process_batch($name, $code, $sink) {
                 my $f = shift;
                 $metrics->report_timer(
                     batch_timing => $f->elapsed // 0, {
-                        method => $k,
+                        method => $name,
                         status => $f->state,
                         service => $service_name
                     }

@@ -41,7 +41,6 @@ declare_exception UnknownTransport => (
 sub new {
     my ($class, %args) = @_;
     my $transport = delete $args{transport};
-    weaken(my $myriad = delete $args{myriad});
 
     # Passing args individually looks tedious but this is to avoid
     # L<IO::Async::Notifier> exception when it doesn't recognize the key.
@@ -49,12 +48,12 @@ sub new {
     if ($transport eq 'redis') {
         require Myriad::Subscription::Implementation::Redis;
         return Myriad::Subscription::Implementation::Redis->new(
-            redis   => $myriad->redis,
+            redis   => $Myriad::INSTANCE->redis,
         );
     } elsif ($transport eq 'memory' or $transport eq 'perl') {
         require Myriad::Subscription::Implementation::Memory;
         return Myriad::Subscription::Implementation::Memory->new(
-            transport => $myriad->memory_transport
+            transport => $Myriad::INSTANCE->memory_transport
         );
     } else {
         Myriad::Exception::Subscription::UnknownTransport->throw();
