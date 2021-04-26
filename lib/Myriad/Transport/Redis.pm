@@ -219,7 +219,11 @@ async method read_from_stream (%args) {
         return map {
             my ($id, $args) = $_->@*;
             $log->tracef('Item from stream %s is ID %s and args %s', $stream, $id, $args);
-            return {stream => $self->remove_prefix($stream), id => $id, data => $args}
+            return {
+                stream => $self->remove_prefix($stream),
+                id     => $id,
+                data   => $args,
+            }
         } $data->@*;
     }
 
@@ -227,9 +231,8 @@ async method read_from_stream (%args) {
 }
 
 async method stream_info ($stream) {
-    $self->apply_prefix($stream);
     my $v = await $redis->xinfo(
-        STREAM => $stream
+        STREAM => $self->apply_prefix($stream)
     );
 
     my %info = pairmap {
@@ -378,7 +381,7 @@ It'll also send the MKSTREAM option to create the stream if it doesn't exist.
 =item * C<group> - The group name.
 
 =item * C<start_from> - The id of the message that is going to be considered the start of the stream for this group's point of view
-by default it's `$` which means the last message.
+by default it's C<$> which means the last message.
 
 =back
 
