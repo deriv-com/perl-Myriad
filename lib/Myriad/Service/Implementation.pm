@@ -6,18 +6,6 @@ use warnings;
 # VERSION
 # AUTHORITY
 
-use Object::Pad;
-use Future;
-use Future::AsyncAwait;
-use Syntax::Keyword::Try;
-
-use Myriad::Storage::Implementation::Redis;
-use Myriad::Subscription;
-
-use Myriad::Exception;
-
-class Myriad::Service::Implementation extends IO::Async::Notifier;
-
 use utf8;
 
 =encoding utf8
@@ -31,6 +19,18 @@ Myriad::Service - microservice coördination
 =head1 DESCRIPTION
 
 =cut
+
+use Object::Pad;
+use Future;
+use Future::AsyncAwait;
+use Syntax::Keyword::Try;
+
+use Myriad::Storage::Implementation::Redis;
+use Myriad::Subscription;
+
+use Myriad::Exception;
+
+class Myriad::Service::Implementation extends IO::Async::Notifier;
 
 use Log::Any qw($log);
 use Metrics::Any qw($metrics);
