@@ -44,40 +44,46 @@ async method create_from_source (%args) {
 
     my $stream = "service.subscriptions.$service/$args{channel}";
 
-    $src->unblocked->then(sub {
+    $src->unblocked->then($self->$curry::weak(await method {
         # The streams will be checked later by "check_for_overflow" to avoid unblocking the source by mistake
         # we will make "check_for_overflow" aware about this stream after the service has started
-        push @emitters, {stream => $stream, source => $src, max_len => $args{max_len} // MAX_ALLOWED_STREAM_LENGTH};
-        return $src->map(sub {
+        push @emitters, {
+            stream => $stream,
+            source => $src,
+            max_len => $args{max_len} // MAX_ALLOWED_STREAM_LENGTH
+        };
+        await $src->map($self->$curry::weak(method {
             $log->tracef('sub has an event! %s', $_);
             return $redis->xadd(
                 encode_utf8($stream) => '*',
                 data => encode_json_utf8($_),
             );
-        })->ordered_futures(
+        }))->ordered_futures(
             low => 100,
             high => 5000,
         )->completed
-         ->on_fail(sub {
+         ->on_fail($self->$curry::weak(method {
             $log->warnf("Redis XADD command failed for stream %s", $stream);
             $should_shutdown->fail(
                 "Failed to publish subscription data for $stream - " . shift
             ) unless $should_shutdown->is_ready;
-        })
-    })->retain;
+        }));
+        return;
+    }))->retain;
     return;
 }
 
 async method create_from_sink (%args) {
-    my $sink = delete $args{sink} or die 'need a sink';
+    my $sink = delete $args{sink}
+        or die 'need a sink';
     my $remote_service = $args{from} || $args{service};
     my $stream = "service.subscriptions.$remote_service/$args{channel}";
     $log->tracef('created sub thing from sink');
     push @receivers, {
-        key => $stream,
+        key    => $stream,
         client => $args{client},
-        sink => $sink,
-        group => 0,
+        sink   => $sink,
+        group  => 0,
     };
 }
 
