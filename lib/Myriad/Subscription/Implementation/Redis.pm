@@ -98,7 +98,8 @@ async method start {
 }
 
 async method stop {
-    $should_shutdown->done() unless $should_shutdown->is_ready;
+    $should_shutdown->done unless $should_shutdown->is_ready;
+    return;
 }
 
 
