@@ -56,10 +56,6 @@ has $myriad;
 has $service_name;
 has %active_batch;
 
-BUILD (%args) {
-    Scalar::Util::weaken($myriad = delete $args{myriad});
-}
-
 =head1 ATTRIBUTES
 
 These methods return instance variables.
@@ -165,7 +161,6 @@ Populate internal configuration.
 method configure (%args) {
     $service_name //= (delete $args{name} || die 'need a service name');
     Scalar::Util::weaken($myriad = delete $args{myriad}) if exists $args{myriad};
-    weaken($myriad = delete $args{myriad}) if exists $args{myriad};
     $self->next::method(%args);
 }
 
