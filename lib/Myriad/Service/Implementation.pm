@@ -202,20 +202,26 @@ async method process_batch($k, $code, $src) {
         await $src->unblocked;
         my $data = [];
         try {
-            $data = await $self->$code()->on_ready(sub {
+            $data = await $self->$code->on_ready(sub {
                 my $f = shift;
-                $metrics->report_timer(batch_timing => $f->elapsed // 0, {method => $k, status => $f->state, service => $service_name});
+                $metrics->report_timer(
+                    batch_timing => $f->elapsed // 0, {
+                        method => $k,
+                        status => $f->state,
+                        service => $service_name
+                    }
+                );
             });
         } catch ($e) {
             $log->warnf("Batch iteration for %s failed - %s", $k, $e);
         }
+
         if ($data->@*) {
             $backoff = 0;
             $src->emit($_) for $data->@*;
             # Defer next processing, give other events a chance
             await $self->loop->delay_future(after => 0);
-        }
-        else {
+        } else {
             $backoff = min(MAX_EXPONENTIAL_BACKOFF, ($backoff || 0.02) * 2);
             $log->tracef('Batch for %s returned no results, delaying for %dms before retry', $k, $backoff * 1000.0);
             await $self->loop->delay_future(
@@ -245,8 +251,13 @@ async method load () {
             );
 
             $spec->{src} = $sink->source->map(sub {
-                    $metrics->inc_counter('emitters_count', {method => $method, service => $service_name});
-                    return $_;
+                $metrics->inc_counter(
+                    'emitters_count', {
+                        method => $method,
+                        service => $service_name
+                    }
+                );
+                return $_;
             });
 
             await $self->subscription->create_from_source(
@@ -284,7 +295,6 @@ async method load () {
     if (my $batches = $registry->batches_for(ref($self))) {
         for my $method (sort keys $batches->%*) {
             $log->tracef('Starting batch process %s for %s', $method, ref($self));
-            my $code = $batches->{$method}{code};
             my $sink = $batches->{$method}{sink} = $ryu->sink(label => 'batch:' . $method);
             $sink->pause;
             await $self->subscription->create_from_source(
