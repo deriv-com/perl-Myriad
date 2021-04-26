@@ -310,21 +310,32 @@ async method load () {
             my $spec = $rpc_calls->{$method};
             my $sink = $spec->{sink} = $ryu->sink(label => "rpc:$service_name:$method");
             $sink->pause;
-            $self->rpc->create_from_sink(service => $service_name, method => $method, sink => $sink);
+            $self->rpc->create_from_sink(
+                service => $service_name,
+                method => $method,
+                sink => $sink
+            );
 
             my $code = $spec->{code};
-            $spec->{current} = $sink->source->map(async sub {
-                my $message = shift;
+            $spec->{current} = $sink->source->map($self->$curry::weak(async method ($message) {
                 try {
-                    my $response = await $self->$code($message->args->%*)->on_ready(sub {
+                    my $response = await $self->$code(
+                        $message->args->%*
+                    )->on_ready(sub {
                         my $f = shift;
-                        $metrics->report_timer(rpc_timing => $f->elapsed // 0, {method => $method, status => $f->state, service => $service_name});
+                        $metrics->report_timer(
+                            rpc_timing => $f->elapsed // 0, {
+                                method => $method,
+                                status => $f->state,
+                                service => $service_name
+                            }
+                        );
                     });
                     await $self->rpc->reply_success($service_name, $message, $response);
                 } catch ($e) {
                     await $self->rpc->reply_error($service_name, $message, $e);
                 }
-            })->resolve->completed;
+            }))->resolve->completed;
         }
     }
 }
@@ -343,19 +354,17 @@ async method start {
         $self->diagnostics(1),
     );
 
-    die "diagnostics for $service_name failed" unless $diag eq 'ok';
-
     # Since everything is ready now we let the service commence work
     my $registry = $Myriad::REGISTRY;
     if(my $emitters = $registry->emitters_for(ref($self))) {
         for my $method (sort keys $emitters->%*) {
             $log->tracef('Starting emitter %s as %s', $method, $emitters->{$method}->{channel});
             my $spec = $emitters->{$method};
-            my $code = $spec->{code};
+            my $code = delete $spec->{code};
             $spec->{current} = $self->$code(
                 $spec->{sink},
             )->on_fail(sub {
-                    $log->fatalf('Emitter for %s failed - %s', $method, shift);
+                $log->fatalf('Emitter for %s failed - %s', $method, shift);
             })->retain;
             $spec->{src}->resume;
         }
@@ -366,25 +375,36 @@ async method start {
             try {
                 $log->tracef('Starting receiver %s as %s', $method, $receivers->{$method}->{channel});
                 my $spec = $receivers->{$method};
-                my $code = $spec->{code};
-                my $current = await $self->$code($spec->{sink}->source);
+                my $code = delete $spec->{code};
+                my $current = await $self->$code(
+                    $spec->{sink}->source
+                );
                 $log->tracef('Completed setup for receiver');
 
                 die "Receivers method: $method should return a Ryu::Source"
                     unless blessed $current && $current->isa('Ryu::Source');
 
-                $spec->{current} =  $current->map(sub {
+                Scalar::Util::weaken(my $sink_copy = $spec->{sink});
+                $spec->{current} = $current->map(sub {
                     my $f = Future->wrap(shift);
-                    $metrics->report_timer(receiver_timing => ($f->elapsed // 0), {method => $method, status => $f->state, service => $service_name});
+                    $metrics->report_timer(
+                        receiver_timing => ($f->elapsed // 0), {
+                            method => $method,
+                            status => $f->state,
+                            service => $service_name
+                        }
+                    );
                     return $f;
-                })->resolve->completed->retain->on_fail(sub {
+                })->resolve->completed->on_fail(sub {
                     my $error = shift;
-                    $log->errorf("Reciever %s failed while processing messages - %s", $method, $error);
-                    $spec->{sink}->source->fail($error);
-                });
+                    $log->errorf("Receiver %s failed while processing messages - %s", $method, $error);
+                    my $sink = $sink_copy or return;
+                    my $src = $sink->source;
+                    $src->fail($error) unless $src->completed->is_ready;
+                })->retain;
                 $spec->{sink}->resume;
             } catch ($e) {
-                $log->errorf('Failed while setarting up receiver: %s', $e);
+                $log->errorf('Failed while starting up receiver: %s', $e);
             }
         }
     }
@@ -392,11 +412,15 @@ async method start {
     if (my $batches = $registry->batches_for(ref($self))) {
         for my $method (sort keys $batches->%*) {
             $log->tracef('Starting batch process %s for %s', $method, ref($self));
-            my $code = $batches->{$method}{code};
+            my $code = delete $batches->{$method}{code};
 
             $active_batch{$method} = [
                 $batches->{$method}{sink},
-                $self->process_batch($method, $code, $batches->{$method}{sink})
+                $self->process_batch(
+                    $method,
+                    $code,
+                    $batches->{$method}{sink}
+                )
             ];
 
             $batches->{$method}{sink}->resume;
@@ -404,7 +428,7 @@ async method start {
     }
 
     if (my $rpc_calls = $registry->rpc_for(ref($self))) {
-        $rpc_calls->{$_}->{sink}->resume for (keys $rpc_calls->%*);
+        $rpc_calls->{$_}->{sink}->resume for keys $rpc_calls->%*;
     }
 
     $log->infof('Done');
