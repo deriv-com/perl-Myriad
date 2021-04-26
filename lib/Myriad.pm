@@ -608,6 +608,7 @@ Prepare for logging.
 
 method setup_logging () {
     my $level = $config->log_level;
+    STDERR->autoflush(1);
     $level->subscribe(my $code = sub {
         Log::Any::Adapter->import(
             qw(Stderr),
