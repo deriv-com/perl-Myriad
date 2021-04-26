@@ -56,6 +56,10 @@ has $myriad;
 has $service_name;
 has %active_batch;
 
+BUILD (%args) {
+    Scalar::Util::weaken($myriad = delete $args{myriad});
+}
+
 =head1 ATTRIBUTES
 
 These methods return instance variables.
