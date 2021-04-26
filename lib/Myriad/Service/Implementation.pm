@@ -51,8 +51,9 @@ sub MODIFY_CODE_ATTRIBUTES {
 }
 
 has $ryu;
+has $rpc;
+has $subscription;
 has $storage;
-has $myriad;
 has $service_name;
 has %active_batch;
 
@@ -68,25 +69,17 @@ Provides a common L<Ryu::Async> instance.
 
 method ryu () { $ryu }
 
-=head2 myriad
-
-The L<Myriad> instance which owns this service. Stored internally as a weak reference.
-
-=cut
-
-method myriad () { $myriad }
-
 =head2 rpc
 
 =cut
 
-method rpc () { $myriad->rpc }
+method rpc () { $rpc //= $self->{rpc}->() }
 
 =head2 subscription
 
 =cut
 
-method subscription () { $myriad->subscription }
+method subscription () { $subscription //= $self->{subscription}->() }
 
 =head2 service_name
 
@@ -160,7 +153,8 @@ Populate internal configuration.
 
 method configure (%args) {
     $service_name //= (delete $args{name} || die 'need a service name');
-    Scalar::Util::weaken($myriad = delete $args{myriad}) if exists $args{myriad};
+    $self->{rpc} = delete $args{rpc} if $args{rpc};
+    $self->{subscription} = delete $args{subscription} if $args{subscription};
     $self->next::method(%args);
 }
 
@@ -200,11 +194,11 @@ async method process_batch($name, $code, $sink) {
     $log->tracef('Start batch processing for %s', $name);
     while (1) {
         await $sink->unblocked;
-       my $data = [];
+        my $data = [];
         try {
             $data = await $code->()->on_ready(sub {
                 my $f = shift;
-                 $metrics->report_timer(batch_timing => $f->elapsed // 0, {method => $name, status => $f->state, service => $self->service_name});
+                $metrics->report_timer(batch_timing => $f->elapsed // 0, {method => $name, status => $f->state, service => $self->service_name});
             });
         } catch ($e) {
             $log->warnf("Batch iteration for %s failed - %s", $name, $e);

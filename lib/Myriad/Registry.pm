@@ -55,7 +55,8 @@ async method add_service (%args) {
     $srv = $srv->new(
         %args,
         name => $service_name,
-        myriad => $myriad,
+        rpc => sub { $myriad->rpc },
+        subscription => sub { $myriad->subscription },
     ) unless blessed($srv) and $srv->isa('Myriad::Service');
 
     # Inject an `$api` instance so that this service can talk
