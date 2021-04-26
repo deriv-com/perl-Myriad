@@ -44,7 +44,7 @@ async method create_from_source (%args) {
 
     my $stream = "service.subscriptions.$service/$args{channel}";
 
-    $src->unblocked->then($self->$curry::weak(await method {
+    $src->unblocked->then($self->$curry::weak(async method {
         # The streams will be checked later by "check_for_overflow" to avoid unblocking the source by mistake
         # we will make "check_for_overflow" aware about this stream after the service has started
         push @emitters, {
