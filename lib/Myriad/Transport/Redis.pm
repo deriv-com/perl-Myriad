@@ -1,7 +1,5 @@
 package Myriad::Transport::Redis;
 
-use Class::Method::Modifiers qw(:all);
-use Sub::Util qw(subname);
 use Myriad::Class extends => qw(IO::Async::Notifier);
 
 # VERSION
@@ -22,6 +20,9 @@ This module is responsible for namespacing, connection handling and clustering.
 It should also cover retry for stateless calls.
 
 =cut
+
+use Class::Method::Modifiers qw(:all);
+use Sub::Util qw(subname);
 
 use Myriad::Redis::Pending;
 
@@ -328,11 +329,16 @@ method pending (%args) {
     my $stream = $self->apply_prefix($args{stream});
     my $group = $args{group};
     my $client = $args{client};
-    my $instance;
     Future->wait_any(
         $src->completed->without_cancel,
-        (async sub {
-            $instance = await $self->borrow_instance_from_pool;
+        (async method {
+            my $instance = await $self->borrow_instance_from_pool;
+            defer { 
+                $self->return_instance_to_pool($instance) if $instance;
+                undef $instance;
+            }
+
+            my $src = $self->source;
             my $start = '-';
             while (1) {
                 await $src->unblocked;
@@ -356,11 +362,9 @@ method pending (%args) {
                 }
                 last unless @$pending >= $self->batch_count;
             }
-        })->(),
-    )->on_ready(sub {
-        $self->return_instance_to_pool($instance) if $instance;
-    })->on_fail(sub  {
-        $src->fail(shift);
+        })->($self),
+    )->on_fail(sub  {
+        $src->fail(@_);
     })->retain;
     $src;
 }
