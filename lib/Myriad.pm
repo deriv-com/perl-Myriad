@@ -3,7 +3,7 @@ package Myriad;
 
 use Myriad::Class;
 
-our $VERSION = '0.001';
+our $VERSION = '0.002';
 # AUTHORITY
 
 =encoding utf8
@@ -324,14 +324,14 @@ method redis () {
         $self->loop->add(
             $redis = Myriad::Transport::Redis->new(
                 $config ? (
-                    redis_uri => $config->transport_redis->as_string,
-                    cluster   => ($config->transport_cluster->as_string ? 1 : 0),
-                    client_side_cache_size => ($config->transport_redis_cache->as_string or 0),
+                    redis_uri              => $config->transport_redis->as_string,
+                    cluster                => ($config->transport_cluster->as_string ? 1 : 0),
+                    client_side_cache_size => $config->transport_redis_cache->as_number,
                 ) : ()
             )
         );
 
-        $self->on_start(async sub {
+        $self->on_start(async method {
             await $self->redis->start;
         });
     }
@@ -347,7 +347,7 @@ The L<Myriad::Transport::Memory> instance.
 method memory_transport () {
     unless ($memory_transport) {
         $loop->add(
-            $memory_transport = Myriad::Transport::Memory->new()
+            $memory_transport = Myriad::Transport::Memory->new
         );
     }
 
@@ -365,17 +365,20 @@ method rpc () {
         $self->loop->add(
             $rpc = Myriad::RPC->new(
                 transport => $config ? $config->rpc_transport->as_string : '',
-                myriad => $self,
+                myriad    => $self,
             )
         );
 
-        $self->on_start(async sub {
-            $rpc->start->retain->on_fail(sub {
-                $self->shutdown_future->fail(shift) unless $self->shutdown_future->is_ready;
-            });
+        $self->on_start(async method {
+            $rpc->start->retain->on_fail($self->$curry::weak(sub {
+                my ($self, $reason) = @_;
+                $self->shutdown_future->fail($reason)
+                    unless $self->shutdown_future->is_ready;
+            }));
+            return;
         });
 
-        $self->on_shutdown(async sub {
+        $self->on_shutdown(async method {
             await $rpc->stop;
         });
     }
@@ -402,7 +405,7 @@ method rpc_client () {
             $self->shutdown_future->fail(shift);
         });
 
-        $self->on_shutdown(async sub {
+        $self->on_shutdown(async method {
             await $rpc_client->stop;
         });
     }
@@ -440,13 +443,13 @@ method subscription () {
             )
         );
 
-        $self->on_start(async sub {
+        $self->on_start(async method {
             $subscription->start->retain->on_fail(sub {
                 $self->shutdown_future->fail(shift);
             });
         });
 
-        $self->on_shutdown(async sub {
+        $self->on_shutdown(async method {
             await $subscription->stop;
         });
     }
@@ -540,7 +543,7 @@ async method shutdown () {
 
         # We also have generic tasks, such as transport or RPC/subscription
         push @shutdown_operations, map {
-            $_->()
+            $self->$_
         } splice $shutdown_tasks->@*;
 
         await Future->wait_any(
@@ -605,6 +608,7 @@ Prepare for logging.
 
 method setup_logging () {
     my $level = $config->log_level;
+    STDERR->autoflush(1);
     $level->subscribe(my $code = sub {
         Log::Any::Adapter->import(
             qw(Stderr),
@@ -629,7 +633,7 @@ method setup_tracing () {
             protocol => 'jaeger',
         )
     );
-    $self->on_shutdown(async sub {
+    $self->on_shutdown(async method {
         await $tracing->sync
     });
     return;
@@ -654,7 +658,7 @@ async method run () {
     try {
         # Run the startup tasks, order is imporatant
         for my $task ($startup_tasks->@*) {
-            await $task->();
+            await $self->$task;
         }
     } catch ($e) {
         die "Startup tasks failed - $e";
