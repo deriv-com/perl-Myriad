@@ -108,6 +108,7 @@ async method create_group($receiver) {
         await $redis->create_group($receiver->{key}, $uuid);
         $receiver->{group} = 1;
     }
+    return;
 }
 
 async method receive_items {
@@ -135,20 +136,30 @@ async method receive_items {
             await $self->create_group($item);
 
             my @events = await $redis->read_from_stream(
-                    stream => $stream,
-                    group => $uuid,
-                    client => $client
+                stream => $stream,
+                group => $uuid,
+                client => $client
             );
 
             for my $event (@events) {
                 try {
                     my $event_data = $event->{data}->[1];
-                    $sink->source->emit({data => decode_json_utf8($event_data)});
+                    $sink->source->emit({
+                        data => decode_json_utf8($event_data)
+                    });
                 } catch($e) {
-                    $log->tracef("An error happned while decoding event data for stream %s message: %s , error: %s",
-                    $stream, $event->{data}, $e);
+                    $log->tracef(
+                        "An error happened while decoding event data for stream %s message: %s, error: %s",
+                        $stream,
+                        $event->{data},
+                        $e
+                    );
                 }
-                await $redis->ack($stream, $client, $event->{id});
+                await $redis->ack(
+                    $stream,
+                    $client,
+                    $event->{id}
+                );
             }
         } else {
             $log->tracef('No receivers, waiting for a few seconds');
@@ -156,7 +167,6 @@ async method receive_items {
         }
     }
 }
-
 
 async method check_for_overflow () {
     while (1) {
@@ -170,7 +180,10 @@ async method check_for_overflow () {
                         $emitter->{source}->pause;
                         $log->tracef("Paused emitter on %s, length is %s, max allowed %s", $emitter->{stream}, $len, $emitter->{max_len});
                     }
-                    await $redis->cleanup(stream => $emitter->{stream}, limit => $emitter->{max_len});
+                    await $redis->cleanup(
+                        stream => $emitter->{stream},
+                        limit => $emitter->{max_len}
+                    );
                 } else {
                     if($emitter->{source}->is_paused) {
                         $emitter->{source}->resume;
