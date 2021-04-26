@@ -461,15 +461,21 @@ async method diagnostics($level) {
 
 =head2 shutdown
 
-Gracefully shut down the service by
+Gracefully shut down the service. At the moment, this means we:
 
-- stop accepting more requests
+=over 4
 
-- finish the pending requests
+=item * stop accepting more requests
+
+=item * finish the pending requests
+
+=back
 
 =cut
 
-async method shutdown {}
+async method shutdown {
+    return;
+}
 
 1;
 
