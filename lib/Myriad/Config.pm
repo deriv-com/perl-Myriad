@@ -227,9 +227,8 @@ method lookup_from_args ($commandline) {
         # First match arg with expected keys
         my $key = exists $DEFAULTS{$arg} ? $arg : $FULLNAME_FOR{$arg};
         if ($key) {
-            # For flags (0|1) config will implement a naive parsing
-            $value = 1 if defined $DEFAULTS{$arg} && $DEFAULTS{$arg} eq 0;
-            $value = shift $commandline->@* unless $value;
+            # Either `--example=123` or `--example 123`
+            $value = shift $commandline->@* unless defined $value;
             $config->{$key} = $value;
         } elsif ($arg =~ s/services?[_|\.]//) { # are we doing service config
             $value = shift $commandline->@* unless $value;
