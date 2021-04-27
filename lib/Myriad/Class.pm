@@ -57,6 +57,11 @@ The following Perl language features and modules are applied:
 
 =item * provides L<Scalar::Util/blessed>, L<Scalar::Util/weaken>, L<Scalar::Util/refaddr>
 
+=item * provides L<List::Util/min>, L<List::Util/max>, L<List::Util/sum0>
+
+=item * provides L<JSON::MaybeUTF8/encode_json_text>, L<JSON::MaybeUTF8/encode_json_utf8>,
+L<JSON::MaybeUTF8/decode_json_text>, L<JSON::MaybeUTF8/decode_json_utf8>, L<JSON::MaybeUTF8/format_json_text>
+
 =back
 
 In addition, the following core L<feature>s are enabled:
@@ -107,6 +112,9 @@ use Future::AsyncAwait;
 use Syntax::Keyword::Try;
 use Syntax::Keyword::Dynamically;
 use Scalar::Util;
+use List::Util;
+
+use JSON::MaybeUTF8;
 
 use Heap;
 use IO::Async::Notifier;
@@ -169,6 +177,18 @@ sub import {
 
     # Helper functions which are used often enough to be valuable as a default
     Scalar::Util->export($pkg => qw(refaddr blessed weaken));
+    List::Util->export($pkg => qw(min max sum0));
+    {
+        no strict 'refs';
+        *{$pkg . '::' . $_} = JSON::MaybeUTF8->can($_) for qw(
+            encode_json_text
+            encode_json_utf8
+            decode_json_text
+            decode_json_utf8
+            format_json_text
+        );
+    }
+
     {
         no strict 'refs';
         # trim() might appear in core perl at some point, so let's reserve the

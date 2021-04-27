@@ -26,7 +26,7 @@ requires 'Config::Any', '>= 0.32';
 requires 'YAML::XS', '>= 0.82';
 requires 'Metrics::Any', '>= 0.06';
 requires 'OpenTracing::Any', '>= 1.003';
-requires 'JSON::MaybeUTF8', '>= 1.002';
+requires 'JSON::MaybeUTF8', '>= 2.000';
 requires 'Unicode::UTF8';
 requires 'Time::Moment', '>= 0.44';
 requires 'Sys::Hostname';
