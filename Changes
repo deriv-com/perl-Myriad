@@ -1,5 +1,8 @@
 
 Revision history for {{$dist->name}}
+    [Bugs fixed]
+    - updates to latest Net::Async::Redis to resolve remaining memory leaks
+    - numeric configuration values were treated as booleans if the default was set to zero
 
 {{$NEXT}}
     [API Changes]

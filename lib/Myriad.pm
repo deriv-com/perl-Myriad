@@ -3,7 +3,7 @@ package Myriad;
 
 use Myriad::Class;
 
-our $VERSION = '0.002';
+our $VERSION = '0.003';
 # AUTHORITY
 
 =encoding utf8
