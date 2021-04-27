@@ -40,6 +40,8 @@ requires 'Module::Pluggable::Object';
 requires 'Math::Random::Secure';
 requires 'Getopt::Long';
 requires 'Pod::Usage';
+requires 'List::Util', '>= 1.55';
+requires 'List::Keywords', '>= 0.01';
 # Integration
 requires 'Net::Async::OpenTracing', '>= 1.000';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
