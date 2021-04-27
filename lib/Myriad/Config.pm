@@ -54,7 +54,7 @@ alternative.
 our %DEFAULTS = (
     config_path            => 'config.yml',
     transport_redis        => 'redis://localhost:6379',
-    transport_redis_cache  => '',
+    transport_redis_cache  => 0,
     transport_cluster      => 0,
     log_level              => 'info',
     library_path           => '',
