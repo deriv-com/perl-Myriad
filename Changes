@@ -5,6 +5,8 @@ Revision history for {{$dist->name}}
     - numeric configuration values were treated as booleans if the default was set to zero
 
 {{$NEXT}}
+
+0.003     2021-04-27 14:57:49+08:00 Asia/Kuala_Lumpur
     [API Changes]
     - The "perl" transport has been renamed to "memory", for consistency
       with implementations in other languages
