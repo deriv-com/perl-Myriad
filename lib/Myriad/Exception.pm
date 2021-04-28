@@ -6,8 +6,6 @@ use warnings;
 # VERSION
 # AUTHORITY
 
-no indirect qw(fatal);
-
 use utf8;
 
 =encoding utf8
@@ -21,6 +19,8 @@ Myriad::Exception
 This is a rôle used for all exceptions throughout the framework.
 
 =cut
+
+no indirect qw(fatal);
 
 use Scalar::Util;
 use Role::Tiny;
