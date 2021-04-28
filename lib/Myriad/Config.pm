@@ -17,8 +17,6 @@ Configuration support.
 
 =cut
 
-use feature qw(current_sub);
-
 use Getopt::Long qw(GetOptionsFromArray);
 use Pod::Usage;
 use Config::Any;

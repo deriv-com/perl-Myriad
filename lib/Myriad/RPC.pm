@@ -6,9 +6,6 @@ use warnings;
 # VERSION
 # AUTHORITY
 
-no indirect qw(fatal);
-use Scalar::Util qw(weaken);
-
 use utf8;
 
 =encoding utf8
@@ -24,6 +21,9 @@ Myriad::RPC - microservice RPC abstraction
 =head1 DESCRIPTION
 
 =cut
+
+no indirect qw(fatal);
+use Scalar::Util qw(weaken);
 
 use Myriad::Exception::Builder category => 'rpc';
 

@@ -6,7 +6,6 @@ use warnings;
 # VERSION
 # AUTHORITY
 
-no indirect qw(fatal);
 use utf8;
 
 =encoding utf8
@@ -21,6 +20,7 @@ See L<Myriad::Exception> for the rôle that defines the exception API.
 
 =cut
 
+no indirect qw(fatal);
 use Myriad::Exception;
 use Myriad::Exception::Base;
 

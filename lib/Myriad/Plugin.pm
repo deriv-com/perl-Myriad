@@ -5,6 +5,8 @@ use Myriad::Class;
 # VERSION
 # AUTHORITY
 
+=encoding utf8
+
 =head1 NAME
 
 Myriad::Plugin

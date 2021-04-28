@@ -1,15 +1,9 @@
 package Myriad::RPC::Message;
 
-use strict;
-use warnings;
+use Myriad::Class;
 
 # VERSION
 # AUTHORITY
-
-use Object::Pad;
-class Myriad::RPC::Message;
-
-use utf8;
 
 =encoding utf8
 
@@ -254,4 +248,14 @@ sub apply_decoding ($data, $encoding) {
 }
 
 1;
+
+=head1 AUTHOR
+
+Deriv Group Services Ltd. C<< DERIV@cpan.org >>.
+
+See L<Myriad/CONTRIBUTORS> for full details.
+
+=head1 LICENSE
+
+Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
 
