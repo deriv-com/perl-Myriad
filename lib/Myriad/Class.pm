@@ -210,7 +210,7 @@ sub import {
     Syntax::Keyword::Try->import_into($pkg);
     Syntax::Keyword::Dynamically->import_into($pkg);
     Syntax::Keyword::Defer->import_into($pkg);
-    Future::AsyncAwait->import_into($pkg);
+    Future::AsyncAwait->import_into($pkg, ':experimental(cancel)');
     Metrics::Any->import_into($pkg, '$metrics');
 
     # For history here, see this:
