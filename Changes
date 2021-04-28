@@ -2,6 +2,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+
+0.004     2021-04-28 13:27:36+08:00 Asia/Kuala_Lumpur
     [API Changes]
     - Helper methods from List::Util - `min`, `max` and `sum0` - plus JSON functions
     from JSON::MaybeUTF8 now injected into classes by default
