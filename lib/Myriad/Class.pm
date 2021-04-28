@@ -184,7 +184,6 @@ sub import {
     # Helper functions which are used often enough to be valuable as a default
     Scalar::Util->export($pkg => qw(refaddr blessed weaken));
     List::Util->export($pkg => qw(min max sum0));
-    List::Keywords->export($pkg => qw(any all));
     {
         no strict 'refs';
         *{$pkg . '::' . $_} = JSON::MaybeUTF8->can($_) for qw(
@@ -216,6 +215,9 @@ sub import {
     Syntax::Keyword::Defer->import_into($pkg);
     Future::AsyncAwait->import_into($pkg, ':experimental(cancel)');
     Metrics::Any->import_into($pkg, '$metrics');
+
+    # Others use lexical hints
+    List::Keywords->import(qw(any all));
 
     # For history here, see this:
     # https://rt.cpan.org/Ticket/Display.html?id=132337
