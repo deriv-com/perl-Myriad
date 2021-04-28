@@ -5,6 +5,11 @@ Revision history for {{$dist->name}}
     [API Changes]
     - Helper methods from List::Util - `min`, `max` and `sum0` - plus JSON functions
     from JSON::MaybeUTF8 now injected into classes by default
+    - `defer` keyword from Syntax::Keyword::Defer is also injected into classes by default
+
+    [Bugs fixed]
+    - `memory` transport was not delivering messages correctly due to a double-counting bug
+    - Redis stream cleanup fixed
 
 0.003     2021-04-27 14:57:49+08:00 Asia/Kuala_Lumpur
     [Bugs fixed]
