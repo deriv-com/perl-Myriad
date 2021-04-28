@@ -333,7 +333,7 @@ method pending (%args) {
         $src->completed->without_cancel,
         (async method {
             my $instance = await $self->borrow_instance_from_pool;
-            defer { 
+            defer {
                 $self->return_instance_to_pool($instance) if $instance;
                 undef $instance;
             }
