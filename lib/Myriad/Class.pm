@@ -53,6 +53,8 @@ The following Perl language features and modules are applied:
 
 =item * L<Syntax::Keyword::Dynamically>
 
+=item * L<Syntax::Keyword::Defer>
+
 =item * L<Future::AsyncAwait>
 
 =item * provides L<Scalar::Util/blessed>, L<Scalar::Util/weaken>, L<Scalar::Util/refaddr>
@@ -111,6 +113,7 @@ use experimental qw(signatures);
 use Future::AsyncAwait;
 use Syntax::Keyword::Try;
 use Syntax::Keyword::Dynamically;
+use Syntax::Keyword::Defer;
 use Scalar::Util;
 use List::Util;
 
@@ -206,6 +209,7 @@ sub import {
     # Some well-designed modules provide direct support for import target
     Syntax::Keyword::Try->import_into($pkg);
     Syntax::Keyword::Dynamically->import_into($pkg);
+    Syntax::Keyword::Defer->import_into($pkg);
     Future::AsyncAwait->import_into($pkg);
     Metrics::Any->import_into($pkg, '$metrics');
 
