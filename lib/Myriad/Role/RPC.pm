@@ -6,7 +6,6 @@ use warnings;
 # VERSION
 # AUTHORITY
 
-no indirect qw(fatal);
 use utf8;
 
 =encoding utf8
@@ -36,6 +35,7 @@ a concrete implementation - instead, see classes such as:
 
 =cut
 
+no indirect qw(fatal);
 use Role::Tiny;
 
 use Future::AsyncAwait;

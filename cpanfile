@@ -5,6 +5,7 @@ requires 'multidimensional';
 requires 'bareword::filehandles';
 requires 'Syntax::Keyword::Dynamically', '>= 0.07';
 requires 'Syntax::Keyword::Try', '>= 0.23';
+requires 'Syntax::Keyword::Defer', '>= 0.05';
 requires 'Future', '>= 0.47';
 requires 'Future::Queue';
 requires 'Future::AsyncAwait', '>= 0.49';

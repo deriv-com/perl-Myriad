@@ -58,6 +58,7 @@ my %WriteMakefileArgs = (
     "Ryu" => "2.009",
     "Ryu::Async" => "0.019",
     "Scope::Guard" => 0,
+    "Syntax::Keyword::Defer" => "0.05",
     "Syntax::Keyword::Dynamically" => "0.07",
     "Syntax::Keyword::Try" => "0.23",
     "Sys::Hostname" => 0,
@@ -86,7 +87,7 @@ my %WriteMakefileArgs = (
     "Test::More" => "0.98",
     "Test::NoTabs" => 0
   },
-  "VERSION" => "0.003",
+  "VERSION" => "0.004",
   "test" => {
     "TESTS" => "t/*.t t/RPC/*.t t/transport/*.t"
   }
@@ -137,6 +138,7 @@ my %FallbackPrereqs = (
   "Ryu" => "2.009",
   "Ryu::Async" => "0.019",
   "Scope::Guard" => 0,
+  "Syntax::Keyword::Defer" => "0.05",
   "Syntax::Keyword::Dynamically" => "0.07",
   "Syntax::Keyword::Try" => "0.23",
   "Sys::Hostname" => 0,
