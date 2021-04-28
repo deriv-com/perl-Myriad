@@ -349,6 +349,10 @@ method pending (%args) {
                 $self->return_instance_to_pool($instance) if $instance;
                 undef $instance;
             }
+            CANCEL {
+                $self->return_instance_to_pool($instance) if $instance;
+                undef $instance;
+            }
 
             my $src = $self->source;
             my $start = '-';
