@@ -345,38 +345,34 @@ method pending (%args) {
         $src->completed->without_cancel,
         (async method {
             my $instance = await $self->borrow_instance_from_pool;
-            defer {
-                $self->return_instance_to_pool($instance) if $instance;
-                undef $instance;
-            }
-            CANCEL {
-                $self->return_instance_to_pool($instance) if $instance;
-                undef $instance;
-            }
-
-            my $src = $self->source;
-            my $start = '-';
-            while (1) {
-                await $src->unblocked;
-                my ($pending) = await $instance->xpending(
-                    $stream,
-                    $group,
-                    $start, '+',
-                    $self->batch_count,
-                    $client,
-                );
-                for my $item ($pending->@*) {
-                    my ($id, $consumer, $age, $delivery_count) = $item->@*;
-                    $log->tracef('Claiming pending message %s from %s, age %s, %d prior deliveries', $id, $consumer, $age, $delivery_count);
-                    my $claim = await $redis->xclaim($stream, $group, $client, 10, $id);
-                    $log->tracef('Claim is %s', $claim);
-                    my $args = $claim->[0]->[1];
-                    if($args) {
-                        push @$args, ("message_id", $id);
-                        $src->emit($args);
+            try {
+                my $src = $self->source;
+                my $start = '-';
+                while (1) {
+                    await $src->unblocked;
+                    my ($pending) = await $instance->xpending(
+                        $stream,
+                        $group,
+                        $start, '+',
+                        $self->batch_count,
+                        $client,
+                    );
+                    for my $item ($pending->@*) {
+                        my ($id, $consumer, $age, $delivery_count) = $item->@*;
+                        $log->tracef('Claiming pending message %s from %s, age %s, %d prior deliveries', $id, $consumer, $age, $delivery_count);
+                        my $claim = await $redis->xclaim($stream, $group, $client, 10, $id);
+                        $log->tracef('Claim is %s', $claim);
+                        my $args = $claim->[0]->[1];
+                        if($args) {
+                            push @$args, ("message_id", $id);
+                            $src->emit($args);
+                        }
                     }
+                    last unless @$pending >= $self->batch_count;
                 }
-                last unless @$pending >= $self->batch_count;
+            } finally {
+                $self->return_instance_to_pool($instance) if $instance;
+                undef $instance;
             }
         })->($self),
     )->on_fail(sub  {
