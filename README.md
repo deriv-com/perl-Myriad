@@ -2,6 +2,9 @@
 
 Myriad - microservice coördination
 
+[![Coverage status](https://coveralls.io/repos/github/binary-com/perl-Myriad/badge.svg?branch=master)](https://coveralls.io/github/binary-com/perl-Myriad?branch=master)
+[![Test status](https://circleci.com/github/binary-com/perl-Myriad.svg?style=svg&circle-token=55b191c6582ef5932e57b142fb29d8e13ae19598)](<LINK>)
+
 # SYNOPSIS
 
     use Myriad;
