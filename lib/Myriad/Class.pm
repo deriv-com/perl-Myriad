@@ -110,6 +110,7 @@ no multidimensional;
 no bareword::filehandles;
 use mro;
 use experimental qw(signatures);
+use curry;
 use Future::AsyncAwait;
 use Syntax::Keyword::Try;
 use Syntax::Keyword::Dynamically;
