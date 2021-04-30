@@ -2,6 +2,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+
+0.005     2021-04-30 12:52:41+00:00 UTC
     [Bugs fixed]
     - small memory leak due to defer blocks not being cleared up, now uses try/finally
     to avoid this
