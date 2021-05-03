@@ -24,15 +24,15 @@ subtest 'In-Memory streams tests' => sub {
 
 subtest 'In-Memory streams read' => sub {
     $transport->add_to_stream('stream_read', key => $_)->get() for (0..9);
-    my %messages = $transport->read_from_stream('stream_read')->get();
-    is(keys %messages, 10, 'messages has been received correctly');
+    my $messages = $transport->read_from_stream('stream_read')->get();
+    is(0 + keys(%$messages), 10, 'messages has been received correctly');
 
-    %messages = $transport->read_from_stream('stream_read', 5, 1)->get();
-    is(keys %messages, 1, 'it should respect messages read limit');
-    is($messages{5}->{key}, 5, 'it should respect messages read offset');
+    $messages = $transport->read_from_stream('stream_read', 5, 1)->get();
+    is(keys %$messages, 1, 'it should respect messages read limit');
+    is($messages->{5}->{key}, 5, 'it should respect messages read offset');
 
-    %messages = $transport->read_from_stream('does not exist')->get();
-    is(keys %messages, 0, 'it should return an empty array of stream not found');
+    $messages = $transport->read_from_stream('does not exist')->get();
+    is(keys %$messages, 0, 'it should return an empty array of stream not found');
 };
 
 subtest 'In-Memory strams consumer groups' => sub {
@@ -48,18 +48,18 @@ subtest 'In-Memory strams consumer groups' => sub {
 
     $transport->add_to_stream('consumer_stream', key => $_)->get() for (0..99);
 
-    my %first_consumer_message  = $transport->read_from_stream_by_consumer('consumer_stream', 'test_group', 'consumer_1', 0, 1)->get();
-    my %second_consumer_message = $transport->read_from_stream_by_consumer('consumer_stream', 'test_group', 'consumer_2', 0, 1)->get();
-    ok($first_consumer_message{0} && $second_consumer_message{1}, 'it should deliver two different messages');
+    my $first_consumer_message  = $transport->read_from_stream_by_consumer('consumer_stream', 'test_group', 'consumer_1', 0, 1)->get();
+    my $second_consumer_message = $transport->read_from_stream_by_consumer('consumer_stream', 'test_group', 'consumer_2', 0, 1)->get();
+    ok($first_consumer_message->{0} && $second_consumer_message->{1}, 'it should deliver two different messages');
 
     # you can't claim a message after acknowledging it
     $transport->ack_message('consumer_stream', 'test_group', 0)->get();
-    my %message = $transport->claim_message('consumer_stream', 'test_group', 'new_consumer', 0)->get();
+    my $message = $transport->claim_message('consumer_stream', 'test_group', 'new_consumer', 0)->get();
 
-    ok(keys %message == 0, 'it should not allow claiming acknowledged messages');
+    ok(keys %$message == 0, 'it should not allow claiming acknowledged messages');
 
-    %message = $transport->claim_message('consumer_stream', 'test_group', 'new_consumer', 1)->get();
-    ok(%message, 'it should allow re-claiming messages');
+    $message = $transport->claim_message('consumer_stream', 'test_group', 'new_consumer', 1)->get();
+    ok($message, 'it should allow re-claiming messages');
 
 };
 

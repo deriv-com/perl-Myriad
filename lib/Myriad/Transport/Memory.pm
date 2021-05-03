@@ -158,8 +158,9 @@ as long as it exists in the stream.
 
 async method read_from_stream ($stream_name, $offset = 0 , $count = 10) {
     my $stream = $streams->{$stream_name} // return ();
-    my %messages = map { $_ => $stream->{data}->{$_}->{data} } ($offset..$offset+$count - 1);
-    return %messages;
+    return {
+        map { $_ => $stream->{data}->{$_}->{data} } ($offset..$offset+$count - 1)
+    };
 }
 
 
