@@ -362,10 +362,10 @@ async method service_config ($pkg, $service_name) {
 
             # nothing from storage then try other sources
 
-            $value //= $instance_overrides->{$key} ||
-                       $available_config->{$key} ||
-                       $declared_config->{$key}->{default} ||
-                       Myriad::Exception::Config::ConfigRequired->throw(reason => $key);
+            $value //= $instance_overrides->{$key} //
+                $available_config->{$key} //
+                $declared_config->{$key}->{default} //
+                Myriad::Exception::Config::ConfigRequired->throw(reason => $key);
             $value = Myriad::Util::Secret->new($value) if $declared_config->{$key}->{secure};
             $ACTIVE_SERVICES_CONFIG{$storage_request->{key}} = $service_config->{$key} = Ryu::Observable->new($value);
         }
