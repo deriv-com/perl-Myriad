@@ -12,7 +12,7 @@ use utf8;
 
 =head1 NAME
 
-Myriad::Subscription - microservice Subscription abstraction
+Myriad::Subscription - microservice subscription abstraction
 
 =head1 SYNOPSIS
 
