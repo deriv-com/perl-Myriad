@@ -6,15 +6,14 @@ use Test::More;
 use Log::Any::Adapter qw(TAP);
 use Myriad;
 
-my @received_from_emitter;
-my @received_from_batch;
-
 package Example::Sender {
     use Myriad::Service;
     has $sent = 0;
 
     async method simple_emitter : Emitter() ($sink) {
-        $sink->emit({event => 1});
+        my $data = {event => 1};
+        $log->infof('emitter emits %s', $data);
+        $sink->emit($data);
     }
 
     async method simple_batch : Batch () {
@@ -25,6 +24,9 @@ package Example::Sender {
         return $arr;
     }
 }
+
+my @received_from_emitter;
+my @received_from_batch;
 
 package Example::Receiver {
     use Myriad::Service;
@@ -50,7 +52,7 @@ package Example::Receiver {
 
 my $myriad = new_ok('Myriad');
 await $myriad->configure_from_argv(
-    qw(--transport memory --log_level trace service)
+    qw(--transport memory --log_level warn service)
 );
 
 await $myriad->add_service('Example::Receiver');

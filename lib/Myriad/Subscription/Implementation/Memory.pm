@@ -53,32 +53,34 @@ async method create_from_sink (%args) {
 
     push $receivers->@*, {
         channel => $channel_name,
-        sink => $sink
+        sink    => $sink
     };
     return;
 }
 
 
 async method start {
+    my %groups_for_channel;
     while (1) {
-        if ($receivers && $receivers->@*) {
-            my $subscription = shift $receivers->@*;
-            push $receivers->@*, $subscription;
-
-            try {
-                await $transport->create_consumer_group($subscription->{channel}, 'subscriber', 0, 1);
-            } catch ($e) {
-                $log->tracef('Failed to create consumer group due: %s', $e);
+        await &fmap_void($self->$curry::curry(async method ($subscription) {
+            unless(exists $groups_for_channel{$subscription->{channel}}{subscriber}) {
+                try {
+                    await $transport->create_consumer_group($subscription->{channel}, 'subscriber', 0, 1);
+                    $groups_for_channel{$subscription->{channel}}{subscriber} = 1;
+                } catch ($e) {
+                    $log->tracef('Failed to create consumer group due: %s', $e);
+                }
             }
 
             try {
+                $log->tracef('Sink blocked state: %s', $subscription->{sink}->unblocked->state);
                 await Future->wait_any(
                     $self->loop->timeout_future(after => 0.5),
                     $subscription->{sink}->unblocked,
                 );
             } catch {
                 $log->tracef("skipped stream %s because sink is blocked", $subscription->{channel});
-                next
+                return;
             }
 
             my $messages = await $transport->read_from_stream_by_consumer(
@@ -95,7 +97,7 @@ async method start {
                 $stopped->done;
                 last;
             }
-        }
+        }), foreach => [ $receivers->@* ], concurrent => 8);
         await $self->loop->delay_future(after => 0.1);
     }
 }
