@@ -63,12 +63,12 @@ async method start () {
                 $log->tracef("Group alrady exists");
             }
 
-            my %messages = await $transport->read_from_stream_by_consumer($service, $self->group_name, hostname());
-            for my $id (sort keys %messages) {
+            my $messages = await $transport->read_from_stream_by_consumer($service, $self->group_name, hostname());
+            for my $id (sort keys $messages->%*) {
                 my $message;
                 try {
-                    $messages{$id}->{transport_id} = $id;
-                    $message = Myriad::RPC::Message::from_hash($messages{$id}->%*);
+                    $messages->{$id}->{transport_id} = $id;
+                    $message = Myriad::RPC::Message::from_hash($messages->{$id}->%*);
                     if (my $sink = $rpc_methods->{$service}->{$message->rpc}) {
                         $sink->emit($message);
                     } else {
@@ -76,7 +76,7 @@ async method start () {
                     }
                 } catch ($e isa Myriad::Exception::RPC::BadEncoding) {
                     $log->warnf('Recived a dead message that we cannot parse, going to drop it.');
-                    $log->tracef("message was: %s", $messages{$id});
+                    $log->tracef("message was: %s", $messages->{$id});
                     await $self->drop($service, $id);
                 } catch ($e) {
                     await $self->reply_error($service, $message, $e);

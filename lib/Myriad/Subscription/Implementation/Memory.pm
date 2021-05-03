@@ -20,7 +20,7 @@ BUILD {
     $receivers = [];
 }
 
-method receivers { $receivers }
+method receivers () { $receivers }
 
 method _add_to_loop ($loop) {
     $stopped = $loop->new_future(label => 'subscription::redis::stopped');
@@ -48,7 +48,10 @@ async method create_from_sink (%args) {
     my $remote_service = $args{from} || $args{service};
     my $channel_name = $remote_service . '.' . $args{channel};
 
-    push $receivers->@*, { channel => $channel_name, sink => $sink };
+    push $receivers->@*, {
+        channel => $channel_name,
+        sink => $sink
+    };
     return;
 }
 
@@ -57,7 +60,7 @@ async method start {
     while (1) {
         if ($receivers && $receivers->@*) {
             my $subscription = shift $receivers->@*;
-            push  $receivers->@*, $subscription;
+            push $receivers->@*, $subscription;
 
             try {
                 await $transport->create_consumer_group($subscription->{channel}, 'subscriber', 0, 1);
@@ -75,11 +78,16 @@ async method start {
                 next
             }
 
-            my %messages = await $transport->read_from_stream_by_consumer($subscription->{channel}, 'subscriber', 'consumer');
-            for my $event_id (keys %messages) {
-                $subscription->{sink}->emit($messages{$event_id});
+            my $messages = await $transport->read_from_stream_by_consumer(
+                $subscription->{channel},
+                'subscriber',
+                'consumer'
+            );
+            for my $event_id (sort keys $messages->%*) {
+                $subscription->{sink}->emit($messages->{$event_id});
                 await $transport->ack_message($subscription->{channel}, 'subscriber', $event_id);
             }
+
             if($should_shutdown) {
                 $stopped->done;
                 last;

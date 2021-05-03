@@ -204,7 +204,7 @@ async method read_from_stream_by_consumer ($stream_name, $group_name, $consumer_
 
     $group->{cursor} += $offset + $read_count;
 
-    return %messages;
+    return \%messages;
 }
 
 =head2 ack_message
