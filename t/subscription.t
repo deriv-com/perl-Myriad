@@ -40,12 +40,11 @@ package Example::Receiver {
             push @received_from_batch, shift
         });
     }
-
 }
 
 my $myriad = new_ok('Myriad');
 await $myriad->configure_from_argv(
-    qw(--transport perl --log_level error service)
+    qw(--transport memory --log_level trace service)
 );
 
 await $myriad->add_service('Example::Receiver');
