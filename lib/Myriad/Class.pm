@@ -117,6 +117,7 @@ use Syntax::Keyword::Dynamically;
 use Syntax::Keyword::Defer;
 use Scalar::Util;
 use List::Util;
+use Future::Utils;
 
 use JSON::MaybeUTF8;
 
@@ -190,6 +191,16 @@ sub import {
             decode_json_text
             decode_json_utf8
             format_json_text
+        );
+    }
+    {
+        no strict 'refs';
+        *{$pkg . '::' . $_} = Future::Utils->can($_) for qw(
+            fmap_void
+            fmap_concat
+            fmap_scalar
+            fmap0
+            fmap1
         );
     }
 
