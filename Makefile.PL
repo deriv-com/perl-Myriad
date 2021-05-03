@@ -55,7 +55,7 @@ my %WriteMakefileArgs = (
     "Pod::Simple::Text" => 0,
     "Pod::Usage" => 0,
     "Role::Tiny" => "2.002004",
-    "Ryu" => "2.009",
+    "Ryu" => "3.000",
     "Ryu::Async" => "0.019",
     "Scope::Guard" => 0,
     "Syntax::Keyword::Defer" => "0.05",
@@ -89,7 +89,7 @@ my %WriteMakefileArgs = (
   },
   "VERSION" => "0.005",
   "test" => {
-    "TESTS" => "t/*.t t/RPC/*.t t/transport/*.t"
+    "TESTS" => "t/*.t t/RPC/*.t t/transport/*.t t/util/*.t"
   }
 );
 
@@ -135,7 +135,7 @@ my %FallbackPrereqs = (
   "Pod::Simple::Text" => 0,
   "Pod::Usage" => 0,
   "Role::Tiny" => "2.002004",
-  "Ryu" => "2.009",
+  "Ryu" => "3.000",
   "Ryu::Async" => "0.019",
   "Scope::Guard" => 0,
   "Syntax::Keyword::Defer" => "0.05",
