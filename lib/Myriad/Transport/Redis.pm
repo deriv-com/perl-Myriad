@@ -342,7 +342,7 @@ method pending (%args) {
     my $group = $args{group};
     my $client = $args{client};
     Future->wait_any(
-        $src->completed->without_cancel,
+        $src->completed,
         (async method {
             my $instance = await $self->borrow_instance_from_pool;
             try {
