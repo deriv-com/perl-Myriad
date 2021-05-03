@@ -16,7 +16,7 @@ Myriad::Util::Secret - protect secrets from getting exposed accidentally
 
 =head1 DESCRIPTION
 
-Override the actual string value with "***"
+When stringified, this will return C<***> instead of the real data.
 
 =cut
 
@@ -104,6 +104,16 @@ sub DESTROY {
 1;
 
 __END__
+
+=head1 SEE ALSO
+
+=over 4
+
+=item * L<String::Compare::ConstantTime> - handles the constant-time comparison, but returns
+early if the string lengths are different, which is problematic since knowing the length makes
+attacks easier
+
+=back
 
 =head1 AUTHOR
 
