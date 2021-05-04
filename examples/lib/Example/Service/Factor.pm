@@ -1,4 +1,4 @@
-package example::Service::Factor;
+package Example::Service::Factor;
 
 use Myriad::Service;
 

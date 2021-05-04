@@ -1,4 +1,4 @@
-package example::Service::Secret;
+package Example::Service::Secret;
 
 use Myriad::Service;
 use Ryu::Source;
