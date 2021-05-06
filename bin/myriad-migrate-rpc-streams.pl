@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 use strict;
 use warnings;
 
@@ -50,7 +52,7 @@ my $old_rpc_stream = "myriad.service.$service_name/rpc";
 my $new_rpc_stream_prefix = "myriad.service.$service_name.rpc/";
 
 unless ( await $redis->exists($old_rpc_stream) ) {
-    $log->fatal('Cannot find old rpc stream for service %s', $service_name);
+    $log->fatalf('Cannot find old rpc stream for service %s', $service_name);
     exit 1;
 }
 
@@ -76,7 +78,7 @@ try {
         for my $message ($messages->@*) {
             my ($id, $info) = $message->@*;
             my %args = $info->@*;
-            my $stream = $new_rpc_stream_prefix . $args{rpc}; 
+            my $stream = $new_rpc_stream_prefix . $args{rpc};
 
             await $redis->xadd(
                 $stream => '*',
