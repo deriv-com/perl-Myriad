@@ -120,6 +120,7 @@ use Syntax::Keyword::Defer;
 use Scalar::Util;
 use List::Util;
 use List::Keywords;
+use Faster::Maths;
 use Future::Utils;
 
 use JSON::MaybeUTF8;
@@ -230,6 +231,7 @@ sub import {
 
     # Others use lexical hints
     List::Keywords->import(qw(any all));
+    Faster::Maths->import;
 
     # For history here, see this:
     # https://rt.cpan.org/Ticket/Display.html?id=132337

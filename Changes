@@ -2,6 +2,10 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+    [API Changes]
+    - we now pull in Faster::Maths by default for all services, which should provide a modest performance
+    improvement with no other visible impact on the code. Note that this is not transitive - it only applies
+    to mathematical operations within the service class itself, any code in other modules will not be affected.
 
 0.006     2021-05-07 04:16:11+00:00 UTC
     [API Changes]

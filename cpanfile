@@ -43,6 +43,7 @@ requires 'Getopt::Long';
 requires 'Pod::Usage';
 requires 'List::Util', '>= 1.56';
 requires 'List::Keywords', '>= 0.04';
+requires 'Faster::Maths', '>= 0.01';
 # Integration
 requires 'Net::Async::OpenTracing', '>= 1.000';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
