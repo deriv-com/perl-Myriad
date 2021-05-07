@@ -1,5 +1,9 @@
 #!/usr/bin/env perl
 
+# Basic usage: myriad-migrate-rpc-streams.pl --uri <redis_uri> --service <service to migrate>
+# This script will move messages from the old single rpc stream into multiple streams
+# it won't delete the original stream.
+
 use strict;
 use warnings;
 
