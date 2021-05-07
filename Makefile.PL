@@ -15,6 +15,7 @@ my %WriteMakefileArgs = (
   "DISTNAME" => "Myriad",
   "EXE_FILES" => [
     "bin/myriad-dev.pl",
+    "bin/myriad-migrate-rpc-streams.pl",
     "bin/myriad-start.sh",
     "bin/myriad.pl"
   ],
@@ -89,7 +90,7 @@ my %WriteMakefileArgs = (
     "Test::More" => "0.98",
     "Test::NoTabs" => 0
   },
-  "VERSION" => "0.005",
+  "VERSION" => "0.006",
   "test" => {
     "TESTS" => "t/*.t t/RPC/*.t t/transport/*.t t/util/*.t"
   }

@@ -2,6 +2,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+
+0.006     2021-05-07 04:16:11+00:00 UTC
     [API Changes]
     - `fmap_void`, `fmap_concat` and `fmap_scalar` are imported from Future::Utils into classes by default
     - RPC streams are now organized differently there will be a stream for each method 
