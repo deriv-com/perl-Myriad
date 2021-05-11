@@ -65,7 +65,7 @@ async method start () {
                 my $message;
                 try {
                     $messages->{$id}->{transport_id} = $id;
-                    $message = Myriad::RPC::Message::from_hash($messages->{$id}->%*);
+                    $message = Myriad::RPC::Message->from_hash($messages->{$id}->%*);
                     $rpc->{sink}->emit($message);
                 } catch ($e isa Myriad::Exception::RPC::BadEncoding) {
                     $log->warnf('Recived a dead message that we cannot parse, going to drop it.');
@@ -118,7 +118,7 @@ In this implementation it's done by resolving the L<Future> calling C<done>.
 =cut
 
 async method reply_success ($service, $message, $response) {
-    $message->response = { response => $response };
+    $message->set_response({ response => $response });
     await $transport->publish($message->who, $message->as_json);
     await $transport->ack_message($self->stream_name($service, $message->rpc), $self->group_name, $message->transport_id);
 }

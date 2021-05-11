@@ -92,7 +92,9 @@ The response to this message.
 
 =cut
 
-method response :lvalue { $response }
+method response { $response }
+
+method set_response ($v) { $response = $v }
 
 =head2 stash
 
@@ -152,18 +154,18 @@ method as_hash () {
 
 =head2 from_hash
 
-a static method (can't be done with Object::Pad currently) that tries to
-parse a hash and return a L<Myriad::RPC::Message>.
+A class method which tries to parse a hash and return a L<Myriad::RPC::Message>.
 
-the hash should comply with the format returned by C<as_hash>.
+The hash should comply with the format returned by C<as_hash>.
 
 =cut
 
 sub from_hash ($class, %hash) {
-    check_valid(\%hash);
-    decode_raw_message(\%hash, 'utf8');
+    $class->check_valid(\%hash);
 
-    return Myriad::RPC::Message->new(%hash);
+    return $class->new(
+        $class->transcode_message(\%hash, 'decode')->%*
+    );
 }
 
 =head2 as_json
@@ -192,7 +194,7 @@ and return a L<Myriad::RPC::Message>.
 
 sub from_json ($class, $json) {
     my $raw_message = decode_json_text($json);
-    check_valid($raw_message);
+    $class->check_valid($raw_message);
 
     return $class->new(
         $class->transcode_message($raw_message, 'decode')->%*
@@ -206,11 +208,13 @@ sure that we have the needed information.
 
 =cut
 
-sub check_valid ($message) {
+sub check_valid ($class, $message) {
     for my $field (qw(rpc message_id who deadline args)) {
         Myriad::Exception::RPC::InvalidRequest->throw(reason => "$field is required") unless exists $message->{$field};
     }
 }
+
+my %keys_to_encode = map { $_ => 1 } qw(args response stash trace);
 
 =head2 transcode_message
 
