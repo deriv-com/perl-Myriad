@@ -144,7 +144,7 @@ method as_hash () {
         deadline => $deadline,
     };
 
-    $self->apply_encoding($data, 'utf8');
+    $self->transcode_message($data, 'encode');
 
     return $data;
 
@@ -159,9 +159,9 @@ the hash should comply with the format returned by C<as_hash>.
 
 =cut
 
-sub from_hash (%hash) {
-    is_valid(\%hash);
-    apply_decoding(\%hash, 'utf8');
+sub from_hash ($class, %hash) {
+    check_valid(\%hash);
+    decode_raw_message(\%hash, 'utf8');
 
     return Myriad::RPC::Message->new(%hash);
 }
@@ -173,16 +173,14 @@ returns the message data as a JSON string.
 =cut
 
 method as_json () {
-        my $data = {
-            rpc        => $rpc,
-            message_id => $message_id,
-            who        => $who,
-            deadline   => $deadline,
-        };
+    my $data = {
+        rpc        => $rpc,
+        message_id => $message_id,
+        who        => $who,
+        deadline   => $deadline,
+    };
 
-        # This step is not necessary but I'm too lazy to repeat the keys names.
-        $self->apply_encoding($data, 'text');
-        return encode_json_utf8($data);
+    return encode_json_text($self->transcode_message($data, 'encode'));
 }
 
 =head2 from_json
@@ -192,56 +190,49 @@ and return a L<Myriad::RPC::Message>.
 
 =cut
 
-sub from_json ($json) {
-    my $raw_message = decode_json_utf8($json);
-    is_valid($raw_message);
-    apply_decoding($raw_message, 'text');
+sub from_json ($class, $json) {
+    my $raw_message = decode_json_text($json);
+    check_valid($raw_message);
 
-    return Myriad::RPC::Message->new($raw_message->%*);
+    return $class->new(
+        $class->transcode_message($raw_message, 'decode')->%*
+    );
 }
 
-=head2 is_valid
+=head2 check_valid
 
 A static method used in the C<from_*> methods family to make
 sure that we have the needed information.
 
 =cut
 
-sub is_valid ($message) {
+sub check_valid ($message) {
     for my $field (qw(rpc message_id who deadline args)) {
-        Myriad::Exception::RPC::InvalidRequest->throw(reason => "$field is requried") unless exists $message->{$field};
+        Myriad::Exception::RPC::InvalidRequest->throw(reason => "$field is required") unless exists $message->{$field};
     }
 }
 
-=head2 apply_encoding
+=head2 transcode_message
 
-A helper method to enode the hash fields into JSON string.
-
-=cut
-
-method apply_encoding ($data, $encoding) {
-    my $encode = $encoding eq 'text' ? \&encode_json_text : \&encode_json_utf8;
-    try {
-        for my $field (qw(args response stash trace)) {
-            $data->{$field} = $encode->($self->$field);
-        }
-    } catch($e) {
-        Myriad::Exception::RPC::BadEncoding->throw(reason => $e);
-    }
-}
-
-=head2 apply_decoding
-
-A helper sub to decode some field from JSON string into Perl hashes.
+A class method to decode some field from JSON string into Perl hashes.
 
 =cut
 
-sub apply_decoding ($data, $encoding) {
-    my $decode = $encoding eq 'text' ? \&decode_json_text : \&decode_json_utf8;
+sub transcode_message ($class, $data, $direction) {
+    my $decode = $direction eq 'encode'
+    ? \&encode_json_text
+    : $direction eq 'decode'
+    ? \&decode_json_text
+    : die 'invalid ->transcode_message direction, expecting "encode" or "decode"';
+
     try {
-        for my $field (qw(args response stash trace)) {
-            $data->{$field} = $decode->($data->{$field}) if $data->{$field};
-        }
+        return +{
+            map {
+                $_ => exists $keys_to_encode{$_}
+                ? $decode->($data->{$_})
+                : $_
+            } keys $data->%*
+        };
     } catch ($e) {
         Myriad::Exception::RPC::BadEncoding->throw(reason => $e);
     }
