@@ -56,7 +56,7 @@ sub add_service {
     my ($pkg, $meta);
     if (my $service = delete $args{service}) {
         $pkg = $service;
-        $meta = $service->META;
+        $meta = Object::Pad::MOP::Class->for_class(ref $service);
     } elsif ($service = delete $args{name}) {
         die 'The name should look like a Perl package name' unless $service =~ /::/;
         $pkg  = $service;
