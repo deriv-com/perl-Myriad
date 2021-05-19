@@ -229,7 +229,7 @@ async method read_from_stream (%args) {
         return map {
             my ($id, $args) = $_->@*;
             $log->tracef('Item from stream %s is ID %s and args %s', $stream, $id, $args);
-            return {
+            +{
                 stream => $self->remove_prefix($stream),
                 id     => $id,
                 data   => $args,
