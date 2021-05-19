@@ -2,6 +2,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+    [Bugs fixed]
+    - RPC reading multiple items from stream but processing only one.
 
 0.006     2021-05-07 04:16:11+00:00 UTC
     [API Changes]
