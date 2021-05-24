@@ -2,8 +2,8 @@ package Myriad::Transport::Redis;
 
 use Myriad::Class extends => qw(IO::Async::Notifier);
 
-# VERSION
-# AUTHORITY
+our $VERSION = '0.006'; # VERSION
+our $AUTHORITY = 'cpan:DERIV'; # AUTHORITY
 
 =pod
 
@@ -212,7 +212,10 @@ async method read_from_stream (%args) {
     my $stream = $self->apply_prefix($args{stream});
     my $group = $args{group};
     my $client = $args{client};
+    my $source = $args{source};
 
+    while(1) {
+    $log->warnf('Before xreadgroup');
     my ($delivery) = await $self->xreadgroup(
         BLOCK   => $self->wait_time,
         GROUP   => $group, $client,
@@ -220,24 +223,21 @@ async method read_from_stream (%args) {
         STREAMS => ($stream, '>'),
     );
 
-    $log->tracef('Read group %s', $delivery);
+    use Data::Dumper;
+    $log->warnf('Read group %s', Dumper($delivery));
 
     # We are strictly reading for one stream
     my $batch = $delivery->[0];
     if ($batch) {
         my  ($stream, $data) = $batch->@*;
-        return map {
-            my ($id, $args) = $_->@*;
-            $log->tracef('Item from stream %s is ID %s and args %s', $stream, $id, $args);
-            +{
-                stream => $self->remove_prefix($stream),
-                id     => $id,
-                data   => $args,
-            }
-        } $data->@*;
+	for my $item ($data->@*) {
+	     my ($id, $args) = $item->@*;
+            $log->warnf('Item from stream %s is ID %s and args %s', $stream, $id, $args);
+	     $source->emit({stream => $self->remove_prefix($stream), id => $id, data => $args});
+	}
     }
-
-    return ();
+    }
+    #return ();
 }
 
 async method stream_info ($stream) {
@@ -336,49 +336,38 @@ Returns a L<Ryu::Source> for the pending items in this stream.
 
 =cut
 
-method pending (%args) {
+async method pending (%args) {
     my $src = $self->source;
     my $stream = $self->apply_prefix($args{stream});
     my $group = $args{group};
     my $client = $args{client};
-    Future->wait_any(
-        $src->completed,
-        (async method {
-            my $instance = await $self->borrow_instance_from_pool;
-            try {
-                my $src = $self->source;
-                my $start = '-';
-                while (1) {
-                    await $src->unblocked;
-                    my ($pending) = await $instance->xpending(
-                        $stream,
-                        $group,
-                        $start, '+',
-                        $self->batch_count,
-                        $client,
-                    );
-                    for my $item ($pending->@*) {
-                        my ($id, $consumer, $age, $delivery_count) = $item->@*;
-                        $log->tracef('Claiming pending message %s from %s, age %s, %d prior deliveries', $id, $consumer, $age, $delivery_count);
-                        my $claim = await $redis->xclaim($stream, $group, $client, 10, $id);
-                        $log->tracef('Claim is %s', $claim);
-                        my $args = $claim->[0]->[1];
-                        if($args) {
-                            push @$args, ("message_id", $id);
-                            $src->emit($args);
-                        }
-                    }
-                    last unless @$pending >= $self->batch_count;
-                }
+    my @res = ();
+    my $instance = await $self->borrow_instance_from_pool;
+    try {
+        my $start = '-';
+        my ($pending) = await $instance->xpending(
+            $stream,
+            $group,
+            $start, '+',
+            $self->batch_count,
+            $client,
+        );
+        @res = await &fmap_concat($self->$curry::weak( 
+	    async method ($item) {
+                my ($id, $consumer, $age, $delivery_count) = $item->@*;
+                my $claim = await $redis->xclaim($stream, $group, $client, 10, $id);
+                my $args = $claim->[0]->[1];
+                $log->warnf('Claiming pending message %s from %s, age %s, %d prior deliveries | args: %s | claim: %s', $id, $consumer, $age, $delivery_count, $args, $claim);
+	        return {stream => $self->remove_prefix($stream), id => $id, data => $args ? $args : []};
+	    }) ,
+        foreach => $pending, concurrent => 8);
+	$log->warnf('fffff %s', \@res);
+                
             } finally {
                 $self->return_instance_to_pool($instance) if $instance;
                 undef $instance;
             }
-        })->($self),
-    )->on_fail(sub  {
-        $src->fail(@_);
-    })->retain;
-    $src;
+    return @res;
 }
 
 =head2 create_group
@@ -528,9 +517,13 @@ async method redis () {
 
 async method xreadgroup (@args) {
     my $instance = await $self->borrow_instance_from_pool;
+    my $s = Time::Moment->now;
+    warn 'IIIIII ' . $instance;
+    $log->warnf('ddd Got the instance %s | %s', $s);
     my ($batch) =  await $instance->xreadgroup(@args)->on_ready(sub {
-        $self->return_instance_to_pool($instance);
+		    $self->return_instance_to_pool($instance);
     });
+    $log->warnf('ddd After xreadgroup %s', (Time::Moment->now->epoch - $s->epoch ));
     return ($batch);
 }
 
@@ -555,7 +548,7 @@ Acknowledge a message from a Redis stream.
 =cut
 
 async method ack ($stream, $group, $message_id) {
-    await $redis->xack($self->apply_prefix($stream), $group, $message_id);
+	await $redis->xack($self->apply_prefix($stream), $group, $message_id);
 }
 
 =head2 publish

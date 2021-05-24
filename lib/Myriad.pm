@@ -4,7 +4,7 @@ package Myriad;
 use Myriad::Class;
 
 our $VERSION = '0.006';
-# AUTHORITY
+our $AUTHORITY = 'cpan:DERIV'; # AUTHORITY
 
 =encoding utf8
 
@@ -665,9 +665,10 @@ async method run () {
 
     try {
         # Run the startup tasks, order is imporatant
-        for my $task ($startup_tasks->@*) {
-            await $self->$task;
-        }
+	#for my $task ($startup_tasks->@*) {
+	#    await $self->$task;
+	#}
+	await &fmap_void($self->$curry::weak(async method ($task) { await $self->$task; }), foreach => [$startup_tasks->@*], concurrent => 1);
     } catch ($e) {
         die "Startup tasks failed - $e";
     }

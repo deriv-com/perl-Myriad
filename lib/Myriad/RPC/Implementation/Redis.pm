@@ -2,8 +2,8 @@ package Myriad::RPC::Implementation::Redis;
 
 use Myriad::Class extends => qw(IO::Async::Notifier);
 
-# VERSION
-# AUTHORITY
+our $VERSION = '0.006'; # VERSION
+our $AUTHORITY = 'cpan:DERIV'; # AUTHORITY
 
 =encoding utf8
 
@@ -45,7 +45,11 @@ method whoami { $whoami }
 has $rpc_list;
 method rpc_list { $rpc_list }
 
+has $ryu;
+method ryu { $ryu }
+
 has $running;
+
 
 sub stream_name_from_service ($service, $method) {
     return RPC_PREFIX . ".$service.". RPC_SUFFIX . "/$method"
@@ -58,6 +62,13 @@ method configure (%args) {
     $rpc_list //= [];
 
     $self->next::method(%args);
+}
+
+method _add_to_loop($loop) {
+    $self->add_child(
+        $ryu = Ryu::Async->new
+    );
+    $self->next::method($loop);
 }
 
 async method start () {
@@ -88,31 +99,54 @@ async method create_group ($rpc) {
     }
 }
 
-async method listen () {
-    return $running //= (async sub {
-        while (1) {
-            await &fmap_void($self->$curry::curry(async method ($rpc) {
-                await $self->create_group($rpc);
-
-                my @items = await $self->redis->read_from_stream(
-                    stream => $rpc->{stream},
-                    group => $self->group_name,
-                    client => $self->whoami
-                );
-
-                for my $item (@items) {
+async method listening_source ($rpc) {
+	my $source = $ryu->source(label => "rpc_source:listening:$rpc->{stream}");
+	$source->map($self->$curry::weak(async method ($item) {
                     push $item->{data}->@*, ('transport_id', $item->{id});
                     try {
                         my $message = Myriad::RPC::Message::from_hash($item->{data}->@*);
-                        $rpc->{sink}->emit($message);
+			return $message;
                     } catch ($error) {
                         $log->tracef("error while parsing the incoming messages: %s", $error->message);
-                        await $self->drop($rpc->{stream}, $_->{id});
+                        await $self->drop($rpc->{stream}, $item->{id});
                     }
-                }
-            }), foreach => [$self->rpc_list->@*], concurrent => 8);
-            await $self->loop->delay_future(after => 0.001);
-        }
+
+			}))->resolve->retain;
+                        $rpc->{sink}->from($source);
+	return $source;
+
+}
+
+async method listen () {
+    return $running //= (async sub {
+		    #        while (1) {
+             my @rpcs = await &fmap_concat($self->$curry::curry(async method ($rpc) {
+                await $self->create_group($rpc);
+
+        # check for pending
+	#my @pending_items = await $self->redis->pending(stream => $rpc->{stream}, group => $self->group_name, client => $self->whoami);
+	#	use Data::Dumper;
+	#	$log->warnf('PPPPPPpending %s', Dumper(\@pending_items) );
+	#	$log->warnf('AFTER');
+
+	my $s =  await $self->listening_source($rpc);
+              await $self->redis->read_from_stream(
+                    stream => $rpc->{stream},
+                    group => $self->group_name,
+                    client => $self->whoami,
+		    source   => $s,
+                );
+		#$log->warnf('AFTER  HIIIIIIIII');
+		#await $s;
+
+		#	my @items = (@pending_items, @new_items);
+		#$log->warnf('NEW %s', Dumper(\@new_items) );
+		#for my $item (@items) {
+		#}
+                }), foreach => [$self->rpc_list->@*], concurrent => 4);
+          return Future->wait_all(@rpcs);
+	    #await $self->loop->delay_future(after => 0.001);
+	    # }
     })->();
 }
 
@@ -142,8 +176,8 @@ async method drop ($stream, $id) {
     await $self->redis->ack($stream, $self->group_name, $id);
 }
 
-async method has_pending_requests ($service) {
-    my $stream = stream_name_from_service($service);
+async method has_pending_requests ($stream) {
+	#my $stream = stream_name_from_service($service);
     my $stream_info = await $self->redis->pending_messages_info($stream, $self->group_name);
     if($stream_info->[0]) {
         for my $consumer ($stream_info->[3]->@*) {
