@@ -53,21 +53,20 @@ subtest 'redis multi xgroupread wait time' => sub {
 
         $param{stream_name} = stream_name_from_service($param{service}, $param{method});
 
-        $param{sink}->source->each(
-            sub {
-                my $e = shift;
-		        my $msg = $e->as_hash;
-		        my $now = Time::Moment->now;
+        $param{sink}->source->each(sub {
+            my $e = shift;
+            my $msg = $e->as_hash;
+            my $now = Time::Moment->now;
 
-		        is Myriad::RPC::Message::is_valid($msg), '', 'Getting a valid message';
+            is Myriad::RPC::Message::is_valid($msg), '', 'Getting a valid message';
 
-		        Myriad::RPC::Message::apply_decoding($msg, 'utf8');
-		        is $now->epoch - $msg->{args}{data}{current_time} , 0, 'Got request same time it was sent';
+            Myriad::RPC::Message::apply_decoding($msg, 'utf8');
+            is $now->epoch - $msg->{args}{data}{current_time} , 0, 'Got request same time it was sent';
 
-		        $rpc->drop($param{stream_name}, $e->message_id)->get;
-	        }
-        )->completed;
-	    push @params, \%param;
+            $rpc->drop($param{stream_name}, $e->message_id)->get;
+        })->completed;
+        
+        push @params, \%param;
     }
 
 
@@ -81,15 +80,15 @@ subtest 'redis multi xgroupread wait time' => sub {
             my $now = Time::Moment->now;
             my $request = Myriad::RPC::Message->new(
                 rpc        => $param->{method},
-	        who        => 'me',
-	        deadline   => 10,
-	        message_id => 1,
-	        args => {data => {test => 'HI', current_time => $now->epoch }},
-        );
+                who        => 'me',
+                deadline   => 10,
+                message_id => 1,
+                args => {data => {test => 'HI', current_time => $now->epoch }},
+            );
 
-	    $redis->xadd($param->{stream_name} => '*', $request->as_hash->%*)->get;
+            $redis->xadd($param->{stream_name} => '*', $request->as_hash->%*)->get;
 
-	    # keep it at the end so we pick the same one on next pop
+            # keep it at the end so we pick the same one on next pop
             push @params, $param;
         },
     );
