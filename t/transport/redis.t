@@ -13,6 +13,8 @@ use IO::Async::Timer::Periodic;
 use Ryu::Async;
 use Time::Moment;
 
+plan skip_all => 'set TESTING_REDIS_URI env var to test' unless exists $ENV{TESTING_REDIS_URI};
+
 subtest 'pending instance' => sub {
     my $redis = do {
         package Placeholder::Redis;
@@ -31,7 +33,7 @@ subtest 'pending instance' => sub {
 subtest 'redis multi xgroupread wait time' => sub {
     my $loop = IO::Async::Loop->new;
     my $redis = Myriad::Transport::Redis->new(
-         redis_uri              => 'redis://redis6:6379',
+         redis_uri              => $ENV{TESTING_REDIS_URI},
          cluster                =>  0,
          client_side_cache_size =>  0,
     );
