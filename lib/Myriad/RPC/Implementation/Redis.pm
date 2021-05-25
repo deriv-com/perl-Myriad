@@ -69,11 +69,15 @@ method create_from_sink (%args) {
     my $sink   = $args{sink} // die 'need a sink';
     my $method = $args{method} // die 'need a method name';
     my $service = $args{service} // die 'need a service name';
+    my $process_pending = $args{process_pending};
+
+    $log->warnf('Process_pending: %d', $process_pending);
 
     push $rpc_list->@*, {
         stream => stream_name_from_service($service, $method),
         sink   => $sink,
-        group  => 0
+        group  => 0,
+        process_pending => $process_pending,
     };
 }
 
@@ -84,7 +88,34 @@ async method stop () {
 async method create_group ($rpc) {
     unless ($rpc->{group}) {
         await $self->redis->create_group($rpc->{stream}, $self->group_name);
+        await $self->process_pending($rpc);
         $rpc->{group} = 1;
+    }
+}
+
+async method process_pending ($rpc) {
+    my $pending_info = await $self->redis->pending_messages_info($rpc->{stream}, $self->group_name);
+    while ($pending_info->[0] > 0) {
+        my @items = await $self->redis->pending(stream => $rpc->{stream}, group => $self->group_name, client => $self->whoami);
+
+        for my $item (@items) {
+            push $item->{data}->@*, ('transport_id', $item->{id});
+            if ($rpc->{process_pending}){
+                try {
+                    $log->infof('processing pending request %s',$item);
+                    my $message = Myriad::RPC::Message::from_hash($item->{data}->@*);
+                    $rpc->{sink}->emit($message);
+                } catch ($error) {
+                    $log->tracef("error while parsing the incoming messages: %s", $error->message);
+                    await $self->drop($rpc->{stream}, $item->{id});
+                }
+            } else {
+                $log->tracef("skip processing pending | dropping message: %s", $item->{id});
+                await $self->drop($rpc->{stream}, $item->{id});
+            }
+        }
+
+        $pending_info = await $self->redis->pending_messages_info($rpc->{stream}, $self->group_name);
     }
 }
 
@@ -111,8 +142,7 @@ async method listen () {
                     }
                 }
             }
-        }), foreach => [$self->rpc_list->@*], concurrent => 8);
-            await $self->loop->delay_future(after => 0.001);
+        }), foreach => [$self->rpc_list->@*], concurrent => scalar $self->rpc_list->@*);
     })->();
 }
 

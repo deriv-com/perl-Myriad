@@ -313,7 +313,8 @@ async method load () {
             $self->rpc->create_from_sink(
                 service => $service_name,
                 method => $method,
-                sink => $sink
+                sink => $sink,
+                process_pending => $spec->{args}{process_pending} // 0,
             );
 
             my $code = $spec->{code};

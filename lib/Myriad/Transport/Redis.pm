@@ -337,7 +337,6 @@ Returns a L<Ryu::Source> for the pending items in this stream.
 =cut
 
 async method pending (%args) {
-    my $src = $self->source;
     my $stream = $self->apply_prefix($args{stream});
     my $group = $args{group};
     my $client = $args{client};
@@ -366,13 +365,13 @@ async method pending (%args) {
             concurrent => 8
         );
 
-        } catch ($e) {
-            $log->warnf('Could not read pending messages on stream: %s | error: %s', $stream, $e);
-        }
-        $self->return_instance_to_pool($instance) if $instance;
-        undef $instance;
+    } catch ($e) {
+        $log->warnf('Could not read pending messages on stream: %s | error: %s', $stream, $e);
+    }
+    $self->return_instance_to_pool($instance) if $instance;
+    undef $instance;
 
-        return @res;
+    return @res;
 }
 
 =head2 create_group
