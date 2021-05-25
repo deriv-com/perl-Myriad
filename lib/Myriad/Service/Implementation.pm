@@ -314,7 +314,7 @@ async method load () {
                 service => $service_name,
                 method => $method,
                 sink => $sink,
-                process_pending => $spec->{args}{process_pending} // 0,
+                process_pending => $spec->{args}{process_pending},
             );
 
             my $code = $spec->{code};

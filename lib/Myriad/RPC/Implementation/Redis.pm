@@ -71,8 +71,6 @@ method create_from_sink (%args) {
     my $service = $args{service} // die 'need a service name';
     my $process_pending = $args{process_pending};
 
-    $log->warnf('Process_pending: %d', $process_pending);
-
     push $rpc_list->@*, {
         stream => stream_name_from_service($service, $method),
         sink   => $sink,
