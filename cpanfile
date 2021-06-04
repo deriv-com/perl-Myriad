@@ -3,13 +3,14 @@ requires 'mro';
 requires 'indirect';
 requires 'multidimensional';
 requires 'bareword::filehandles';
+requires 'XS::Parse::Keyword', '>= 0.06';
 requires 'Syntax::Keyword::Dynamically', '>= 0.08';
-requires 'Syntax::Keyword::Try', '>= 0.24';
+requires 'Syntax::Keyword::Try', '>= 0.25';
 requires 'Syntax::Keyword::Defer', '>= 0.05';
 requires 'Future', '>= 0.47';
 requires 'Future::Queue';
-requires 'Future::AsyncAwait', '>= 0.50';
-requires 'Object::Pad', '>= 0.39';
+requires 'Future::AsyncAwait', '>= 0.51';
+requires 'Object::Pad', '>= 0.40';
 requires 'Role::Tiny', '>= 2.002004';
 # Streams
 requires 'Ryu', '>= 3.000';
@@ -42,7 +43,7 @@ requires 'Math::Random::Secure';
 requires 'Getopt::Long';
 requires 'Pod::Usage';
 requires 'List::Util', '>= 1.56';
-requires 'List::Keywords', '>= 0.06';
+requires 'List::Keywords', '>= 0.08';
 # Integration
 requires 'Net::Async::OpenTracing', '>= 1.000';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
