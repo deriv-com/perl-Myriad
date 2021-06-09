@@ -67,13 +67,15 @@ async method start () {
                     $messages->{$id}->{transport_id} = $id;
                     $message = Myriad::RPC::Message->from_hash($messages->{$id}->%*);
                     $rpc->{sink}->emit($message);
-                } catch ($e isa Myriad::Exception::RPC::BadEncoding) {
-                    $log->warnf('Recived a dead message that we cannot parse, going to drop it.');
-                    $log->tracef("message was: %s", $messages->{$id});
-                    await $self->drop($rpc->{stream}, $id);
                 } catch ($e) {
-                    my ($service) = $rpc->{stream} =~ /service.(.*).rpc\//;
-                    await $self->reply_error($service, $message, $e);
+                    if (blessed $e && $e->isa('Myriad::Exception::RPC::BadEncoding')) {
+                        $log->warnf('Recived a dead message that we cannot parse, going to drop it.');
+                        $log->tracef("message was: %s", $messages->{$id});
+                        await $self->drop($rpc->{stream}, $id);
+                    } else {
+                        my ($service) = $rpc->{stream} =~ /service.(.*).rpc\//;
+                        await $self->reply_error($service, $message, $e);
+                    }
                 }
             }
         }), foreach => [ $self->rpc_list->@* ], concurrent => 8);
