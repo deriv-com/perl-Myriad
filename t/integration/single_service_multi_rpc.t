@@ -40,14 +40,11 @@ my $run_future = $loop->new_future(label => 'test_run');
     }
 
     async method keep_calling_timer() {
-        my $timer = IO::Async::Timer::Periodic->new(
+        my $timer1 = IO::Async::Timer::Periodic->new(
             interval => 1,
             on_tick  => sub {
-                $log->info('Calling Test::Service::TwoRPC::rpc_test1');
-                my $remote_service = $api->service_by_name('test.service.tworpc');
-
                 my $time = Time::Moment->now;
-                my $r = $remote_service->call_rpc('rpc_test1')->get; 
+                my $r = $self->call_service_rpc('rpc_test1')->retain; 
                 my $wait_time = $time->delta_seconds(Time::Moment->now);
 
                 is $r->{response}{called}, 'rpc_test1', 'Got the right response';
@@ -55,11 +52,35 @@ my $run_future = $loop->new_future(label => 'test_run');
 
                 $calls_count++;
                 # Run it for four times.
+                #$run_future->done('finished') if $calls_count == 4;
+            },
+        );
+        $self->add_child($timer1);
+        $timer1->start;
+
+        my $timer2 = IO::Async::Timer::Periodic->new(
+            interval => 1,
+            on_tick  => sub {
+                my $time = Time::Moment->now;
+                my $r = $self->call_service_rpc('rpc_test2')->retain; 
+                my $wait_time = $time->delta_seconds(Time::Moment->now);
+
+                is $r->{response}{called}, 'rpc_test2', 'Got the right response';
+                cmp_ok $wait_time, '<=', 1, 'Took us one second or less to get response.';
+
+                $calls_count++;
+                # Run it for four times.
                 $run_future->done('finished') if $calls_count == 4;
             },
         );
-        $self->add_child($timer);
-        $timer->start;
+        $self->add_child($timer2);
+        $timer2->start;
+    }
+    
+    async method call_service_rpc ($rpc) {
+        $log->infof('Calling Test::Service::TwoRPC::%s', $rpc);
+        my $remote_service = $api->service_by_name('test.service.tworpc');
+        await $remote_service->call_rpc($rpc); 
     }
 
 }
