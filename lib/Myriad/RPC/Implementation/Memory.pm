@@ -72,9 +72,10 @@ async method start () {
                         $log->warnf('Recived a dead message that we cannot parse, going to drop it.');
                         $log->tracef("message was: %s", $messages->{$id});
                         await $self->drop($rpc->{stream}, $id);
+                    } else {
+                        my ($service) = $rpc->{stream} =~ /service.(.*).rpc\//;
+                        await $self->reply_error($service, $message, $e);
                     }
-                    my ($service) = $rpc->{stream} =~ /service.(.*).rpc\//;
-                    await $self->reply_error($service, $message, $e);
                 }
             }
         }), foreach => [ $self->rpc_list->@* ], concurrent => 8);
