@@ -30,7 +30,7 @@ subtest 'RPCs should not block each others in the same service'  => sub {
     (async sub {
         my $myriad = new_ok('Myriad');
 
-        await $myriad->configure_from_argv('--transport', $ENV{MYRIAD_TRANSPORT} // 'memory');
+        await $myriad->configure_from_argv('--transport', $ENV{MYRIAD_TRANSPORT} // 'memory', '--transport_cluster', $ENV{MYRIAD_TRANSPORT_CLUSTER} // 0);
         await $myriad->add_service('Service::RPC');
 
         # Run the service
@@ -73,7 +73,7 @@ subtest 'RPCs should not block each others in different services, same Myriad in
 
         my $myriad = new_ok('Myriad');
 
-        await $myriad->configure_from_argv('--transport', $ENV{MYRIAD_TRANSPORT} // 'memory');
+        await $myriad->configure_from_argv('--transport', $ENV{MYRIAD_TRANSPORT} // 'memory', '--transport_cluster', $ENV{MYRIAD_TRANSPORT_CLUSTER} // 0);
         await $myriad->add_service('Service::RPC');
         await $myriad->add_service('Another::RPC');
 
