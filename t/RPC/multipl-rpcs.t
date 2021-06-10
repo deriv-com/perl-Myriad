@@ -41,11 +41,12 @@ subtest 'RPCs should not block each others in the same service'  => sub {
         my $start_time = time;
 
         # if one RPC doesn't have messages it should not block the others
-        await (fmap {
-            my $rpc = shift;
-            $myriad->rpc_client->call_rpc('service.rpc', $rpc)->catch(sub {warn shift});
-        } foreach => ['echo', 'ping'], concurrent => 3);
-
+        for my $i (0..10) {
+            await (fmap {
+                my $rpc = shift;
+                $myriad->rpc_client->call_rpc('service.rpc', $rpc)->catch(sub {warn shift});
+            } foreach => ['echo', 'ping'], concurrent => 3);
+        }
         my $done_time = time;
 
         is($done_time - $start_time < 1, 1, 'RPCs are not blocking each others');
@@ -85,14 +86,16 @@ subtest 'RPCs should not block each others in different services, same Myriad in
 
         my $start_time = time;
         # if one service's RPC doesn't have messages it should not block the others
-        await (fmap {
-            my ($service, $rpc) = shift->%*;
-            $myriad->rpc_client->call_rpc($service, $rpc);
-        } foreach => [
-            {'service.rpc' => 'echo'}, {'service.rpc' => 'ping'},
-            {'another.rpc' => 'zero'}, {'another.rpc' => 'five'},
-        ], concurrent => 6);
 
+        for my $i (0..10) {
+            await (fmap {
+                my ($service, $rpc) = shift->%*;
+                $myriad->rpc_client->call_rpc($service, $rpc);
+            } foreach => [
+                {'service.rpc' => 'echo'}, {'service.rpc' => 'ping'},
+                {'another.rpc' => 'zero'}, {'another.rpc' => 'five'},
+            ], concurrent => 6);
+        }
         my $done_time = time;
 
         is($done_time - $start_time < 1, 1, 'RPCs are not blocking each others');
