@@ -111,7 +111,7 @@ async method listen () {
                     }
                 }
             }
-        }), foreach => [$self->rpc_list->@*], concurrent => 8);
+        }), foreach => [$self->rpc_list->@*], concurrent => scalar $self->rpc_list->@*);
             await $self->loop->delay_future(after => 0.001);
     })->();
 }
