@@ -19,6 +19,7 @@ our @REGISTERED_SERVICES;
 
 my $loop = IO::Async::Loop->new();
 my $myriad = Myriad->new();
+my $ready_f;
 
 =head1 NAME
 
@@ -56,7 +57,7 @@ sub add_service {
     my ($pkg, $meta);
     if (my $service = delete $args{service}) {
         $pkg = $service;
-        $meta = Object::Pad::MOP::Class->for_class(ref $service);
+        $meta = Object::Pad::MOP::Class->for_class($service);
     } elsif ($service = delete $args{name}) {
         die 'The name should look like a Perl package name' unless $service =~ /::/;
         $pkg  = $service;
@@ -76,17 +77,27 @@ sub add_service {
     return Test::Myriad::Service->new(meta => $meta, pkg => $pkg, myriad => $myriad);
 }
 
+sub ready {
+    return $ready_f //= $loop->new_future(label => 'myriad.test.ready');
+}
+
 sub import {
+    my $self = shift;;
     Check::UnitCheck::unitcheckify(sub {
-        $myriad->configure_from_argv()->get();
+        $myriad->configure_from_argv(('--transport', 'memory', 'service'))->get();
         $loop->later(sub {
             (fmap0 {
                 $myriad->add_service($_);
             } foreach => [@REGISTERED_SERVICES])->then(sub {
+                $myriad->on_start(async sub {
+                    $self->ready->done
+                });
                 return $myriad->run;
             })->on_fail(sub {
                 my $error = shift;
-                die "Failed to start the test environment due: $error";
+                $self->ready->fail("Failed to start the test environment due: $error");
+                # Just in case the developer didn't await the future
+                die $error;
             })->retain;
         });
     });
