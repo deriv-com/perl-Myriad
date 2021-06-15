@@ -98,10 +98,7 @@ subtest 'RPCs should not block each others in different services, same Myriad in
             await Future->needs_any(
                 fmap_void(async sub {
                     my ($service, $rpc, $args, $res) = shift->@*;
-                    my $response = await Future->needs_any(
-                        $myriad->rpc_client->call_rpc($service, $rpc, %$args),
-                        $myriad->loop->timeout_future(after => 1)
-                    );
+                    my $response = await $myriad->rpc_client->call_rpc($service, $rpc, %$args);
                     is_deeply $response, $res, "Matching response $service:$rpc";
                 }, foreach => [
                     ['service.rpc' => 'echo'   , { hi => 'echo' }    , { response => { hi => 'echo' } } ],
