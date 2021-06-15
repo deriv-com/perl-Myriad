@@ -49,7 +49,7 @@ subtest 'RPCs should not block each others in the same service'  => sub {
         }
         my $done_time = time;
 
-        is($done_time - $start_time < 1, 1, 'RPCs are not blocking each others');
+        is($done_time - $start_time <= 1, 1, 'RPCs are not blocking each others');
     })->()->get();
 };
 
@@ -98,7 +98,7 @@ subtest 'RPCs should not block each others in different services, same Myriad in
         }
         my $done_time = time;
 
-        is($done_time - $start_time < 1, 1, 'RPCs are not blocking each others');
+        is($done_time - $start_time <= 1, 1, 'RPCs are not blocking each others');
     })->()->get();
 };
 
