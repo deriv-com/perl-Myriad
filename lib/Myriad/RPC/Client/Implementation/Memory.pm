@@ -88,7 +88,7 @@ async method call_rpc ($service, $method, %args) {
             $self->loop->timeout_future(at => $deadline),
             $pending
         );
-        return $message->response;
+        return $message->response->{response};
     } catch ($e) {
         if ($e =~ /Timeout/) {
             $e  = Myriad::Exception::RPC::Timeout->new(reason => 'deadline is due');
