@@ -3,7 +3,7 @@ Revision history for {{$dist->name}}
 
 {{$NEXT}}
     [New feature]
-    - RPC on start hanle existing pending messages in stream, default is dropping them, while setting option process_pending will process them instead.
+    - RPC on start handle existing pending messages in stream, default is dropping them, while setting option process_pending will process them instead.
 
     [Bugs fixed]
     - Having multiple RPC added will not block and wait each others from reading from stream.
