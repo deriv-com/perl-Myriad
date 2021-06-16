@@ -55,7 +55,8 @@ BUILD (%args) {
                         return delete $mocked_rpc->{$method};
                     }
                     try {
-                        await $default_rpc->{$method}->(@_);
+                        my $self = shift;
+                        await $self->$method(@_);
                     } catch ($e) {
                         $log->tracef("An exception has been thrown while calling the original sub - %s", $e);
                         die $e;
