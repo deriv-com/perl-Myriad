@@ -19,7 +19,6 @@ our @REGISTERED_SERVICES;
 
 my $loop = IO::Async::Loop->new();
 my $myriad = Myriad->new();
-my $ready_f;
 
 =head1 NAME
 
@@ -32,6 +31,14 @@ Myriad::Test - a collection of helpers to test microservices.
  my $mock_service = add_service(name => 'mocked_service');
 
 =head1 DESCRIPTION
+
+A mini utility to help developers testing myriad services.
+
+it can create completely fake services or mock already
+existing ones.
+
+It uses the L<Myriad::Transport::Memory> by default to change that
+you can set the environment variable MYRIAD_TEST_TRANSPORT
 
 =head1 Methods
 
@@ -77,27 +84,31 @@ sub add_service {
     return Test::Myriad::Service->new(meta => $meta, pkg => $pkg, myriad => $myriad);
 }
 
+=head2 ready
+
+Returns a L<Future> indicate that test env
+is ready to be used.
+
+at the moment it is just a shortcut for L<Myriad> run_future.
+
+=cut
+
 sub ready {
-    return $ready_f //= $loop->new_future(label => 'myriad.test.ready');
+    return $myriad->run_future;
 }
 
 sub import {
     my $self = shift;;
     Check::UnitCheck::unitcheckify(sub {
-        $myriad->configure_from_argv(('--transport', 'memory', 'service'))->get();
+        $myriad->configure_from_argv(('--transport', $ENV{MYRIAD_TEST_TRANSPORT} // 'memory', 'service'))->get();
         $loop->later(sub {
             (fmap0 {
                 $myriad->add_service($_);
             } foreach => [@REGISTERED_SERVICES])->then(sub {
-                $myriad->on_start(async sub {
-                    $self->ready->done
-                });
                 return $myriad->run;
             })->on_fail(sub {
                 my $error = shift;
-                $self->ready->fail("Failed to start the test environment due: $error");
-                # Just in case the developer didn't await the future
-                die $error;
+                die "Failed to start the test environment due: $error";
             })->retain;
         });
     });
