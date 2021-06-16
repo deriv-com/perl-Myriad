@@ -46,9 +46,9 @@ subtest 'RPCs should not block each others in the same service'  => sub {
                     my $rpc = shift;
                     my $response = await $myriad->rpc_client->call_rpc('service.rpc', $rpc)->catch(sub {warn shift});
                     if ( $rpc eq 'ping' ) {
-                         cmp_ok $response->{response}{time}, '==', time, 'Ping Matching Time';
+                         cmp_ok $response->{time}, '==', time, 'Ping Matching Time';
                     } elsif ( $rpc eq 'echo' ) {
-                        like $response->{response}, qr//, 'Got echo response';
+                        like $response, qr//, 'Got echo response';
                     }
                 }, foreach => ['echo', 'ping'], concurrent => 3),
                 $myriad->loop->timeout_future(after => 1)
@@ -101,10 +101,10 @@ subtest 'RPCs should not block each others in different services, same Myriad in
                     my $response = await $myriad->rpc_client->call_rpc($service, $rpc, %$args);
                     is_deeply $response, $res, "Matching response $service:$rpc";
                 }, foreach => [
-                    ['service.rpc' => 'echo'   , { hi => 'echo' }    , { response => { hi => 'echo' } } ],
-                    ['service.rpc' => 'reverse', { v => 'reverseme' }, { response => { reversed => 'emesrever' } } ],
-                    ['another.rpc' => 'double' , { v => 4 }          , { response => 8 } ],
-                    ['another.rpc' => 'five'   , {}                  , { response => 5 } ],
+                    ['service.rpc' => 'echo'   , { hi => 'echo' }    , { hi => 'echo' } ],
+                    ['service.rpc' => 'reverse', { v => 'reverseme' }, { reversed => 'emesrever' } ],
+                    ['another.rpc' => 'double' , { v => 4 }          , 8 ],
+                    ['another.rpc' => 'five'   , {}                  , 5 ],
                 ], concurrent => 6),
                 $myriad->loop->timeout_future(after => 1),
             );
