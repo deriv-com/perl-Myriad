@@ -216,6 +216,8 @@ async method process_batch($k, $code, $src) {
             $log->warnf("Batch iteration for %s failed - %s", $k, $e);
         }
 
+        die 'Batch should return an arrayref' unless ref $data eq 'ARRAY';
+
         if ($data->@*) {
             $backoff = 0;
             $src->emit($_) for $data->@*;
