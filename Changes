@@ -3,6 +3,7 @@ Revision history for {{$dist->name}}
 
 {{$NEXT}}
     [API Changes]
+    - Breaking: RPC client will unwrap the extra 'response' level from the response.
     - Myriad now has run_future like shutdown_future, to tell when the framework is running.
     - Test::Myriad has a ready sub, to tell when the underlying Myriad is running.
 
