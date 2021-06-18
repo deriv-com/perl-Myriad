@@ -190,6 +190,13 @@ Registers a coderef to be called during shutdown.
 
 The coderef is expected to return a [Future](https://metacpan.org/pod/Future) indicating completion.
 
+## run\_future
+
+Returns a copy of the run [Future](https://metacpan.org/pod/Future).
+
+This would resolve once the process is running and it's
+ready to accept requests.
+
 ## shutdown\_future
 
 Returns a copy of the shutdown [Future](https://metacpan.org/pod/Future).

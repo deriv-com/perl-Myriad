@@ -2,6 +2,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+
+0.008     2021-06-18 05:24:31+00:00 UTC
     [API Changes]
     - Breaking: RPC client will unwrap the extra 'response' level from the response.
     - Myriad now has run_future like shutdown_future, to tell when the framework is running.
