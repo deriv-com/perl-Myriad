@@ -26,7 +26,6 @@ subtest 'batch should work fine' => sub {
     }, $sink)->retain;
 
     (async sub {
-    
         $loop->delay_future(after => 0.001)->then(sub {
             $sink->source->finish;
         })->retain;
@@ -48,13 +47,13 @@ subtest 'batch should through if output is wrong' => sub {
     $loop->add($fake_service);
 
     my $sink = $ryu->sink;
-    like( 
+    like(
         exception { $fake_service->process_batch('fake_batch', async sub {
             return {key => 1};
         }, $sink)->get},
     qr/Batch should return an arrayref/, 'Batch should throw if single hash returned');
 
-    like( 
+    like(
         exception { $fake_service->process_batch('fake_batch', async sub {
             return 1;
         }, $sink)->get},
@@ -73,7 +72,7 @@ subtest 'batch should still work if empty array returned' => sub {
             return [];
     }, $sink)->retain();
 
-    (async sub { 
+    (async sub {
         $loop->delay_future(after => 0.001)->then(sub {
             $sink->source->finish;
         })->retain;
