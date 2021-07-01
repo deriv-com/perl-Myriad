@@ -2,6 +2,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+    [API Changes]
+    - Syntax::Keyword::Match is now imported in Myriad::Service code
 
 0.008     2021-06-18 05:24:31+00:00 UTC
     [API Changes]

@@ -117,6 +117,7 @@ use Future::AsyncAwait;
 use Syntax::Keyword::Try;
 use Syntax::Keyword::Dynamically;
 use Syntax::Keyword::Defer;
+use Syntax::Keyword::Match;
 use Scalar::Util;
 use List::Util;
 use List::Keywords;
@@ -230,6 +231,7 @@ sub import {
 
     # Others use lexical hints
     List::Keywords->import(qw(any all));
+    Syntax::Keyword::Match->import(qw(match));
 
     # For history here, see this:
     # https://rt.cpan.org/Ticket/Display.html?id=132337
