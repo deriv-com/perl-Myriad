@@ -400,9 +400,11 @@ by default it's C<$> which means the last message.
 
 =cut
 
-async method create_group ($stream, $group, $start_from = '$') {
+async method create_group ($stream, $group, $start_from = '$', $make_stream = 0) {
     try {
-        await $redis->xgroup('CREATE', $self->apply_prefix($stream), $group, $start_from, 'MKSTREAM');
+        my @args = ('CREATE', $self->apply_prefix($stream), $group, $start_from);
+        push @args, 'MKSTREAM' if $make_stream;
+        await $redis->xgroup(@args);
     } catch ($e) {
         if($e =~ /BUSYGROUP/){
             return;
