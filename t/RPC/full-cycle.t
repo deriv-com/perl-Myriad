@@ -8,6 +8,10 @@ use Test::Myriad;
 use Future;
 use Future::AsyncAwait;
 
+use Log::Any::Adapter;
+
+Log::Any::Adapter->set('Null');
+
 my ($ping_service, $pong_service);
 
 package Test::Ping {
