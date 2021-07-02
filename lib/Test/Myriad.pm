@@ -15,6 +15,8 @@ use Myriad;
 use Myriad::Service::Implementation;
 use Test::Myriad::Service;
 
+use Log::Any::Adapter;
+
 our @REGISTERED_SERVICES;
 
 my $loop = IO::Async::Loop->new();
@@ -101,6 +103,10 @@ sub import {
     my $self = shift;;
     Check::UnitCheck::unitcheckify(sub {
         $myriad->configure_from_argv(('--transport', $ENV{MYRIAD_TEST_TRANSPORT} // 'memory', 'service'))->get();
+
+        # Override logger
+        Log::Any::Adapter->set('TAP', filter => 'info');
+
         $loop->later(sub {
             (fmap0 {
                 $myriad->add_service($_);
