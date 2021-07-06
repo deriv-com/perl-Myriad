@@ -231,7 +231,7 @@ it takes the following args:
 =cut
 
 method make_service_name ($name, $namespace = '') {
-    $name =~ s/$namespace// if $namespace;
+    $name =~ s/^\Q$namespace// if $namespace;
     return lc($name) =~ s{::}{.}gr
 }
 
