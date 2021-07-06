@@ -40,6 +40,12 @@ use Net::Async::Redis::Cluster;
 
 use List::Util qw(pairmap);
 
+use Myriad::Exception::Builder category => 'transport_redis';
+
+declare_exception 'NoSuchStream' => (
+    message => 'There is no such stream, is the other service running?',
+);
+
 # Cluster mode by default
 has $use_cluster = 1;
 
@@ -408,6 +414,10 @@ async method create_group ($stream, $group, $start_from = '$', $make_stream = 0)
     } catch ($e) {
         if($e =~ /BUSYGROUP/){
             return;
+        } elsif ($e =~ /requires the key to exist/) {
+            Myriad::Exception::Transport::Redis::NoSuchStream->throw(
+                reason => "no such stream: $stream",
+            );
         } else {
             die $e;
         }
