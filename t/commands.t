@@ -69,6 +69,13 @@ subtest "service command" => sub {
     # Clear it for next test.
     undef @added_services_modules;
 
+    # Running services under the same namespace
+    wait_for_future( $command->service('Ta::*')->get->{code}->() )->get;
+    cmp_deeply(\@added_services_modules, ['Ta::Sibling1', 'Ta::Sibling2'], 'Added modules under the namespace');
+    # Clear it for next test.
+    undef @added_services_modules;
+
+
     # Command to run multiple services should not be allowed when service_name option is set
     my $srv_run_name = 'service.test.one';
     $metaclass->get_slot('$config')->value($myriad) = Myriad::Config->new( commandline => ['--service_name', $srv_run_name] );
