@@ -58,7 +58,6 @@ subtest "Adding and viewing components" => sub {
         my $add = join '_', 'add', $component;
 
         my  $for = component_for_method($component);
-        note "FFFF: $for";
 
         # Always pass empty $args only with receiver set service name
         $registry->$add($srv_class, $sub_name, $dummy_sub, $component eq 'receiver'? {'service' => $srv_class} : {});
