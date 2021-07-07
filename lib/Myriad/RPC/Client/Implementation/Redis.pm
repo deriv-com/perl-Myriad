@@ -95,7 +95,7 @@ async method call_rpc($service, $method, %args) {
         # The subscription loop will parse the message for us
         my $message = await Future->wait_any($self->loop->timeout_future(after => $timeout), $pending);
 
-        return $message->response;
+        return $message->response->{response};
     } catch ($e) {
         $log->tracef('RPC request failed due: %s', $e);
         if ($e =~ /Timeout/) {

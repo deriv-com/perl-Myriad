@@ -3,7 +3,19 @@ Revision history for {{$dist->name}}
 
 {{$NEXT}}
     [New feature]
-    - RPC on start handle existing pending messages in stream, default is dropping them, while setting option process_pending will process them instead.
+
+    [API Changes]
+    - Syntax::Keyword::Match is now imported in Myriad::Service code
+    - Redis: A service will not create another service's stream.
+    - Allow services namespaces by adding '::*' to the startup command.
+    - RPC on start handle existing pending messages in stream, if not expired.
+
+0.008     2021-06-18 05:24:31+00:00 UTC
+    [API Changes]
+    - Breaking: RPC client will unwrap the extra 'response' level from the response.
+    - Myriad now has run_future like shutdown_future, to tell when the framework is running.
+    - Test::Myriad has a ready sub, to tell when the underlying Myriad is running.
+    - Batch will now throw an exception and fail if the developer didn't return arrayref.
 
     [Bugs fixed]
     - Having multiple RPC added will not block and wait each others from reading from stream.
