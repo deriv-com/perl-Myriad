@@ -87,8 +87,6 @@ This will cause the method to be registered in L<Myriad::Registry/add_rpc>.
 
 sub rpc {
     my ($class, $pkg, $method, $code, $args) = @_;
-    # Set default $args if not passed
-    $args = { process_pending => 0 } unless $args and exists $args->{process_pending};
     $Myriad::REGISTRY->add_rpc(
         $pkg,
         $method,

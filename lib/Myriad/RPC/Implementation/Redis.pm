@@ -69,13 +69,11 @@ method create_from_sink (%args) {
     my $sink   = $args{sink} // die 'need a sink';
     my $method = $args{method} // die 'need a method name';
     my $service = $args{service} // die 'need a service name';
-    my $process_pending = $args{process_pending};
 
     push $rpc_list->@*, {
         stream => stream_name_from_service($service, $method),
         sink   => $sink,
-        group  => 0,
-        process_pending => $process_pending,
+        group  => 0
     };
 }
 
@@ -98,17 +96,18 @@ async method process_pending ($rpc) {
 
         for my $item (@items) {
             push $item->{data}->@*, ('transport_id', $item->{id});
-            if ($rpc->{process_pending}){
-                try {
-                    $log->infof('processing pending request %s',$item);
-                    my $message = Myriad::RPC::Message::from_hash($item->{data}->@*);
-                    $rpc->{sink}->emit($message);
-                } catch ($error) {
-                    $log->tracef("error while parsing the incoming messages: %s", $error->message);
-                    await $self->drop($rpc->{stream}, $item->{id});
-                }
+            try {
+                $log->infof('processing pending request %s',$item);
+                my $message = Myriad::RPC::Message::from_hash($item->{data}->@*);
+            } catch ($error) {
+                $log->tracef("error while parsing the incoming messages: %s", $error->message);
+                await $self->drop($rpc->{stream}, $item->{id});
+            }
+            if ($message->deadline > time ) {
+                # still valid and client is waiting response
+                $rpc->{sink}->emit($message);
             } else {
-                $log->tracef("skip processing pending | dropping message: %s", $item->{id});
+                $log->tracef("dropping expired message: %s", $item->{id});
                 await $self->drop($rpc->{stream}, $item->{id});
             }
         }

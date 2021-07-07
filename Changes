@@ -2,8 +2,6 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
-    [New feature]
-
     [API Changes]
     - Syntax::Keyword::Match is now imported in Myriad::Service code
     - Redis: A service will not create another service's stream.

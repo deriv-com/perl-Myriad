@@ -347,7 +347,6 @@ async method pending (%args) {
     my $group = $args{group};
     my $client = $args{client};
     my @res = ();
-
     my $instance = await $self->borrow_instance_from_pool;
     try {
         my ($pending) = await $instance->xpending(
@@ -364,8 +363,11 @@ async method pending (%args) {
                 my $claim = await $redis->xclaim($stream, $group, $client, 10, $id);
                 $log->tracef('Claim is %s', $claim);
                 my $args = $claim->[0]->[1];
-
-                return {stream => $self->remove_prefix($stream), id => $id, data => $args ? $args : []};
+                return {
+                    stream => $self->remove_prefix($stream),
+                    id => $id,
+                    data => $args ? $args : []
+                };
             }),
             foreach => $pending,
             concurrent => 8
