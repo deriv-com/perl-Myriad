@@ -96,14 +96,15 @@ async method process_pending ($rpc) {
 
         for my $item (@items) {
             push $item->{data}->@*, ('transport_id', $item->{id});
+            my $message;
             try {
                 $log->infof('processing pending request %s',$item);
-                my $message = Myriad::RPC::Message::from_hash($item->{data}->@*);
+                $message = Myriad::RPC::Message::from_hash($item->{data}->@*);
             } catch ($error) {
                 $log->tracef("error while parsing the incoming messages: %s", $error->message);
                 await $self->drop($rpc->{stream}, $item->{id});
             }
-            if ($message->deadline > time ) {
+            if ( $message->deadline > time ) {
                 # still valid and client is waiting response
                 $rpc->{sink}->emit($message);
             } else {
