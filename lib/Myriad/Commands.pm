@@ -96,12 +96,13 @@ async method service (@args) {
         code => async sub {
             try {
                 await fmap0 {
-                    my $service = shift;
+                    my $key = shift;
+                    my $service = $myriad->services->{$key};
                     $log->infof('Starting service [%s]', $service->service_name);
                     $service->start->transform(fail => sub {
                         return $service->service_name . ' : ' . shift;
                     });
-                } foreach => [values $myriad->services->%*], concurrent => 4;
+                } foreach => [sort keys $myriad->services->%*], concurrent => 1;
 
             } catch($e) {
                 $log->warnf('Failed to start services - %s', $e);

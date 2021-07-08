@@ -86,7 +86,7 @@ async method add_service (%args) {
     await $srv->load();
     my $k = refaddr($srv);
     weaken($service_by_name{$service_name} = $srv);
-    weaken($myriad->services->{$k} = $srv);
+    weaken($myriad->services->{scalar(keys $myriad->services->%*)} = $srv);
 
     return;
 }
