@@ -372,7 +372,6 @@ async method pending (%args) {
             foreach => $pending,
             concurrent => 8
         );
-
     } catch ($e) {
         $log->warnf('Could not read pending messages on stream: %s | error: %s', $stream, $e);
     }

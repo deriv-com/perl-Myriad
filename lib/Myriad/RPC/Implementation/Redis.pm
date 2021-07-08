@@ -90,30 +90,35 @@ async method create_group ($rpc) {
 }
 
 async method process_pending ($rpc) {
-    my $pending_info = await $self->redis->pending_messages_info($rpc->{stream}, $self->group_name);
-    while ($pending_info->[0] > 0) {
+    my $done = 0;
+    while ( !$done ) {
         my @items = await $self->redis->pending(stream => $rpc->{stream}, group => $self->group_name, client => $self->whoami);
+        $log->tracef('Pending messages in stream: %s', \@items);
+        $done = 1 unless @items > 0;
 
         for my $item (@items) {
+            unless ( $item->{data}->@* > 0 ) {
+                $done = 1;
+                last;
+            }
             push $item->{data}->@*, ('transport_id', $item->{id});
             my $message;
             try {
-                $log->infof('processing pending request %s',$item);
+                $log->tracef('processing pending request %s',$item);
                 $message = Myriad::RPC::Message::from_hash($item->{data}->@*);
             } catch ($error) {
                 $log->tracef("error while parsing the incoming messages: %s", $error->message);
                 await $self->drop($rpc->{stream}, $item->{id});
             }
-            if ( $message->deadline > time ) {
+            if ( defined $message and $message->deadline > time ) {
                 # still valid and client is waiting response
+                $log->tracef('Emit pending to process: %s', $message);
                 $rpc->{sink}->emit($message);
             } else {
-                $log->tracef("dropping expired message: %s", $item->{id});
+                $log->tracef("dropping expired message: %s | %s", $message, $item);
                 await $self->drop($rpc->{stream}, $item->{id});
             }
         }
-
-        $pending_info = await $self->redis->pending_messages_info($rpc->{stream}, $self->group_name);
     }
 }
 
