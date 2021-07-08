@@ -40,7 +40,7 @@ BEGIN {
             return $self->storage->$method($self->apply_prefix($key), @rest)->on_ready(sub {
                 my $f = shift;
                 $metrics->report_timer(time_elapsed =>
-                    $f->elapsed, {method => $method, status => $f->state, service => $self->local_service_name});
+                    $f->elapsed // 0, {method => $method, status => $f->state, service => $self->local_service_name});
             });
         });
     }

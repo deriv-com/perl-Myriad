@@ -59,13 +59,17 @@ package Service::Caller {
         my $service = $api->service_by_name('service.rpc');
         $count_req++;
         $log->tracef('Calling %s', $count_req);
-        my $res = await $service->call_rpc('controlled_rpc', timeout => 4, count => $count_req);
+        my $res = await $service->call_rpc('controlled_rpc', timeout => 1, count => $count_req);
         $count_res = $res->{internal_count};
+        # Mainly to control frequency and get consistent numbers.
+        await $self->loop->delay_future(after => 0.1);
         return [ { res => $res } ];
     }
 
     async method current_count : RPC (%args) {
-        return { count_req => $count_req, count_res => $count_res };
+        my $rpc_storage = $api->service_by_name('service.rpc')->storage;
+        my $rpc_count = await $rpc_storage->get('count');
+        return { count_req => $count_req, count_res => $count_res, rpc_count => $rpc_count };
     }
 };
 
@@ -99,7 +103,7 @@ subtest 'RPCs on start should check and process pending messages on start'  => s
         });
 
         # Let the first call happen.
-        await $loop->delay_future(after => 0.2);
+        await $loop->delay_future(after => 0.1);
         my $response = await $caller_m->rpc_client->call_rpc('service.caller', 'current_count')->catch(sub {warn shift});
         note time . " | RES: " . $response->{count_res} . " | REQ: " . $response->{count_req};
         is $response->{count_req}, 1, 'We only sent one request';
@@ -116,9 +120,10 @@ subtest 'RPCs on start should check and process pending messages on start'  => s
         
         await $loop->delay_future(after => 0.5);
         $response = await $caller_m->rpc_client->call_rpc('service.caller', 'current_count')->catch(sub {warn shift});
-        note time . " | RES2: " . $response->{count_res} . " | REQ: " . $response->{count_req};
+        note time . " | RES2: " . $response->{count_res} . " | REQ: " . $response->{count_req} . " | RPC_res: ". $response->{rpc_count};
         cmp_ok $response->{count_req}, '>', 1, "We sent more requests $response->{count_req}";
         is $response->{count_res}, $response->{count_req}, 'We got responses for all of our requests and nothing timedout';
+        is $response->{count_res}, $response->{rpc_count}, 'We got matching response count';
         await $caller_m->shutdown;
         await $p_rpc_m->shutdown;
         $loop->stop;
