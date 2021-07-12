@@ -35,11 +35,10 @@ async method drink : Batch () {
             push @got_coffees,  $r;
         }), foreach => [($get_coffee_params->()) x $concurrent], concurrent => $concurrent);
 
-    return  [ @got_coffees ];
+    return  [ @got_coffees ];29/3636
 
 }
 
-=d
 async method new_driker : Batch () {
     my $user_service = $api->service_by_name('coffee.manager.user');
     my @added_users;
@@ -76,5 +75,5 @@ async method new_machine : Batch () {
 
     return  [ @added_machines ];
 }
-=cut
+
 1;
