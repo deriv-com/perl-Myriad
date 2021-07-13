@@ -5,6 +5,7 @@ use Myriad::Service;
 use JSON::MaybeUTF8 qw(:v1);
 
 has $fields;
+has $id;
 
 BUILD (%args) {
     $fields = {
@@ -19,7 +20,7 @@ BUILD (%args) {
 }
 
 async method startup () {
-
+    $id = await $api->storage->get('id');
 }
 
 async method request : RPC (%args) {
@@ -46,9 +47,7 @@ async method request : RPC (%args) {
         my %cleaned_body;
         @cleaned_body{keys $fields->%*} = @body{keys $fields->%*};
 
-        my $id = await $storage->get('id');
-        $id++;
-        await $storage->set('id', $id);
+        $id = await $storage->incr('id');
 
         await $storage->hash_set('machine', $id, encode_json_utf8(\%cleaned_body));
         await fmap_void(

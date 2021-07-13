@@ -21,38 +21,38 @@ async method startup () {
 
 async method drink : Batch () {
     my $coffee_service = $api->service_by_name('coffee.manager.coffee');
-    my @got_coffees;
+    #my @got_coffees;
     my $concurrent = int(rand(51));
-    $log->warnf('CALL');
     my $get_coffee_params = sub { return { int(rand($latest_user_id))  => int(rand($latest_machine_id)) } };
+    my $requests = [ map { $get_coffee_params->() } (0..$concurrent) ];
     $log->warnf('Bought Coffee User: %d | Machine: %d | entry_id: %d', $get_coffee_params->());
-    await &fmap_void( $self->$curry::curry(async method ($params) {
+    my @got_coffees = await &fmap_concat( $self->$curry::curry(async method ($params) {
             my $r = await $coffee_service->call_rpc('buy', 
                 type => 'PUT',
                 params => $params
             );
             $log->warnf('Bought Coffee User: %d | Machine: %d | entry_id: %d', $params->%*, $r->{id});
-            push @got_coffees,  $r;
-        }), foreach => [($get_coffee_params->()) x $concurrent], concurrent => $concurrent);
+            #push @got_coffees,  $r;
+            $r;
+        }), foreach => $requests, concurrent => $concurrent);
 
-    return  [ @got_coffees ];29/3636
+    return  [ @got_coffees ];
 
 }
 
-async method new_driker : Batch () {
+async method new_drinker : Batch () {
     my $user_service = $api->service_by_name('coffee.manager.user');
-    my @added_users;
     my $concurrent = int(rand(51));
-    my $new_user_hash = sub { return {login => $rng->randpattern("CccccCcCC"), password => 'pass', email => $rng->randpattern("CCCccccccc")} };
-    await &fmap_void( $self->$curry::curry(async method ($user_hash) {
+    my $requests = [ map { {login => $rng->randpattern("CccccCcCC"), password => 'pass', email => $rng->randpattern("CCCccccccc")} } (0..$concurrent) ];
+    my @added_users = await &fmap_concat( $self->$curry::curry(async method ($user_hash) {
             my $r = await $user_service->call_rpc('request', 
                 type => 'PUT',
                 body => $user_hash
             );
             $log->warnf('Added User: %s', $r);
             $latest_user_id = $r->{id};
-            push @added_users, $r;
-        }), foreach => [($new_user_hash->()) x $concurrent], concurrent => $concurrent);
+            $r;
+        }), foreach => $requests, concurrent => $concurrent);
 
     return  [ @added_users ];
 
@@ -60,18 +60,17 @@ async method new_driker : Batch () {
 
 async method new_machine : Batch () {
     my $machine_service = $api->service_by_name('coffee.manager.machine');
-    my @added_machines;
     my $concurrent = int(rand(51));
-    my $new_machine_hash = sub { return {name => $rng->randpattern("Ccccccccc"), caffeine => $rng->randpattern("n")} };
-    await &fmap_void( $self->$curry::curry(async method ($machine_hash) {
+    my $requests = [ map { {name => $rng->randpattern("Ccccccccc"), caffeine => $rng->randpattern("n")} } (0..$concurrent) ];
+    my @added_machines = await &fmap_concat( $self->$curry::curry(async method ($machine_hash) {
             my $r = await $machine_service->call_rpc('request', 
                 type => 'PUT',
                 body => $machine_hash
             );
-            $log->warnf('Added Machine %s', $r);
+            $log->warnf('Added Machine %s | %s', $r, $machine_hash);
             $latest_machine_id = $r->{id};
-            push @added_machines, $r;
-        }), foreach => [($new_machine_hash->()) x $concurrent], concurrent => $concurrent);
+            $r;
+        }), foreach => $requests, concurrent => $concurrent);
 
     return  [ @added_machines ];
 }
