@@ -9,7 +9,7 @@ use Myriad::Class;
 
 =head1 NAME
 
-Myriad::Service:Storage - microservice storage abstraction
+Myriad::Service::Storage - microservice storage abstraction
 
 =head1 SYNOPSIS
 
