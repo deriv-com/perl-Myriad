@@ -6,7 +6,7 @@ use JSON::MaybeUTF8 qw(:v1);
 use Time::Moment;
 
 has $fields;
-has $id;
+has $last_id;
 
 BUILD (%args) {
     $fields = {
@@ -25,7 +25,13 @@ BUILD (%args) {
 }
 
 async method startup () {
-    $id = await $api->storage->get('id');
+    $last_id = await $api->storage->get('id');
+}
+
+async method next_id () {
+    my $id = await $api->storage->incr('id');
+    $last_id = $id;
+    return $id;
 }
 
 async method buy : RPC (%args) {
@@ -69,7 +75,7 @@ async method buy : RPC (%args) {
         $input{timestamp} = $input{timestamp}->epoch;
         $log->debugf('ARGS: %s', \%input);
 
-        $id = await $storage->incr('id');
+        my $id = await $self->next_id;
         await $storage->hash_set('coffee', $id, encode_json_utf8(\%input));
         return {id => $id};
 

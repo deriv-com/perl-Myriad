@@ -5,7 +5,7 @@ use Myriad::Service;
 use JSON::MaybeUTF8 qw(:v1);
 
 has $fields;
-has $id;
+has $last_id;
 
 BUILD (%args) {
     $fields = {
@@ -25,7 +25,13 @@ BUILD (%args) {
 }
 
 async method startup () {
-    $id = await $api->storage->get('id');
+    $last_id = await $api->storage->get('id');
+}
+
+async method next_id () {
+    my $id = await $api->storage->incr('id');
+    $last_id = $id;
+    return $id;
 }
 
 async method request : RPC (%args) {
@@ -52,7 +58,8 @@ async method request : RPC (%args) {
         my %cleaned_body;
         @cleaned_body{keys $fields->%*} = @body{keys $fields->%*};
 
-        $id = await $storage->incr('id');
+        my $id = await $self->next_id;
+        $log->warnf('ID after INCR: %d', $id);
 
         await $storage->hash_set('user', $id, encode_json_utf8(\%cleaned_body));
         await fmap_void(
