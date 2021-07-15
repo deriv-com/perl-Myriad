@@ -45,7 +45,25 @@ a concrete implementation - instead, see classes such as:
 
 =cut
 
-our @WRITE_METHODS = qw(set getset incr push unshift pop shift hash_set hash_add orderedset_add orderedset_remove_member orderedset_remove_byscore );
+use Role::Tiny;
+
+our @WRITE_METHODS = qw(set getset incr push unshift pop shift hash_set hash_add);
+our @READ_METHODS = qw(get observe watch_keyspace hash_get hash_keys hash_values hash_exists hash_count hash_as_list);
+
+requires $_ for @WRITE_METHODS;
+requires $_ for @READ_METHODS;
+
+=head2 get
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=back
+
+Returns a L<Future> which will resolve to the corresponding value, or C<undef> if none.
 
 =head2 set
 
