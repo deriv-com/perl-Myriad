@@ -9,7 +9,7 @@ use Myriad::Class;
 
 =head1 NAME
 
-Myriad::Config
+Myriad::Config - dynamic configuration management for microservices
 
 =head1 DESCRIPTION
 
