@@ -9,7 +9,7 @@ use Myriad::Class;
 
 =head1 NAME
 
-Myriad::Plugin
+Myriad::Plugin - extensible L<Myriad> functionality using attributes
 
 =head1 DESCRIPTION
 
