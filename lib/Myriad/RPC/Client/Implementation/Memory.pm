@@ -47,7 +47,7 @@ async method start {
     $subscription = $sub->each(sub {
         try {
             my $payload = $_;
-            my $message = Myriad::RPC::Message::from_json($payload);
+            my $message = Myriad::RPC::Message->from_json($payload);
             if(my $pending = delete $pending_requests->{$message->message_id}) {
                 return $pending->done($message);
             }

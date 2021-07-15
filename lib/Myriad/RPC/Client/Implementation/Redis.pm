@@ -52,7 +52,7 @@ async method start() {
             my $payload = $_;
             $log->tracef('Received RPC response as %s', $payload);
 
-            my $message = Myriad::RPC::Message::from_json($payload);
+            my $message = Myriad::RPC::Message->from_json($payload);
 
             if(my $pending = delete $pending_requests->{$message->message_id}) {
                 return $pending->done($message);
