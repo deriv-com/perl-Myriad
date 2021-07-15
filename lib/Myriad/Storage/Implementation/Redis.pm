@@ -19,9 +19,14 @@ use experimental qw(signatures);
 
 =head1 NAME
 
-Myriad::Storage::Redis - microservice storage abstraction
+Myriad::Storage::Implementation::Redis - access to microservice storage via Redis
 
-=head1 SYNOPSIS
+=head1 DESCRIPTION
+
+This provides an implementation of L<Myriad::Role::Storage> using L<https://redis.io>
+as the underlying storage mechanism and transport layer.
+
+See L<Myriad::Role::Storage> for API details.
 
 =cut
 
