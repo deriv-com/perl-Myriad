@@ -21,12 +21,13 @@ async method startup () {
 
 async method drink : Batch () {
     my $coffee_service = $api->service_by_name('coffee.manager.coffee');
-    #my @got_coffees;
+    my @got_coffees;
     my $concurrent = int(rand(51));
-    my $get_coffee_params = sub { return { int(rand($latest_user_id))  => int(rand($latest_machine_id)) } };
-    my $requests = [ map { $get_coffee_params->() } (0..$concurrent) ];
-    $log->warnf('Bought Coffee User: %d | Machine: %d | entry_id: %d', $get_coffee_params->());
-    my @got_coffees = await &fmap_concat( $self->$curry::curry(async method ($params) {
+    if ( $latest_user_id > 2 and $latest_machine_id > 2 ) {
+        my $get_coffee_params = sub { return { int(rand($latest_user_id))  => int(rand($latest_machine_id)) } };
+        my $requests = [ map { $get_coffee_params->() } (0..$concurrent) ];
+        $log->warnf('Bought Coffee User: %d | Machine: %d | entry_id: %d', $get_coffee_params->());
+        @got_coffees = await &fmap_concat( $self->$curry::curry(async method ($params) {
             my $r = await $coffee_service->call_rpc('buy', 
                 type => 'PUT',
                 params => $params
@@ -35,7 +36,7 @@ async method drink : Batch () {
             #push @got_coffees,  $r;
             $r;
         }), foreach => $requests, concurrent => $concurrent);
-
+    }
     return  [ @got_coffees ];
 
 }

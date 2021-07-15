@@ -4,9 +4,11 @@ use Myriad::Service;
 
 use JSON::MaybeUTF8 qw(:v1);
 use Time::Moment;
+use Ryu::Source;
 
 has $fields;
 has $last_id;
+has $new_coffee_handler = Ryu::Source->new;
 
 BUILD (%args) {
     $fields = {
@@ -35,7 +37,7 @@ async method next_id () {
 }
 
 async method buy : RPC (%args) {
-    $log->warnf('GOT Request: %s', \%args);
+    $log->infof('GOT Coffee buy Request: %s', \%args);
 
     my $storage = $api->storage;
     if ( $args{type} eq 'PUT' or $args{type} eq 'POST' or $args{type} eq 'GET' ) {
@@ -77,10 +79,19 @@ async method buy : RPC (%args) {
 
         my $id = await $self->next_id;
         await $storage->hash_set('coffee', $id, encode_json_utf8(\%input));
-        return {id => $id};
-
-
+        $log->infof('bought new coffee with id: %d | %s', $id, \%input);
+        my $coffee = {id => $id, %input};
+        $new_coffee_handler->emit($coffee);
+        return $coffee;
     }
 
 }
+
+async method new_coffee : Emitter() ($source){
+    $new_coffee_handler->each(sub {
+        my $coffee = shift;
+        $source->emit($coffee);
+    });
+}
+
 1;

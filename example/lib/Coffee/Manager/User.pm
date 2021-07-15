@@ -3,9 +3,11 @@ package Coffee::Manager::User;
 use Myriad::Service;
 
 use JSON::MaybeUTF8 qw(:v1);
+use Ryu::Source;
 
 has $fields;
 has $last_id;
+has $new_user_handler = Ryu::Source->new;
 
 BUILD (%args) {
     $fields = {
@@ -35,7 +37,7 @@ async method next_id () {
 }
 
 async method request : RPC (%args) {
-    $log->warnf('GOT Request: %s', \%args);
+    $log->debugf('GOT USER Request: %s', \%args);
 
     my $storage = $api->storage;
     # Only accept PUT request
@@ -52,14 +54,14 @@ async method request : RPC (%args) {
             $unique_values{$unique_field} = $body{$unique_field};
 
         }
-        $log->debugf('Unique values %s', \%unique_values);
+        $log->warnf('Unique values %s', \%unique_values);
 
         # Need to add more validation
         my %cleaned_body;
         @cleaned_body{keys $fields->%*} = @body{keys $fields->%*};
 
         my $id = await $self->next_id;
-        $log->warnf('ID after INCR: %d', $id);
+        $log->debugf('ID after INCR: %d', $id);
 
         await $storage->hash_set('user', $id, encode_json_utf8(\%cleaned_body));
         await fmap_void(
@@ -68,10 +70,20 @@ async method request : RPC (%args) {
                 await $storage->hash_set(join('.', 'unique', $key), $unique_values{$key}, 1);
             }, foreach => [keys %unique_values], concurrent => 4
         );
-        return {id => $id, record => \%cleaned_body};
+        $log->infof('added new user with id: %d', $id);
+        my $user = {id => $id, record => \%cleaned_body};
+        $new_user_handler->emit($user);
+        return $user;
     } else {
         return {error => {text => 'Wrong request METHOD please use PUT for this resource', code => 400 } };
     }
+}
+
+async method new_user : Emitter() ($source){
+    $new_user_handler->each(sub {
+        my $user = shift;
+        $source->emit($user);
+    });
 }
 
 1;

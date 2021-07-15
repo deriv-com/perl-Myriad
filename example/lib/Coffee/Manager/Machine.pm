@@ -3,9 +3,11 @@ package Coffee::Manager::Machine;
 use Myriad::Service;
 
 use JSON::MaybeUTF8 qw(:v1);
+use Ryu::Source;
 
 has $fields;
 has $last_id;
+has $new_machine_handler = Ryu::Source->new;
 
 BUILD (%args) {
     $fields = {
@@ -30,7 +32,7 @@ async method next_id () {
 }
 
 async method request : RPC (%args) {
-    $log->warnf('GOT Request: %s', \%args);
+    $log->infof('GOT Machine Request: %s', \%args);
 
     my $storage = $api->storage;
     # Only accept PUT request
@@ -62,10 +64,20 @@ async method request : RPC (%args) {
                 await $storage->hash_set(join('.', 'unique', $key), $unique_values{$key}, 1);
             }, foreach => [keys %unique_values], concurrent => 4
         );
-        return {id => $id, record => \%cleaned_body};
+        $log->infof('added new machine with id: %d', $id);
+        my $machine = {id => $id, record => \%cleaned_body};
+        $new_machine_handler->emit($machine);
+        return $machine;
     } else {
         return {error => {text => 'Wrong request METHOD please use PUT for this resource', code => 400 } };
     }
+}
+
+async method new_machine : Emitter() ($source){
+    $new_machine_handler->each(sub {
+        my $machine = shift;
+        $source->emit($machine);
+    });
 }
 
 1;
