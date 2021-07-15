@@ -33,6 +33,8 @@ Revision history for {{$dist->name}}
     - Syntax::Keyword::Match is now imported in Myriad::Service code
     - Redis: A service will not create another service's stream.
     - Allow service namespaces by adding '::*' to the startup command.
+    [New features]
+    - Added incr method for storage keys.
 
     [New features]
     - Added incr method for storage keys.
