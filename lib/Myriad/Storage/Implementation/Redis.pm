@@ -117,6 +117,24 @@ async method getset ($k, $v) {
     return await $redis->getset($self->apply_prefix($k) => $v);
 }
 
+=head2 incr
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=back
+
+Returns a L<Future> which will resolve to the corresponding incremented value, or C<undef> if none.
+
+=cut
+
+async method incr ($k) {
+    await $redis->incr($self->apply_prefix($k));
+}
+
 =head2 observe
 
 Observe a specific key.
