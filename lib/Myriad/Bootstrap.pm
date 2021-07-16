@@ -12,8 +12,7 @@ use 5.010;
 
 =head1 NAME
 
-Myriad::Bootstrap - starts up a Myriad child process ready for loading modules
-for the main functionality
+Myriad::Bootstrap - dæmon functionality and hot-reload for Myriad
 
 =head1 DESCRIPTION
 

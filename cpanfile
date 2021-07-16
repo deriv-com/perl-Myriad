@@ -3,18 +3,18 @@ requires 'mro';
 requires 'indirect';
 requires 'multidimensional';
 requires 'bareword::filehandles';
-requires 'XS::Parse::Keyword', '>= 0.06';
+requires 'XS::Parse::Keyword', '>= 0.10';
 requires 'Syntax::Keyword::Dynamically', '>= 0.08';
 requires 'Syntax::Keyword::Try', '>= 0.25';
 requires 'Syntax::Keyword::Defer', '>= 0.05';
 requires 'Syntax::Keyword::Match', '>= 0.04';
 requires 'Future', '>= 0.47';
 requires 'Future::Queue';
-requires 'Future::AsyncAwait', '>= 0.51';
-requires 'Object::Pad', '>= 0.42';
+requires 'Future::AsyncAwait', '>= 0.52';
+requires 'Object::Pad', '>= 0.43';
 requires 'Role::Tiny', '>= 2.002004';
 # Streams
-requires 'Ryu', '>= 3.000';
+requires 'Ryu', '>= 3.002';
 requires 'Ryu::Async', '>= 0.019';
 # IO::Async
 requires 'Heap', '>= 0.80';
@@ -54,7 +54,7 @@ requires 'Net::Async::Redis', '>= 3.013';
 requires 'Net::Async::HTTP', '>= 0.48';
 requires 'Net::Async::HTTP::Server', '>= 0.13';
 requires 'Net::Async::SMTP', '>= 0.002';
-requires 'Database::Async', '>= 0.014';
+requires 'Database::Async', '>= 0.015';
 requires 'Database::Async::Engine::PostgreSQL', '>= 0.011';
 # Introspection
 requires 'Devel::MAT::Dumper';

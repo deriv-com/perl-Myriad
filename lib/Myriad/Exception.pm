@@ -12,7 +12,7 @@ use utf8;
 
 =head1 NAME
 
-Myriad::Exception
+Myriad::Exception - standard exception rôle for all L<Myriad> code
 
 =head1 DESCRIPTION
 

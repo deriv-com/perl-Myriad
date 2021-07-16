@@ -9,7 +9,7 @@ use Myriad::Class;
 
 =head1 NAME
 
-Myriad::Commands
+Myriad::Commands - common abstraction for user interface commands
 
 =head1 DESCRIPTION
 
