@@ -133,4 +133,48 @@ subtest "Service name" => sub {
     isa_ok(exception {$registry->service_by_name("Not::Found::Service")}, 'Myriad::Exception::Registry::ServiceNotFound', "Exception for trying to get undef service");
 };
 
+subtest "Adding multiple Services, and keeping their order" => sub {
+
+    my $myriad = new_ok('Myriad');
+    my $config = new_ok('Myriad::Config' => [commandline => ['--transport', 'memory']]);
+    $myriad_meta->get_slot('$config')->value($myriad) = $config;
+    my $registry = $Myriad::REGISTRY;
+
+    # Define our testing services
+    {
+        package Testing::Service1;
+        use Myriad::Service;
+
+    }
+    {
+        package Testing::Service2;
+        use Myriad::Service;
+
+    }
+    {
+        package Testing::Service3;
+        use Myriad::Service;
+
+    }
+
+    # Add service in our registry.
+    wait_for_future($registry->add_service(myriad => $myriad, service => 'Testing::Service1'))->get;
+    wait_for_future($registry->add_service(myriad => $myriad, service => 'Testing::Service3'))->get;
+    wait_for_future($registry->add_service(myriad => $myriad, service => 'Testing::Service2'))->get;
+
+    is (keys $myriad->services->%*, 3, 'all 3 services are added');
+    for my $srv_idx (sort keys $myriad->services->%*) {
+        my $srv_name = $myriad->services->{$srv_idx}->service_name;
+        if ( $srv_idx == 0 ) {
+            like($registry->make_service_name('Testing::Service1'), qr/$srv_name/, "Service1 is added first");
+        } elsif ( $srv_idx == 1 ) {
+            like($registry->make_service_name('Testing::Service3'), qr/$srv_name/, "Service3 is added second");
+        } elsif ( $srv_idx == 2 ) {
+            like($registry->make_service_name('Testing::Service2'), qr/$srv_name/, "Service2 is added third");
+        } else {
+            fail('There should be only 3 services with 3 indexes');
+        }
+    }
+};
+
 done_testing;
