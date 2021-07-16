@@ -96,7 +96,15 @@ sub declare_exception {
     die 'invalid category ' . $category unless $category =~ /^[0-9a-z_]+$/;
     *{$pkg . '::category'} = sub { $category };
     my $message = delete $args{message} // 'unknown';
-    *{$pkg . '::message'} = sub { $message . ' (category=' . shift->category . ')' };
+    *{$pkg . '::message'} = sub {
+        my $self = shift;
+        my $str = $message . ' (category=' . $self->category;
+        if($self->reason) {
+            $str .= ' , reason=' . $self->reason;
+        }
+
+        $str . ')';
+    };
     Role::Tiny->apply_roles_to_package(
         $pkg => 'Myriad::Exception'
     )
