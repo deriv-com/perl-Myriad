@@ -613,6 +613,10 @@ async method getset($key, $v) {
     await $redis->set($self->apply_prefix($key), $v);
 }
 
+async method incr ($key) {
+    await $redis->incr($self->apply_prefix($key));
+}
+
 async method rpush($key, @v) {
     await $redis->rpush($self->apply_prefix($key), @v);
 }
