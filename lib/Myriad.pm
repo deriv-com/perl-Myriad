@@ -242,7 +242,7 @@ has $tracing;
 has $services;
 # Ryu::Source that can be used to recieve commands events
 has $ryu;
-# A Metrics::Any::Adapter holder, since we can't override the on in the package
+# A Metrics::Any::Adapter holder, since we can't override the one in the package
 has $metrics_adapter;
 
 # Note that we don't use Object::Pad as heavily within the core framework as we
@@ -887,4 +887,3 @@ Deriv Group Services Ltd. C<< DERIV@cpan.org >>
 =head1 LICENSE
 
 Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
-
