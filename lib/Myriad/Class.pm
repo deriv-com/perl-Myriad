@@ -252,14 +252,19 @@ sub import {
         # but can be seen in action in this test:
         # https://metacpan.org/source/PEVANS/Object-Pad-0.21/t/70mop-create-class.t#L30
         Object::Pad->import_into($pkg);
-        return Object::Pad::MOP::Class->begin_class(
+        my $meta = Object::Pad::MOP::Class->begin_class(
             $pkg,
             (
                 $args{extends}
                 ? (extends => $args{extends})
                 : ()
-            )
+            ),
         );
+        if(my $does = $args{does}) {
+            $does = [ $does ] unless ref $does;
+            $meta->compose_role($_) for $does->@*;
+        }
+        return $meta;
     }
     return $pkg;
 }
