@@ -50,6 +50,7 @@ alternative.
 # Default values
 
 our %DEFAULTS = (
+    services               => { },
     config_path            => 'config.yml',
     transport_redis        => 'redis://localhost:6379',
     transport_redis_cache  => 0,
