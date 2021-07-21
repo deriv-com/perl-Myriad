@@ -118,7 +118,7 @@ Build a new message.
 
 =cut
 
-BUILD(%message) {
+BUILD (%message) {
     $rpc          = $message{rpc};
     $who          = $message{who};
     $message_id   = $message{message_id};

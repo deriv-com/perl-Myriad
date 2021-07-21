@@ -144,9 +144,19 @@ In this implementation it's done by resolving the L<Future> calling C<fail>.
 =cut
 
 async method reply_error ($service, $message, $error) {
-    $message->response = { error => { category => $error->category, message => $error->message, reason => $error->reason } };
+    $message->set_response({
+        error => {
+            category => $error->category,
+            message => $error->message,
+            reason => $error->reason
+        }
+    });
     await $transport->publish($message->who, $message->as_json);
-    await $transport->ack_message($self->stream_name($service, $message->rpc), $self->group_name, $message->transport_id);
+    await $transport->ack_message(
+        $self->stream_name($service, $message->rpc),
+        $self->group_name,
+        $message->transport_id
+    );
 }
 
 =head2 drop
