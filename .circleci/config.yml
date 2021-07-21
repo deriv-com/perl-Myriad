@@ -100,3 +100,16 @@ workflows:
           requires:
             - run_tests
           filters: *filter_only_master
+  nightly:
+    triggers:
+      - schedule:
+          cron: "06 0 * * *"
+          filters: *filter_only_master
+    jobs:
+      - run_tests:
+        context: perl
+      - update_docker_image:
+        context: perl
+        requires:
+          - run_tests
+
