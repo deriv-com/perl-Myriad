@@ -242,8 +242,6 @@ has $tracing;
 has $services;
 # Ryu::Source that can be used to recieve commands events
 has $ryu;
-# A Metrics::Any::Adapter holder, since we can't override the on in the package
-has $metrics_adapter;
 
 # Note that we don't use Object::Pad as heavily within the core framework as we
 # would expect in microservices - this is mainly due to complications regarding
@@ -683,23 +681,26 @@ method setup_metrics () {
     my $host = $config->metrics_host;
     my $port = $config->metrics_port;
 
+    # Metrics::Any::Adapter use a lexical variable to identify
+    # the adapter instance that doesn't allow easy overrides.
+    my $metrics_adapter;
+    warn $adapter->as_string;
+    *Metrics::Any::Adapter::adapter = sub {
+        return $metrics_adapter //= Metrics::Any::Adapter->class_for_type(
+            $adapter->as_string,
+        )->new(
+            host => $host->as_string,
+            port => $port->as_numeric,
+        );
+    };
+
     my $code = sub {
         undef $metrics_adapter;
-        *Metrics::Any::Adapter::adapter = sub {
-            return $metrics_adapter //= Metrics::Any::Adapter->class_for_type(
-                $adapter->as_string,
-            )->new(
-                host => $host->as_string,
-                port => $port->as_numeric,
-            );
-        };
     };
 
     $adapter->subscribe($code);
     $host->subscribe($code);
-    $port->subscribe($port);
-
-    $code->();
+    $port->subscribe($code);
 
     return;
 }
