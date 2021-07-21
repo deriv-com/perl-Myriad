@@ -29,8 +29,7 @@ BEGIN {
    $pong_service = Test::Myriad->add_service(service => 'Test::Pong');
 }
 
-
-await Test::Myriad->ready();
+await Test::Myriad->ready;
 
 subtest 'RPC should return a response to caller' => sub {
     my $resposne = $pong_service->call_rpc('pong')->get;
@@ -42,5 +41,5 @@ subtest 'RPC client should receive a response' => sub {
     cmp_deeply($response, {pong => 1});
 };
 
-done_testing();
+done_testing;
 
