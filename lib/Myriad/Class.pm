@@ -260,10 +260,7 @@ sub import {
                 : ()
             ),
         );
-        if(my $does = $args{does}) {
-            $does = [ $does ] unless ref $does;
-            $meta->compose_role($_) for $does->@*;
-        }
+        # Note that `does` is not supported yet due to https://rt.cpan.org/Ticket/Display.html?id=137952
         return $meta;
     }
     return $pkg;
