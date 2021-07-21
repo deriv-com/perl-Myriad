@@ -239,7 +239,7 @@ sub import {
     # but can be seen in action in this test:
     # https://metacpan.org/source/PEVANS/Object-Pad-0.21/t/70mop-create-class.t#L30
     Object::Pad->import_into($pkg);
-    my $meta = Object::Pad->begin_class(
+    my $meta = Object::Pad::MOP::Class->begin_class(
         $pkg,
         (
             $args{extends}
