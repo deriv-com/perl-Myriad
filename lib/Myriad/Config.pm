@@ -82,7 +82,7 @@ our %FULLNAME_FOR = (
 
 =head2 SERVICES_CONFIG
 
-A registry of configs defined by the services using the C<< config  >> helper.
+A registry of service configuration defined by the services using the C<< config >> helper.
 
 =cut
 
@@ -90,7 +90,8 @@ our %SERVICES_CONFIG;
 
 =head2 ACTIVE_SERVICES_CONFIG
 
-A collection of L<Ryu::Observable> to notify services about updates on the configs values
+A collection of L<Ryu::Observable> instances for notifying services about updates on their
+configuration.
 
 =cut
 
