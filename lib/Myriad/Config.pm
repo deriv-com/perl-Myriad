@@ -228,13 +228,13 @@ method parse_subargs ($subarg, $root, $value) {
 Parse the arguments provided from the command line.
 
 There are many modules that can parse command lines arguments
-but in our case we have unknown arguments - the services configs - that
+but in our case we have unknown arguments - the services config - that
 might be passed by the user or might not and they are on top of that nested.
 
 This sub simply start looking for a match for the arg at hand in C<%DEFAULTS>
 then it searches in the shortcuts map and lastly it tries to parse it as a subarg.
 
-Currently this sub takes into account flags (0|1) configs and config written as:
+Currently this sub takes into account flags (0|1) config and config written as:
 config=value
 
 
@@ -340,7 +340,7 @@ it takes
 
 =item * C<pkg> - The package name of the service, will be used to lookup for generic config
 
-=item * C<service_name> - The current service name either from the registry or as it bassed by the user, useful for instances config
+=item * C<service_name> - The current service name either from the registry or as it bassed by the user, useful for instance config
 
 =back
 
