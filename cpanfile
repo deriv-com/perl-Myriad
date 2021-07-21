@@ -48,7 +48,7 @@ requires 'List::Keywords', '>= 0.08';
 # Integration
 requires 'Net::Async::OpenTracing', '>= 1.000';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
-requires 'Metrics::Any::Adapter', '>= 0.03';
+requires 'Metrics::Any::Adapter::Statsd', '>= 0.03';
 # Transport
 requires 'Net::Async::Redis', '>= 3.013';
 requires 'Net::Async::HTTP', '>= 0.48';

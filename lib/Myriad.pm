@@ -684,16 +684,17 @@ method setup_metrics () {
     # Metrics::Any::Adapter use a lexical variable to identify
     # the adapter instance that doesn't allow easy overrides.
     my $metrics_adapter;
-    warn $adapter->as_string;
-    *Metrics::Any::Adapter::adapter = sub {
-        return $metrics_adapter //= Metrics::Any::Adapter->class_for_type(
-            $adapter->as_string,
-        )->new(
-            host => $host->as_string,
-            port => $port->as_numeric,
-        );
-    };
-
+    {
+        no warnings 'redefine';
+        *Metrics::Any::Adapter::adapter = sub {
+            return $metrics_adapter //= Metrics::Any::Adapter->class_for_type(
+                $adapter->as_string,
+            )->new(
+                host => $host->as_string,
+                port => $port->as_numeric,
+        )   ;
+        };
+    }
     my $code = sub {
         undef $metrics_adapter;
     };
