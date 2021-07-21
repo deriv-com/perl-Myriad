@@ -62,7 +62,6 @@ our %DEFAULTS = (
     rpc_transport          => undef,
     storage_transport      => undef,
     transport              => 'redis',
-    service_name           => '',
 );
 
 =head2 FULLNAME_FOR
