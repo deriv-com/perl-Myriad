@@ -91,11 +91,11 @@ Details on the request are in L<Myriad::RPC::Request> and the response to be sen
 
 =over 4
 
-=item * L<Myriad::RPC::Redis>
+=item * L<Myriad::RPC::Implementation::Redis>
 
-=item * L<Myriad::RPC::PostgreSQL>
+=item * L<Myriad::RPC::Implementation::PostgreSQL>
 
-=item * L<Myriad::RPC::Memory>
+=item * L<Myriad::RPC::Implementation::Memory>
 
 =back
 
@@ -109,11 +109,11 @@ Subscription implementations include:
 
 =over 4
 
-=item * L<Myriad::Subscription::Redis>
+=item * L<Myriad::Subscription::Implementation::Redis>
 
-=item * L<Myriad::Subscription::PostgreSQL>
+=item * L<Myriad::Subscription::Implementation::PostgreSQL>
 
-=item * L<Myriad::Subscription::Memory>
+=item * L<Myriad::Subscription::Implementation::Memory>
 
 =back
 
