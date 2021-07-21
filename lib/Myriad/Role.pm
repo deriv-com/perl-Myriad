@@ -14,6 +14,15 @@ use utf8;
 
 Myriad::Role - common pragmata for L<Myriad> rôles
 
+=head1 SYNOPSIS
+
+ package Example::Role;
+ use Myriad::Role;
+
+ requires startup;
+
+ 1;
+
 =cut
 
 require Myriad::Class;
@@ -33,9 +42,33 @@ sub import {
     );
 
     my $class = __PACKAGE__;
-    $args{target} //= caller(0);
-    return Myriad::Class->import(%args);
+    my $pkg = delete($args{target}) // caller(0);
+    Myriad::Class->import(%args);
+    if(my $class = $args{class} || $pkg) {
+        # For history here, see this:
+        # https://rt.cpan.org/Ticket/Display.html?id=132337
+        # At the time of writing, ->begin_class is undocumented
+        # but can be seen in action in this test:
+        # https://metacpan.org/source/PEVANS/Object-Pad-0.21/t/70mop-create-class.t#L30
+        Object::Pad->import_into($pkg);
+        return Object::Pad::MOP::Class->begin_role(
+            $pkg
+        );
+    }
+    return $pkg;
 }
 
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Deriv Group Services Ltd. C<< DERIV@cpan.org >>.
+
+See L<Myriad/CONTRIBUTORS> for full details.
+
+=head1 LICENSE
+
+Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
 
