@@ -257,7 +257,7 @@ method lookup_from_args ($commandline) {
             # Either `--example=123` or `--example 123`
             $value = shift $commandline->@* unless defined $value;
             $config->{$key} = $value;
-        } elsif ($arg =~ s/services?[_|\.]//) { # are we doing service config
+        } elsif ($arg =~ s/service[_|\.]//) { # are we doing service config
             $value = shift $commandline->@* unless $value;
             try {
                 $self->parse_subargs($arg, $config->{services}, $value);
@@ -349,11 +349,11 @@ it takes
 async method service_config ($pkg, $service_name) {
     my $service_config = {};
     my $instance = $service_name =~ s/\[(.*)\]$// && $1;
-    my $available_config = $config->{services}->{$service_name}->{configs};
+    my $available_config = $config->{services}->{$service_name}->{config};
 
     my $instance_overrides = {};
     $instance_overrides =
-        $config->{services}->{$service_name}->{instances}->{$instance}->{configs} if $instance;
+        $config->{services}->{$service_name}->{instance}->{$instance}->{config} if $instance;
     if(my $declared_config = $SERVICES_CONFIG{$pkg}) {
         for my $key (keys $declared_config->%*) {
             my $value;
@@ -435,7 +435,7 @@ async method listen_for_updates () {
             $log->trace('Config: transport do not support keyspace notifications');
         }
     } else {
-        $log->warn('Config: Storage is not initiated, cannot listen to configs updates');
+        $log->warn('Config: Storage is not initiated, cannot listen to config updates');
     }
 }
 
