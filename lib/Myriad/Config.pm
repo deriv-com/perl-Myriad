@@ -166,61 +166,58 @@ the best use case for this sub is during tests.
 =cut
 
 method clear_all {
-    $config = {};
+    $config = {
+        services               => { },
+    };
 }
 
 =head2 parse_subargs
 
 A helper to resolve the correct service config
 
-input is expected to look like <service_name>_[configs|instances].<key>
+input is expected to look like:
+
+ <service_name>_[config|instance].<key>
 
 and this sub will set the correct path to key with the provided value.
 
 Example:
 
-dummy_service.configs.password
+ dummy_service.config.password
 
 will end up in
 
-$config->{services}->{dummy_service}->{configs}->{password}
+ $config->{services}->{dummy_service}->{config}->{password}
 
-it takes:
+Takes the following parameters:
 
 =over 4
 
-=item * C<subarg> - the arguments as passed by the user.
+=item * C<$subarg> - the arguments as passed by the user.
 
-=item * C<root> - the level in which we should add the sub arg, we start from $config->{services}.
+=item * C<$root> - the level in which we should add the sub arg, we start from $config->{services}.
 
-=item * C<value> - the value that we should assign after resolving the config path.
+=item * C<$value> - the value that we should assign after resolving the config path.
 
 =back
 
 =cut
 
 method parse_subargs ($subarg, $root, $value) {
-    my $service_name = $subarg =~ s/(.*?)[_|\.](configs?|instances?)(.*)/$2$3/ && $1;
-    die 'invalid service name' unless $2;
+    my $instance = $subarg =~ s{[_.]instance[_.](.*)(?=[_.]config)}{} && $1;
+    my $config = $subarg =~ s{[_.]config[_.](.*)$}{} && $1;
 
-    $service_name =~ s/_/\./g;
-    $root = $root->{$service_name} //= {};
+    my $service_name = $subarg =~ tr/_/./r;
+    $instance = $instance =~ tr/_/./r if $instance;
+    $config = $config =~ tr/./_/r if $config;
 
-    my @sublist = split /_|\./, $subarg;
-    die 'config key is not formated correctly' unless @sublist;
-
-    # configs is the latest level before starting a keyname
-    # Also users might pass config instead of configs
-    while ($sublist[0] !~ s/(config)s?/$1s/) {
-        my $level = shift @sublist;
-        $level .= 's' if $level eq 'instance';
-
-        $root->{$level} //= {};
-        $root= $root->{$level};
+    warn "Apply config $config on instance $instance to service $service_name\n";
+    die 'invalid service name' unless length $service_name;
+    if(length $instance) {
+        $root->{$service_name}{instance}{$instance}{config}{$config} = $value;
+    } else {
+        $root->{$service_name}{config}{$config} = $value;
     }
-    shift @sublist;
-    my $key_name = join '_', @sublist;
-    $root->{configs}->{$key_name} = $value;
 }
 
 =head2 lookup_from_args
