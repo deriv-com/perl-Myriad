@@ -61,17 +61,27 @@ async method start () {
             }
 
             my $messages = await $transport->read_from_stream_by_consumer($rpc->{stream}, $self->group_name, hostname());
+            MESSAGE:
             for my $id (sort keys $messages->%*) {
                 my $message;
                 try {
                     $messages->{$id}->{transport_id} = $id;
+                    $log->tracef('Processing RPC message %s', $messages->{$id});
                     $message = Myriad::RPC::Message->from_hash($messages->{$id}->%*);
                     $rpc->{sink}->emit($message);
                 } catch ($e) {
-                    if (blessed $e && $e->isa('Myriad::Exception::RPC::BadEncoding')) {
-                        $log->warnf('Recived a dead message that we cannot parse, going to drop it.');
-                        $log->tracef("message was: %s", $messages->{$id});
-                        await $self->drop($rpc->{stream}, $id);
+                    if(blessed $e) {
+                        if($e->isa('Myriad::Exception::RPC::BadEncoding')) {
+                            $log->warnf('Received RPC message that we cannot parse, will drop');
+                            $log->tracef("message was: %s", $messages->{$id});
+                            await $self->drop($rpc->{stream}, $id);
+                            next MESSAGE;
+                        } elsif($e->isa('Myriad::Exception::RPC::InvalidRequest')) {
+                            $log->warnf('Received RPC message with missing fields: %s', $e->reason);
+                            $log->tracef("message was: %s", $messages->{$id});
+                            await $self->drop($rpc->{stream}, $id);
+                            next MESSAGE;
+                        }
                     } else {
                         my ($service) = $rpc->{stream} =~ /service.(.*).rpc\//;
                         await $self->reply_error($service, $message, $e);
