@@ -276,16 +276,23 @@ method lookup_from_args ($commandline) {
 
 =head2 lookup_from_env
 
-Tries to find environments variables that start with MYRIAD_* and parse them.
+Try to find environment variables that start with C<MYRIAD_*> and parse them.
 
 =cut
 
 method lookup_from_env () {
-    $config->{$_} //= delete $ENV{'MYRIAD_' . uc($_)} for grep { exists $ENV{'MYRIAD_' . uc($_)} } keys %DEFAULTS;
-    map {
-        s/(MYRIAD_SERVICES?_)//;
-        $self->parse_subargs(lc($_), $config->{services} //= {}, $ENV{$1 . $_});
-    } (grep {$_ =~ /MYRIAD_SERVICES?_/} keys %ENV);
+    $config->{$_} //= $ENV{'MYRIAD_' . uc($_)} for grep {
+        exists $ENV{'MYRIAD_' . uc($_)}
+    } keys %DEFAULTS;
+
+    for(map { /^MYRIAD_SERVICE_(.*)$/ ? [ $_, $1 ] : () } sort keys %ENV) {
+        my ($k, $service) = @$_;
+        $self->parse_subargs(
+            lc($service),
+            $config->{services},
+            $ENV{$k},
+        );
+    }
 }
 
 =head2 lookup_from_file
