@@ -6,7 +6,7 @@ aliases:
      branches:
        only:
          - /^master$/
- - &filter_only_tags
+ - &filter_only_tagged
      tags:
        only:
          - /^v\d.\d{3}$/ # cpan versioning ex: v0.001
