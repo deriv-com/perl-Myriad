@@ -73,6 +73,10 @@ jobs:
   
   update_docker_image:
     executor: docker/docker
+    parameters:
+      tag:
+        type: string
+        default: 'latest'
     steps:
       - checkout
       - setup_remote_docker:
