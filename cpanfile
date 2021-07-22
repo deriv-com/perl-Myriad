@@ -27,7 +27,7 @@ requires 'Log::Any', '>= 1.709';
 requires 'Log::Any::Adapter', '>= 1.709';
 requires 'Config::Any', '>= 0.32';
 requires 'YAML::XS', '>= 0.83';
-requires 'Metrics::Any', '>= 0.06';
+requires 'Metrics::Any', '>= 0.07';
 requires 'OpenTracing::Any', '>= 1.003';
 requires 'JSON::MaybeUTF8', '>= 2.000';
 requires 'Unicode::UTF8';
