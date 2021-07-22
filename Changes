@@ -2,6 +2,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+
+0.010     2021-07-22 07:14:15+00:00 UTC
     [New features]
     - Metrics adapter type is now configurable using --metrics_adapter.
     - Metrics destination can be changed using --metrics_host and --metrics_port.
