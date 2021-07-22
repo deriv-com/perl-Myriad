@@ -86,7 +86,7 @@ A JSON encoded string contains the argument of the procedure.
 
 method args { $args }
 
-=head2 resposne
+=head2 response
 
 The response to this message.
 
