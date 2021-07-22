@@ -157,7 +157,7 @@ async method receive_items {
                 }
                 await $redis->ack(
                     $stream,
-                    $client,
+                    $uuid,
                     $event->{id}
                 );
             }
