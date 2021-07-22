@@ -10,6 +10,8 @@ aliases:
      tags:
        only:
          - /^v\d.\d{3}$/ # cpan versioning ex: v0.001
+     branches:
+       ignore: /.*/
 jobs:
   run_tests:
     docker:
