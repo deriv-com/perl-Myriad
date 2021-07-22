@@ -6,6 +6,10 @@ aliases:
      branches:
        only:
          - /^master$/
+ - &filter_only_tags
+     tags:
+       only:
+         - /^v\d.\d{3}$/ # cpan versioning ex: v0.001
 jobs:
   run_tests:
     docker:
@@ -75,13 +79,13 @@ jobs:
           docker_layer_caching: true
       - docker/build:
           image: deriv/myriad
-          tag: 'latest'
+          tag: <<parameters.tag>>
       - run:
           name: Docker Hub login
           command: echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_LOGIN" --password-stdin
       - docker/push:
           image: deriv/myriad
-          tag: 'latest'
+          tag: <<parameters.tag>>
 
 workflows:
   version: 2
@@ -97,19 +101,32 @@ workflows:
           filters: *filter_only_master
       - update_docker_image:
           context: perl
+          tag: 'stable'
           requires:
             - run_tests
           filters: *filter_only_master
-  nightly:
+  tagged:
+    jobs:
+      - run_tests:
+          context: perl
+          filters: *filter_only_tagged
+      - update_docker_image:
+          context: perl
+          tag: $CIRCLE_TAG
+          requires:
+            - run_tests
+          filters: *filter_only_tagged
+  daily:
     triggers:
       - schedule:
           cron: "06 0 * * *"
           filters: *filter_only_master
     jobs:
       - run_tests:
-        context: perl
+          context: perl
       - update_docker_image:
-        context: perl
-        requires:
-          - run_tests
+          context: perl
+          tag: 'latest'
+          requires:
+            - run_tests
 
