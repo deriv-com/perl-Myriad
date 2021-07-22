@@ -70,7 +70,7 @@ sub add_service {
     } elsif ($service = delete $args{name}) {
         die 'The name should look like a Perl package name' unless $service =~ /::/;
         $pkg  = $service;
-        $meta = Object::Pad->begin_class($pkg, extends => 'Myriad::Service::Implementation');
+        $meta = Object::Pad::MOP::Class->begin_class($pkg, extends => 'Myriad::Service::Implementation');
 
         {
             no strict 'refs';
