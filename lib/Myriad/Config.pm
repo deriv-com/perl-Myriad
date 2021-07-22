@@ -63,6 +63,9 @@ our %DEFAULTS = (
     storage_transport      => undef,
     transport              => 'redis',
     service_name           => '',
+    metrics_adapter        => 'Statsd',
+    metrics_host           => 'localhost',
+    metrics_port           => '8125',
 );
 
 =head2 FULLNAME_FOR
