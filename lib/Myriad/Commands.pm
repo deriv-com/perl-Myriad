@@ -67,7 +67,6 @@ async method service (@args) {
     # Load modules to compile
 
     for my $module (@modules) {
-        $log->debugf('Loading %s', $module);
         try {
             require_module($module);
             die 'loaded ' . $module . ' but it cannot ->new?' unless $module->can('new');
@@ -81,7 +80,6 @@ async method service (@args) {
 
     await fmap0(async sub {
         my ($module) = @_;
-        $log->debugf('Preparing %s', $module);
         try {
             if ($service_custom_name eq '') {
                 await $myriad->add_service($module, namespace => $namespace);

@@ -245,7 +245,7 @@ async method load () {
 
     if(my $emitters = $registry->emitters_for(ref($self))) {
         for my $method (sort keys $emitters->%*) {
-            $log->tracef('Found emitter %s as %s', $method, $emitters->{$method});
+            $log->debugf('Adding Emitter `%s` as %s for [%s]', $method, $emitters->{$method}, $service_name);
             my $spec = $emitters->{$method};
             my $chan = $spec->{args}{channel} // die 'expected a channel, but there was none to be found';
             my $sink = $spec->{sink} = $ryu->sink(
@@ -273,14 +273,13 @@ async method load () {
     if(my $receivers = $registry->receivers_for(ref($self))) {
         for my $method (sort keys $receivers->%*) {
             try {
-                $log->tracef('Found receiver %s as %s', $method, $receivers->{$method});
+                $log->debugf('Adding Receiver `%s` as %s for [%s]', $method, $receivers->{$method}, service_name);
                 my $spec = $receivers->{$method};
                 my $chan = $spec->{args}{channel} // die 'expected a channel, but there was none to be found';
                 my $sink = $spec->{sink} = $ryu->sink(
                     label => "receiver:$chan",
                 );
                 $sink->pause;
-                $log->tracef('Creating receiver from sink');
                 await $self->subscription->create_from_sink(
                     sink    => $sink,
                     channel => $chan,
@@ -296,7 +295,7 @@ async method load () {
 
     if (my $batches = $registry->batches_for(ref($self))) {
         for my $method (sort keys $batches->%*) {
-            $log->tracef('Starting batch process %s for %s', $method, ref($self));
+            $log->debugf('Adding Batch `%s` for [%s]', $method, $service_name);
             my $sink = $batches->{$method}{sink} = $ryu->sink(label => 'batch:' . $method);
             $sink->pause;
             await $self->subscription->create_from_source(
@@ -309,6 +308,7 @@ async method load () {
 
     if (my $rpc_calls = $registry->rpc_for(ref($self))) {
         for my $method (sort keys $rpc_calls->%*) {
+            $log->debugf('Adding RPC `%s` for [%s]', $method, $service_name);
             my $spec = $rpc_calls->{$method};
             my $sink = $spec->{sink} = $ryu->sink(label => "rpc:$service_name:$method");
             $sink->pause;
@@ -363,7 +363,7 @@ async method start {
     my $registry = $Myriad::REGISTRY;
     if(my $emitters = $registry->emitters_for(ref($self))) {
         for my $method (sort keys $emitters->%*) {
-            $log->tracef('Starting emitter %s as %s', $method, $emitters->{$method}->{channel});
+            $log->debugf('Starting Emitter `%s` as %s for [%s]', $method, $emitters->{$method}{args}{channel}, $service_name);
             my $spec = $emitters->{$method};
             my $code = delete $spec->{code};
             $spec->{current} = $self->$code(
@@ -378,13 +378,12 @@ async method start {
     if(my $receivers = $registry->receivers_for(ref($self))) {
         for my $method (sort keys $receivers->%*) {
             try {
-                $log->tracef('Starting receiver %s as %s', $method, $receivers->{$method}->{channel});
+                $log->debugf('Starting Receiver `%s` as %s for [%s]', $method, $receivers->{$method}{args}{channel}, $service_name);
                 my $spec = $receivers->{$method};
                 my $code = delete $spec->{code};
                 my $current = await $self->$code(
                     $spec->{sink}->source
                 );
-                $log->tracef('Completed setup for receiver');
 
                 die "Receivers method: $method should return a Ryu::Source"
                     unless blessed $current && $current->isa('Ryu::Source');
@@ -416,7 +415,7 @@ async method start {
 
     if (my $batches = $registry->batches_for(ref($self))) {
         for my $method (sort keys $batches->%*) {
-            $log->tracef('Starting batch process %s for %s', $method, ref($self));
+            $log->debugf('Starting Batch `%s` for [%s]', $method, $service_name);
             my $code = delete $batches->{$method}{code};
 
             $active_batch{$method} = [
@@ -433,10 +432,13 @@ async method start {
     }
 
     if (my $rpc_calls = $registry->rpc_for(ref($self))) {
-        $rpc_calls->{$_}->{sink}->resume for keys $rpc_calls->%*;
+        for my $method ( sort keys $rpc_calls->%* ) {
+            $log->debugf('Starting RPC `%s` for [%s]', $method, $service_name);
+            $rpc_calls->{$method}->{sink}->resume;
+        }
     }
 
-    $log->infof('Done');
+    $log->infof('[%s] Service has started!', $service_name);
 
 };
 
