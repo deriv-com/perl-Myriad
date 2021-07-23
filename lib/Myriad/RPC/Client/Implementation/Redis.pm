@@ -87,7 +87,7 @@ async method call_rpc($service, $method, %args) {
     try {
         await $self->is_started();
 
-        $log->tracef('Sending [rpc::request::%s::%s]: %s', $service, $method, $request->as_hash);
+        $log->tracef('Sending rpc::request::%s::%s : %s', $service, $method, $request->as_hash);
         my $stream_name = stream_name_from_service($service, $method);
         $pending_requests->{$message_id} = $pending;
         await $redis->xadd($stream_name => '*', $request->as_hash->%*);

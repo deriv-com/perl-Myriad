@@ -44,7 +44,7 @@ async method create_from_source (%args) {
 
     my $stream = "service.subscriptions.$service/$args{channel}";
 
-    $log->tracef('adding Emitter source [%s] to subscription handler', $stream);
+    $log->tracef('Adding subscription source `%s` to handler', $stream);
     $src->unblocked->then($self->$curry::weak(async method {
         # The streams will be checked later by "check_for_overflow" to avoid unblocking the source by mistake
         # we will make "check_for_overflow" aware about this stream after the service has started
@@ -54,7 +54,7 @@ async method create_from_source (%args) {
             max_len => $args{max_len} // MAX_ALLOWED_STREAM_LENGTH
         };
         await $src->map($self->$curry::weak(method ($event) {
-            $log->tracef('Emitter subscription [%s] adding an event: %s',$stream, $event);
+            $log->tracef('Subscription source `%s` adding an event: %s',$stream, $event);
             return $redis->xadd(
                 encode_utf8($stream) => '*',
                 data => encode_json_utf8($event),
@@ -79,7 +79,7 @@ async method create_from_sink (%args) {
         or die 'need a sink';
     my $remote_service = $args{from} || $args{service};
     my $stream = "service.subscriptions.$remote_service/$args{channel}";
-    $log->tracef('adding Receiver sink [%s] to subscription handler', $stream);
+    $log->tracef('Adding subscription sink `%s` to handler', $stream);
     push @receivers, {
         key    => $stream,
         client => $args{client},
@@ -90,7 +90,7 @@ async method create_from_sink (%args) {
 
 async method start {
     $should_shutdown //= $self->loop->new_future(label => 'subscription::redis::shutdown');
-    $log->tracef('Starting subscription handler (%s)', $uuid);
+    $log->tracef('Starting subscription handler UUID: %s', $uuid);
     await Future->wait_any(
         $should_shutdown->without_cancel,
         $self->receive_items,
@@ -113,6 +113,7 @@ async method create_group($receiver) {
 }
 
 async method receive_items {
+    $log->tracef('Start receiving from (%d) subscription sinks', scalar(@receivers));
     while (1) {
         if(@receivers) {
             my $item = shift @receivers;
@@ -128,7 +129,7 @@ async method receive_items {
                     $sink->unblocked,
                 );
             } catch {
-                $log->tracef("skipped stream %s because sink is blocked", $stream);
+                $log->tracef('skipped stream %s because sink is blocked', $stream);
                 next
             }
 
@@ -143,13 +144,13 @@ async method receive_items {
             for my $event (@events) {
                 try {
                     my $event_data = decode_json_utf8($event->{data}->[1]);
-                    $log->tracef('Passing event: %s | from stream: `%s` to subscription: [%s]', $event_data, $stream, $sink->label);
+                    $log->tracef('Passing event: %s | from stream: `%s` to subscription sink: `%s`', $event_data, $stream, $sink->label);
                     $sink->source->emit({
                         data => $event_data
                     });
                 } catch($e) {
                     $log->tracef(
-                        "An error happened while decoding event data for stream %s message: %s, error: %s",
+                        'An error happened while decoding event data for stream %s message: %s, error: %s',
                         $stream,
                         $event->{data},
                         $e
@@ -169,6 +170,7 @@ async method receive_items {
 }
 
 async method check_for_overflow () {
+    $log->tracef('Start checking overflow for (%d) subscription sources', scalar(@emitters));
     while (1) {
         if(@emitters) {
             my $emitter = shift @emitters;
@@ -178,7 +180,7 @@ async method check_for_overflow () {
                 if ($len >= $emitter->{max_len}) {
                     unless ($emitter->{source}->is_paused) {
                         $emitter->{source}->pause;
-                        $log->tracef("Paused emitter on %s, length is %s, max allowed %s", $emitter->{stream}, $len, $emitter->{max_len});
+                        $log->tracef('Paused subscription source on %s, length is %s, max allowed %s', $emitter->{stream}, $len, $emitter->{max_len});
                     }
                     await $redis->cleanup(
                         stream => $emitter->{stream},
@@ -187,11 +189,11 @@ async method check_for_overflow () {
                 } else {
                     if($emitter->{source}->is_paused) {
                         $emitter->{source}->resume;
-                        $log->infof("Resumed emitter on %s, length is %s", $emitter->{stream}, $len);
+                        $log->infof('Resumed subscription source on %s, length is %s', $emitter->{stream}, $len);
                     }
                 }
             } catch ($e) {
-                $log->warnf("An error ocurred while trying to check on stream %s status - %s", $emitter->{stream}, $e);
+                $log->warnf('An error ocurred while trying to check on stream %s status - %s', $emitter->{stream}, $e);
             }
         }
 
