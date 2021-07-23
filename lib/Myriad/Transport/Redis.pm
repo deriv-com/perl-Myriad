@@ -226,7 +226,7 @@ async method read_from_stream (%args) {
         STREAMS => ($stream, '>'),
     );
 
-    $log->tracef('Read group %s', $delivery);
+    $log->tracef('Read group: %s as `%s` from [%s]: %s', $group, $client, $stream, $delivery);
 
     # We are strictly reading for one stream
     my $batch = $delivery->[0];
@@ -234,7 +234,6 @@ async method read_from_stream (%args) {
         my  ($stream, $data) = $batch->@*;
         return map {
             my ($id, $args) = $_->@*;
-            $log->tracef('Item from stream %s is ID %s and args %s', $stream, $id, $args);
             +{
                 stream => $self->remove_prefix($stream),
                 id     => $id,
@@ -411,8 +410,10 @@ async method create_group ($stream, $group, $start_from = '$', $make_stream = 0)
         my @args = ('CREATE', $self->apply_prefix($stream), $group, $start_from);
         push @args, 'MKSTREAM' if $make_stream;
         await $redis->xgroup(@args);
+        $log->tracef('Created new consumer group: %s from stream: %s', $group, $stream);
     } catch ($e) {
         if($e =~ /BUSYGROUP/){
+            $log->tracef('Already exists consumer group: %s from stream: %s', $group, $stream);
             return;
         } elsif ($e =~ /requires the key to exist/) {
             Myriad::Exception::Transport::Redis::NoSuchStream->throw(

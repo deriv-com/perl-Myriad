@@ -273,7 +273,7 @@ async method load () {
     if(my $receivers = $registry->receivers_for(ref($self))) {
         for my $method (sort keys $receivers->%*) {
             try {
-                $log->debugf('Adding Receiver `%s` as %s for [%s]', $method, $receivers->{$method}, service_name);
+                $log->debugf('Adding Receiver `%s` as %s for [%s]', $method, $receivers->{$method}, $service_name);
                 my $spec = $receivers->{$method};
                 my $chan = $spec->{args}{channel} // die 'expected a channel, but there was none to be found';
                 my $sink = $spec->{sink} = $ryu->sink(

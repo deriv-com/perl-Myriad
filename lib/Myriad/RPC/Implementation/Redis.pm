@@ -137,7 +137,7 @@ async method reply_error ($service, $message, $error) {
 }
 
 async method drop ($stream, $id) {
-    $log->tracef("Going to drop message: %s", $id);
+    $log->tracef("Going to drop message ID: %s on stream: [%s]", $id, $stream);
     await $self->redis->ack($stream, $self->group_name, $id);
 }
 
