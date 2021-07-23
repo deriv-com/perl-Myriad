@@ -44,6 +44,7 @@ async method create_from_source (%args) {
 
     my $stream = "service.subscriptions.$service/$args{channel}";
 
+    $log->tracef('adding Emitter source [%s] to subscription handler', $stream);
     $src->unblocked->then($self->$curry::weak(async method {
         # The streams will be checked later by "check_for_overflow" to avoid unblocking the source by mistake
         # we will make "check_for_overflow" aware about this stream after the service has started
@@ -52,11 +53,11 @@ async method create_from_source (%args) {
             source => $src,
             max_len => $args{max_len} // MAX_ALLOWED_STREAM_LENGTH
         };
-        await $src->map($self->$curry::weak(method {
-            $log->tracef('sub has an event! %s', $_);
+        await $src->map($self->$curry::weak(method ($event) {
+            $log->tracef('Emitter subscription [%s] adding an event: %s',$stream, $event);
             return $redis->xadd(
                 encode_utf8($stream) => '*',
-                data => encode_json_utf8($_),
+                data => encode_json_utf8($event),
             );
         }))->ordered_futures(
             low => 100,
@@ -78,7 +79,7 @@ async method create_from_sink (%args) {
         or die 'need a sink';
     my $remote_service = $args{from} || $args{service};
     my $stream = "service.subscriptions.$remote_service/$args{channel}";
-    $log->tracef('created sub thing from sink');
+    $log->tracef('adding Receiver sink [%s] to subscription handler', $stream);
     push @receivers, {
         key    => $stream,
         client => $args{client},
@@ -89,7 +90,7 @@ async method create_from_sink (%args) {
 
 async method start {
     $should_shutdown //= $self->loop->new_future(label => 'subscription::redis::shutdown');
-    $log->tracef('Starting subscription handler');
+    $log->tracef('Starting subscription handler (%s)', $uuid);
     await Future->wait_any(
         $should_shutdown->without_cancel,
         $self->receive_items,
@@ -112,13 +113,11 @@ async method create_group($receiver) {
 }
 
 async method receive_items {
-    $log->tracef('Start loop for receiving items');
     while (1) {
         if(@receivers) {
             my $item = shift @receivers;
             push @receivers, $item;
 
-            $log->tracef('Will readgroup on %s', $item->{key});
             my $stream = $item->{key};
             my $sink = $item->{sink};
             my $client = $item->{client};
@@ -143,9 +142,10 @@ async method receive_items {
 
             for my $event (@events) {
                 try {
-                    my $event_data = $event->{data}->[1];
+                    my $event_data = decode_json_utf8($event->{data}->[1]);
+                    $log->tracef('Passing event: %s | from stream: `%s` to subscription: [%s]', $event_data, $stream, $sink->label);
                     $sink->source->emit({
-                        data => decode_json_utf8($event_data)
+                        data => $event_data
                     });
                 } catch($e) {
                     $log->tracef(

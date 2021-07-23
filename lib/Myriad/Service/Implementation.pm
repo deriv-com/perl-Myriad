@@ -197,7 +197,6 @@ method _add_to_loop($loop) {
 
 async method process_batch($k, $code, $src) {
     my $backoff;
-    $log->tracef('Start batch processing for %s', $k);
     while (1) {
         await $src->unblocked;
         my $data = [];
@@ -213,7 +212,7 @@ async method process_batch($k, $code, $src) {
                 );
             });
         } catch ($e) {
-            $log->warnf("Batch iteration for %s failed - %s", $k, $e);
+            $log->warnf("Batch iteration for `%s` failed - %s", $k, $e);
         }
 
         die 'Batch should return an arrayref' unless ref $data eq 'ARRAY';
@@ -225,7 +224,7 @@ async method process_batch($k, $code, $src) {
             await $self->loop->delay_future(after => 0);
         } else {
             $backoff = min(MAX_EXPONENTIAL_BACKOFF, ($backoff || 0.02) * 2);
-            $log->tracef('Batch for %s returned no results, delaying for %dms before retry', $k, $backoff * 1000.0);
+            $log->tracef('Batch for `%s` returned no results, delaying for %dms before retry', $k, $backoff * 1000.0);
             await $self->loop->delay_future(
                 after => $backoff
             );
