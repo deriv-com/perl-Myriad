@@ -194,11 +194,13 @@ it takes:
 
 =item * C<value> - the value that we should assign after resolving the config path.
 
+=item * C<from> - the source of this argument <CMD|ENV>
+
 =back
 
 =cut
 
-method parse_subargs ($subarg, $root, $value) {
+method parse_subargs ($subarg, $root, $value, $from) {
     my $service_name = $subarg =~ s/(.*?)[_|\.](configs?|instances?)(.*)/$2$3/ && $1;
     die 'invalid service name' unless $2;
 
@@ -219,6 +221,7 @@ method parse_subargs ($subarg, $root, $value) {
     }
     shift @sublist;
     my $key_name = join '_', @sublist;
+    $log->tracef('Setting config key: %s from: %s', $key_name, $from);
     $root->{configs}->{$key_name} = $value;
 }
 
@@ -255,11 +258,12 @@ method lookup_from_args ($commandline) {
         if ($key) {
             # Either `--example=123` or `--example 123`
             $value = shift $commandline->@* unless defined $value;
+            $log->tracef('Setting config key: %s from CMD', $key);
             $config->{$key} = $value;
         } elsif ($arg =~ s/services?[_|\.]//) { # are we doing service config
             $value = shift $commandline->@* unless $value;
             try {
-                $self->parse_subargs($arg, $config->{services}, $value);
+                $self->parse_subargs($arg, $config->{services}, $value, 'CMD');
             } catch {
                 $error = "looks like $arg format is wrong can't parse it!";
                 last;
@@ -283,10 +287,13 @@ Tries to find environments variables that start with MYRIAD_* and parse them.
 =cut
 
 method lookup_from_env () {
-    $config->{$_} //= delete $ENV{'MYRIAD_' . uc($_)} for grep { exists $ENV{'MYRIAD_' . uc($_)} } keys %DEFAULTS;
+    for my $key ( grep { exists $ENV{'MYRIAD_' . uc($_)} } keys %DEFAULTS ) {
+        $log->tracef('Setting config key: %s from ENV', $key);
+        $config->{$key} //= delete $ENV{'MYRIAD_' . uc($key)}
+    }
     map {
         s/(MYRIAD_SERVICES?_)//;
-        $self->parse_subargs(lc($_), $config->{services} //= {}, $ENV{$1 . $_});
+        $self->parse_subargs(lc($_), $config->{services} //= {}, $ENV{$1 . $_}, 'ENV');
     } (grep {$_ =~ /MYRIAD_SERVICES?_/} keys %ENV);
 }
 
@@ -307,7 +314,7 @@ method lookup_from_file ($file_path) {
             use_ext => 1
         })->@*;
 
-        $log->debugf('override is %s', $override);
+        $log->debugf('overriding config from file (%s): %s', $file_path, $override);
 
         my %expanded = pairmap {
                 ref($b) ? $b->%* : ($a => $b)
@@ -361,6 +368,11 @@ async method service_config ($pkg, $service_name) {
             $value = $storage_request->{value};
 
             # nothing from storage then try other sources
+            $log->tracef(
+                'Setting service config: %s where it exists in: Redis(%d), InstanceORID(%d), Args(%d), Default(%d)',
+                $key, defined $value, exists $instance_overrides->{$key}, exists $available_config->{$key},
+                exists $declared_config->{$key}->{default}
+            );
 
             $value //= $instance_overrides->{$key} //
                 $available_config->{$key} //
@@ -425,7 +437,7 @@ async method listen_for_updates () {
                         $updated_value = Myriad::Util::Secret->new($updated_value);
                     }
                     $observable->set($updated_value);
-                    $log->tracef('Detected an update for config key: %s, new value: %s', $key, $updated_value);
+                    $log->tracef('Detected an update for config key: %s', $key);
                 }
             })->resolve->completed->retain->on_fail(sub {
                 $log->warnf('Config: config updates listener failed - %s', shift);
