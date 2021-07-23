@@ -105,7 +105,7 @@ async method listen () {
                     push $item->{data}->@*, ('transport_id', $item->{id});
                     try {
                         my $message = Myriad::RPC::Message::from_hash($item->{data}->@*);
-                        $log->tracef('Passing message: %s to: `%s`', $message, $rpc->{sink}->label);
+                        $log->tracef('Passing message: %s to: %s', $message, $rpc->{sink}->label);
                         $rpc->{sink}->emit($message);
                     } catch ($error) {
                         $log->tracef("error while parsing the incoming messages: %s", $error->message);
@@ -139,7 +139,7 @@ async method reply_error ($service, $message, $error) {
 }
 
 async method drop ($stream, $id) {
-    $log->tracef("Going to drop message ID: %s on stream: `%s`", $id, $stream);
+    $log->tracef("Going to drop message ID: %s on stream: %s", $id, $stream);
     await $self->redis->ack($stream, $self->group_name, $id);
 }
 

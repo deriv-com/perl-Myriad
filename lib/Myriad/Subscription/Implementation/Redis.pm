@@ -44,7 +44,7 @@ async method create_from_source (%args) {
 
     my $stream = "service.subscriptions.$service/$args{channel}";
 
-    $log->tracef('Adding subscription source `%s` to handler', $stream);
+    $log->tracef('Adding subscription source %s to handler', $stream);
     $src->unblocked->then($self->$curry::weak(async method {
         # The streams will be checked later by "check_for_overflow" to avoid unblocking the source by mistake
         # we will make "check_for_overflow" aware about this stream after the service has started
@@ -54,7 +54,7 @@ async method create_from_source (%args) {
             max_len => $args{max_len} // MAX_ALLOWED_STREAM_LENGTH
         };
         await $src->map($self->$curry::weak(method ($event) {
-            $log->tracef('Subscription source `%s` adding an event: %s',$stream, $event);
+            $log->tracef('Subscription source %s adding an event: %s',$stream, $event);
             return $redis->xadd(
                 encode_utf8($stream) => '*',
                 data => encode_json_utf8($event),
@@ -79,7 +79,7 @@ async method create_from_sink (%args) {
         or die 'need a sink';
     my $remote_service = $args{from} || $args{service};
     my $stream = "service.subscriptions.$remote_service/$args{channel}";
-    $log->tracef('Adding subscription sink `%s` to handler', $stream);
+    $log->tracef('Adding subscription sink %s to handler', $stream);
     push @receivers, {
         key    => $stream,
         client => $args{client},
@@ -144,7 +144,7 @@ async method receive_items {
             for my $event (@events) {
                 try {
                     my $event_data = decode_json_utf8($event->{data}->[1]);
-                    $log->tracef('Passing event: %s | from stream: `%s` to subscription sink: `%s`', $event_data, $stream, $sink->label);
+                    $log->tracef('Passing event: %s | from stream: %s to subscription sink: %s', $event_data, $stream, $sink->label);
                     $sink->source->emit({
                         data => $event_data
                     });
