@@ -103,7 +103,7 @@ async method service (@args) {
                 } foreach => [values $myriad->services->%*], concurrent => 4;
 
             } catch($e) {
-                $log->warnf('Failed to start services %s', $e);
+                $log->warnf('Failed to start services, error: %s', $e);
                 await $myriad->shutdown;
             }
         },
