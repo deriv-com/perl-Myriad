@@ -637,16 +637,21 @@ Prepare for logging.
 
 =cut
 
-method setup_logging () {
-    my $level = $config->log_level;
-    STDERR->autoflush(1);
-    $level->subscribe(my $code = sub {
-        Log::Any::Adapter->import(
-            qw(Stderr),
-            log_level => $level->as_string,
-        );
-    });
-    $code->();
+method setup_logging ($code = undef) {
+    state $logging = do {
+        my $level = $config->log_level;
+        $code ||= sub {
+            state $flushed = do {
+                STDERR->autoflush(1);
+            };
+            Log::Any::Adapter->import(
+                qw(Stderr),
+                log_level => $level->as_string,
+            );
+        };
+        $level->subscribe($code);
+        $code->();
+    };
     return;
 }
 
