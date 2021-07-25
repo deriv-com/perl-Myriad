@@ -97,6 +97,7 @@ subtest 'It should parse commandline args correctly' => sub {
         $is_service_instance_ok->($args);
 
     };
+    done_testing;
 };
 
 subtest 'It should read config from ENV correctly' => sub {
@@ -104,6 +105,7 @@ subtest 'It should read config from ENV correctly' => sub {
     $config->clear_all;
 
     # To detect standard config from ENV
+    local %ENV = %ENV;
     $ENV{"MYRIAD_$_"} = 'test_value' for map {uc($_)} keys %regular_config;
     is(exception {
         $config->lookup_from_env();
@@ -131,6 +133,7 @@ subtest 'It should read config from ENV correctly' => sub {
     ok($services_config->{'fake.name'}, 'service name parsed correctly');
     ok(my $instance_config = $services_config->{'fake.name'}->{instance}->{demo}, 'service instance has been parsed correctly');
     is($instance_config->{config}->{env_key}, 'instance value from env', 'instance config has been parsed correctly');
+    done_testing;
 };
 
 subtest 'It should read config from config file correctly' => sub {
@@ -143,9 +146,11 @@ subtest 'It should read config from config file correctly' => sub {
     is($config->key('transport'), 'value_from_file', 'framework config has been passed correctly');
     is($config->key('services')->{'fake.name'}->{config}->{key}, 'value from file', 'services config has been passed correctly');
     is($config->key('services')->{'fake.name'}->{instance}->{demo}->{config}->{key}, 'instance value from file', 'instance config has been passed correctly');
+    done_testing;
 };
 
 subtest 'It should keep config source priority correct' => sub {
+    local %ENV = %ENV;
     # commandline args should take over ENV
     $ENV{MYRIAD_TRANSPORT} = 'env_prio';
     my $args = ['--transport', 'cmd_prio'];
@@ -170,12 +175,14 @@ subtest 'It should keep config source priority correct' => sub {
     # Default by default
     $config = Myriad::Config->new();
     is($config->key('transport'), $defaults{'transport'}, 'default is correct');
+    done_testing;
 };
 
 subtest 'Special config shortcuts' => sub {
     subtest 'framework config should be returend as Ryu::Obvervable' => sub {
         my $config = Myriad::Config->new();
         isa_ok($config->key('transport'), 'Ryu::Observable', 'correct config container');
+        done_testing;
     };
 
     subtest 'It should infer transport and address' => sub {
@@ -184,6 +191,7 @@ subtest 'Special config shortcuts' => sub {
 
         is($config->key('transport'), 'redis', 'correct transport type');
         is($config->key('transport_redis'), 'redis://somehost:1111', 'correct uri for the correct transport');
+        done_testing;
     };
 
     subtest 'It should configure all transport type implicitly' => sub {
@@ -193,7 +201,9 @@ subtest 'Special config shortcuts' => sub {
         is($config->key('rpc_transport'), 'memory', 'correct rpc transport');
         is($config->key('subscription_transport'), 'memory', 'correct subscription transport');
         is($config->key('storage_transport'), 'memory', 'correct storage transport');
+        done_testing;
     };
+    done_testing;
 };
 
 done_testing;
