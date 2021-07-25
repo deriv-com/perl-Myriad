@@ -27,7 +27,7 @@ requires 'Log::Any', '>= 1.709';
 requires 'Log::Any::Adapter', '>= 1.709';
 requires 'Config::Any', '>= 0.32';
 requires 'YAML::XS', '>= 0.83';
-requires 'Metrics::Any', '>= 0.06';
+requires 'Metrics::Any', '>= 0.07';
 requires 'OpenTracing::Any', '>= 1.003';
 requires 'JSON::MaybeUTF8', '>= 2.000';
 requires 'Unicode::UTF8';
@@ -48,7 +48,7 @@ requires 'List::Keywords', '>= 0.08';
 # Integration
 requires 'Net::Async::OpenTracing', '>= 1.000';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
-requires 'Metrics::Any::Adapter::DogStatsd', '>= 0.03';
+requires 'Metrics::Any::Adapter::Statsd', '>= 0.03';
 # Transport
 requires 'Net::Async::Redis', '>= 3.014';
 requires 'Net::Async::HTTP', '>= 0.48';

@@ -3,7 +3,7 @@ package Myriad;
 
 use Myriad::Class;
 
-our $VERSION = '0.009';
+our $VERSION = '0.010';
 # AUTHORITY
 
 =encoding utf8
@@ -181,7 +181,6 @@ use Myriad::Transport::Redis;
 use Log::Any::Adapter;
 
 use Net::Async::OpenTracing;
-use Metrics::Any::Adapter qw(DogStatsd);
 
 our $REGISTRY;
 BEGIN {
@@ -298,6 +297,7 @@ async method configure_from_argv (@args) {
 
     $self->setup_logging;
     $self->setup_tracing;
+    $self->setup_metrics;
 
     $commands = Myriad::Commands->new(
         myriad => $self
@@ -675,6 +675,42 @@ method setup_tracing () {
     return;
 }
 
+=head2 setup_metrics
+
+Prepare L<Metrics::Any::Adapter> to collect metrics.
+
+=cut
+
+method setup_metrics () {
+    my $adapter = $config->metrics_adapter;
+    my $host = $config->metrics_host;
+    my $port = $config->metrics_port;
+
+    # Metrics::Any::Adapter use a lexical variable to identify
+    # the adapter instance that doesn't allow easy overrides.
+    my $metrics_adapter;
+    {
+        no warnings 'redefine';
+        *Metrics::Any::Adapter::adapter = sub {
+            return $metrics_adapter //= Metrics::Any::Adapter->class_for_type(
+                $adapter->as_string,
+            )->new(
+                host => $host->as_string,
+                port => $port->as_numeric,
+        )   ;
+        };
+    }
+    my $code = sub {
+        undef $metrics_adapter;
+    };
+
+    $adapter->subscribe($code);
+    $host->subscribe($code);
+    $port->subscribe($code);
+
+    return;
+}
+
 =head2 run
 
 Starts the main loop.
@@ -858,4 +894,3 @@ Deriv Group Services Ltd. C<< DERIV@cpan.org >>
 =head1 LICENSE
 
 Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
-

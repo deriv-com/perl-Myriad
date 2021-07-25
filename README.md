@@ -62,9 +62,9 @@ Simple request/response patterns are handled with the [Myriad::RPC](https://meta
 
 Details on the request are in [Myriad::RPC::Request](https://metacpan.org/pod/Myriad%3A%3ARPC%3A%3ARequest) and the response to be sent back is in [Myriad::RPC::Response](https://metacpan.org/pod/Myriad%3A%3ARPC%3A%3AResponse).
 
-- [Myriad::RPC::Redis](https://metacpan.org/pod/Myriad%3A%3ARPC%3A%3ARedis)
-- [Myriad::RPC::PostgreSQL](https://metacpan.org/pod/Myriad%3A%3ARPC%3A%3APostgreSQL)
-- [Myriad::RPC::Memory](https://metacpan.org/pod/Myriad%3A%3ARPC%3A%3AMemory)
+- [Myriad::RPC::Implementation::Redis](https://metacpan.org/pod/Myriad%3A%3ARPC%3A%3AImplementation%3A%3ARedis)
+- [Myriad::RPC::Implementation::PostgreSQL](https://metacpan.org/pod/Myriad%3A%3ARPC%3A%3AImplementation%3A%3APostgreSQL)
+- [Myriad::RPC::Implementation::Memory](https://metacpan.org/pod/Myriad%3A%3ARPC%3A%3AImplementation%3A%3AMemory)
 
 Additional transport mechanisms may be available, see CPAN for details.
 
@@ -74,9 +74,9 @@ The [Myriad::Subscription](https://metacpan.org/pod/Myriad%3A%3ASubscription) ab
 
 Subscription implementations include:
 
-- [Myriad::Subscription::Redis](https://metacpan.org/pod/Myriad%3A%3ASubscription%3A%3ARedis)
-- [Myriad::Subscription::PostgreSQL](https://metacpan.org/pod/Myriad%3A%3ASubscription%3A%3APostgreSQL)
-- [Myriad::Subscription::Memory](https://metacpan.org/pod/Myriad%3A%3ASubscription%3A%3AMemory)
+- [Myriad::Subscription::Implementation::Redis](https://metacpan.org/pod/Myriad%3A%3ASubscription%3A%3AImplementation%3A%3ARedis)
+- [Myriad::Subscription::Implementation::PostgreSQL](https://metacpan.org/pod/Myriad%3A%3ASubscription%3A%3AImplementation%3A%3APostgreSQL)
+- [Myriad::Subscription::Implementation::Memory](https://metacpan.org/pod/Myriad%3A%3ASubscription%3A%3AImplementation%3A%3AMemory)
 
 Additional transport mechanisms may be available, see CPAN for details.
 
@@ -211,6 +211,10 @@ Prepare for logging.
 ## setup\_tracing
 
 Prepare [OpenTracing](https://metacpan.org/pod/OpenTracing) collection.
+
+## setup\_metrics
+
+Prepare [Metrics::Any::Adapter](https://metacpan.org/pod/Metrics%3A%3AAny%3A%3AAdapter) to collect metrics.
 
 ## run
 
