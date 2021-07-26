@@ -60,12 +60,7 @@ async method service (@args) {
         }
     }
 
-    my $service_custom_name = $myriad->config->service_name->as_string;
-
-    die 'You cannot pass a service name and load multiple modules' if @modules > 1 and length $service_custom_name;
-
     # Load modules to compile
-
     for my $module (@modules) {
         $log->debugf('Loading %s', $module);
         try {
@@ -83,11 +78,7 @@ async method service (@args) {
         my ($module) = @_;
         $log->debugf('Preparing %s', $module);
         try {
-            if ($service_custom_name eq '') {
-                await $myriad->add_service($module, namespace => $namespace);
-            } else {
-                await $myriad->add_service($module, name => $service_custom_name);
-            }
+            await $myriad->add_service($module, namespace => $namespace);
         } catch ($e) {
             Future::Exception->throw(sprintf 'Failed to add service %s - %s', $module, $e);
         }
