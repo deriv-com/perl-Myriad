@@ -284,7 +284,6 @@ async method load () {
                 await $self->subscription->create_from_sink(
                     sink    => $sink,
                     channel => $chan,
-                    client  => $service_name . '/' . $method,
                     from    => $spec->{args}{service},
                     service => $service_name,
                 );

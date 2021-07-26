@@ -17,7 +17,7 @@ with 'Myriad::Role::Subscription';
 
 has $redis;
 
-has $uuid;
+has $client_id;
 
 # A list of all sources that emits events to Redis
 # will need to keep track of them to block them when
@@ -30,7 +30,7 @@ has @receivers;
 has $should_shutdown;
 
 BUILD {
-    $uuid = Myriad::Util::UUID::uuid();
+    $client_id = Myriad::Util::UUID::uuid();
 }
 
 method configure (%args) {
@@ -80,10 +80,10 @@ async method create_from_sink (%args) {
     my $stream = "service.subscriptions.$remote_service/$args{channel}";
     $log->tracef('created sub thing from sink');
     push @receivers, {
-        key    => $stream,
-        client => $args{client},
-        sink   => $sink,
-        group  => 0,
+        key        => $stream,
+        sink       => $sink,
+        group_name => $args{service},
+        group      => 0,
     };
 }
 
@@ -105,7 +105,7 @@ async method stop {
 
 async method create_group($receiver) {
     unless ($receiver->{group}) {
-        await $redis->create_group($receiver->{key}, $uuid);
+        await $redis->create_group($receiver->{key}, $reciver->{group_name});
         $receiver->{group} = 1;
     }
     return;
@@ -119,9 +119,9 @@ async method receive_items {
             push @receivers, $item;
 
             $log->tracef('Will readgroup on %s', $item->{key});
-            my $stream = $item->{key};
-            my $sink = $item->{sink};
-            my $client = $item->{client};
+            my $stream     = $item->{key};
+            my $sink       = $item->{sink};
+            my $group_name = $item->{group_name};
 
             try {
                 await Future->wait_any(
@@ -137,8 +137,8 @@ async method receive_items {
 
             my @events = await $redis->read_from_stream(
                 stream => $stream,
-                group => $uuid,
-                client => $client
+                group  => $group_name,
+                client => $client_id
             );
 
             for my $event (@events) {
@@ -155,9 +155,10 @@ async method receive_items {
                         $e
                     );
                 }
+
                 await $redis->ack(
                     $stream,
-                    $uuid,
+                    $group_name,
                     $event->{id}
                 );
             }

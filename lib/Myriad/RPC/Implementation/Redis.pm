@@ -107,7 +107,7 @@ async method listen () {
                         $rpc->{sink}->emit($message);
                     } catch ($error) {
                         $log->tracef("error while parsing the incoming messages: %s", $error->message);
-                        await $self->drop($rpc->{stream}, $_->{id});
+                        await $self->drop($rpc->{stream}, $item->{id});
                     }
                 }
             }
