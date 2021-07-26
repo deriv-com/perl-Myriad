@@ -226,7 +226,7 @@ async method read_from_stream (%args) {
         STREAMS => ($stream, '>'),
     );
 
-    $log->tracef('Read group %s', $delivery);
+    $log->tracef('Read group: %s as `%s` from [%s]: %s', $group, $client, $stream, $delivery);
 
     # We are strictly reading for one stream
     my $batch = $delivery->[0];
@@ -234,7 +234,6 @@ async method read_from_stream (%args) {
         my  ($stream, $data) = $batch->@*;
         return map {
             my ($id, $args) = $_->@*;
-            $log->tracef('Item from stream %s is ID %s and args %s', $stream, $id, $args);
             +{
                 stream => $self->remove_prefix($stream),
                 id     => $id,
@@ -276,7 +275,7 @@ async method cleanup (%args) {
 
     # Track how far back our active stream list goes - anything older than this is fair game
     my $oldest = await $self->oldest_processed_id($stream);
-    $log->debugf('Earliest ID to care about: %s', $oldest);
+    $log->tracef('Attempting to clean up [%s] Size: %d | Earliest ID to care about: %s', $stream, $info->{length}, $oldest);
     if ($oldest and $oldest ne '0-0' and $self->compare_id($oldest, $info->{first_entry}[0]) > 0) {
         # At this point we know we have some older items that can go. We'll need to finesse
         # the direction to search: for now, take the naïve but workable assumption that we
@@ -310,15 +309,14 @@ async method cleanup (%args) {
             $endpoint = $v->[-1][0];
         }
         $total = $info->{length} - $total if $direction eq 'xrange';
-        $log->tracef('Would trim to %d items', $total);
 
 #        my ($before) = await $redis->memory_usage($stream);
         my ($trim) = await $redis->xtrim($stream, MAXLEN => $total);
 #        my ($after) = await $redis->memory_usage($stream);
-        $log->tracef('Size changed from %d to %d after trim which removed %d items', 1, 1, $trim);
+        $log->tracef('Trimmed %d items from stream: %s', $total, $stream);
     }
     else {
-        $log->tracef('No point in trimming: oldest is %s and this compares to %s', $oldest, $info->{first_entry}[0]);
+        $log->tracef('No point in trimming (%s) where: oldest is %s and this compares to %s', $stream, $oldest, $info->{first_entry}[0]);
     }
 }
 
@@ -411,8 +409,10 @@ async method create_group ($stream, $group, $start_from = '$', $make_stream = 0)
         my @args = ('CREATE', $self->apply_prefix($stream), $group, $start_from);
         push @args, 'MKSTREAM' if $make_stream;
         await $redis->xgroup(@args);
+        $log->tracef('Created new consumer group: %s from stream: %s', $group, $stream);
     } catch ($e) {
         if($e =~ /BUSYGROUP/){
+            $log->tracef('Already exists consumer group: %s from stream: %s', $group, $stream);
             return;
         } elsif ($e =~ /requires the key to exist/) {
             Myriad::Exception::Transport::Redis::NoSuchStream->throw(
@@ -533,6 +533,7 @@ async method redis () {
         $self->add_child(
             $instance
         );
+        $log->tracef('Added new Redis connection (%s) to pool', $redis_uri->as_string);
         await $instance->connect;
     }
     return $instance;
