@@ -62,7 +62,6 @@ async method service (@args) {
 
     # Load modules to compile
     for my $module (@modules) {
-        $log->debugf('Loading %s', $module);
         try {
             require_module($module);
             die 'loaded ' . $module . ' but it cannot ->new?' unless $module->can('new');
@@ -76,7 +75,6 @@ async method service (@args) {
 
     await fmap0(async sub {
         my ($module) = @_;
-        $log->debugf('Preparing %s', $module);
         try {
             await $myriad->add_service($module, namespace => $namespace);
         } catch ($e) {
@@ -89,14 +87,14 @@ async method service (@args) {
             try {
                 await fmap0 {
                     my $service = shift;
-                    $log->infof('Starting service [%s]', $service->service_name);
+                    $log->infof('Starting service %s', $service->service_name);
                     $service->start->transform(fail => sub {
                         return $service->service_name . ' : ' . shift;
                     });
                 } foreach => [values $myriad->services->%*], concurrent => 4;
 
             } catch($e) {
-                $log->warnf('Failed to start services - %s', $e);
+                $log->warnf('Failed to start services, error: %s', $e);
                 await $myriad->shutdown;
             }
         },
