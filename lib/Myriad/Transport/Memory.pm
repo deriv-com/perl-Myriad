@@ -304,6 +304,38 @@ async method subscribe ($channel_name) {
     return $sink->source;
 }
 
+
+=head2 stream_groups_info
+
+Get information about the stream's groups.
+
+=cut
+
+async method stream_groups_info ($stream_name) {
+    my $stream = $streams->{$stream_name} // Myriad::Exception::Transport::Memory::StreamNotFound->throw();
+    my $info = [];
+    for my $group (keys $stream->{groups}->%*) {
+        my $group_info = { name => $group };
+        # We don't keep track of consumers yet
+        $group_info->{consumers} = 0;
+        $group_info->{pending} = +(keys $stream->{groups}->{$group}->{pendings}->%*);
+        $group_info->{'last-delivered-id'} = $stream->{groups}->{$group}->{cursor};
+        push $info->@*, $group_info;
+    }
+
+    return $info;
+}
+
+=head2 exists 
+
+Checks if a  given key exists or not.
+
+=cut
+
+async method exists ($key) {
+    return exists $streams->{$key} || exists $channels->{$key};
+}
+
 method get_stream_group ($stream_name, $group_name) {
     my $stream = $streams->{$stream_name} // Myriad::Exception::Transport::Memory::StreamNotFound->throw();
     my $group = $stream->{groups}->{$group_name} // Myriad::Exception::Transport::Memory::GroupNotFound->throw();
