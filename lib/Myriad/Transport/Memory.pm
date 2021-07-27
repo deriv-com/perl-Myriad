@@ -326,7 +326,7 @@ async method stream_groups_info ($stream_name) {
     return $info;
 }
 
-=head2 exists 
+=head2 exists
 
 Checks if a  given key exists or not.
 

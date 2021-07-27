@@ -90,7 +90,7 @@ async method create_from_sink (%args) {
 
 async method start {
     $should_shutdown //= $self->loop->new_future(label => 'subscription::redis::shutdown');
-    $log->tracef('Starting subscription handler UUID: %s', $uuid);
+    $log->tracef('Starting subscription handler client_id: %s', $client_id);
     await Future->wait_any(
         $should_shutdown->without_cancel,
         $self->receive_items,
@@ -106,7 +106,7 @@ async method stop {
 
 async method create_group($receiver) {
     unless ($receiver->{group}) {
-        await $redis->create_group($receiver->{key}, $reciver->{group_name});
+        await $redis->create_group($receiver->{key}, $receiver->{group_name});
         $receiver->{group} = 1;
     }
     return;
