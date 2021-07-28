@@ -14,7 +14,7 @@ BEGIN { *CORE::GLOBAL::exit = sub(;$) { pass("called exit"); } }
 use Myriad::Config;
 
 my %defaults = %Myriad::Config::DEFAULTS;
-my %regular_config = grep !ref $defaults{$_}, keys %defaults;
+my @regular_config = grep !ref $defaults{$_}, keys %defaults;
 my %shortcuts = %Myriad::Config::FULLNAME_FOR;
 
 subtest 'It should parse commandline args correctly' => sub {
@@ -26,10 +26,10 @@ subtest 'It should parse commandline args correctly' => sub {
     $log->contains_ok(qr/don't know how to deal with.*bad-key/, 'bad-key was reported');
 
     # Parse full options
-    $args = [ map { "--" . $_ => 'test_value' } keys %regular_config ];
+    $args = [ map { "--" . $_ => 'test_value' } @regular_config ];
     $config->lookup_from_args($args);
 
-    is($config->key($_), 'test_value' , "config $_ has been set correctly") for keys %regular_config;
+    is($config->key($_), 'test_value' , "config $_ has been set correctly") for @regular_config;
 
     # Parse short
     $args = [ map { "-" . $_ => 'test_value' } keys %shortcuts ];
@@ -106,12 +106,12 @@ subtest 'It should read config from ENV correctly' => sub {
 
     # To detect standard config from ENV
     local %ENV = %ENV;
-    $ENV{"MYRIAD_$_"} = 'test_value' for map {uc($_)} keys %regular_config;
+    $ENV{"MYRIAD_$_"} = 'test_value' for map {uc($_)} @regular_config;
     is(exception {
         $config->lookup_from_env();
     }, undef, 'handle global configuration from environment');
 
-    is($config->key($_), 'test_value' , "config $_ has been set correctly") for keys %regular_config;
+    is($config->key($_), 'test_value' , "config $_ has been set correctly") for @regular_config;
 
     # To pass services' config
     $ENV{'MYRIAD_SERVICE_FAKE_NAME_CONFIG_ENV_KEY'} = 'value from env';

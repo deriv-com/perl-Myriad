@@ -326,13 +326,35 @@ async method configure_from_argv (@args) {
 
 method config () { $config }
 
+=head2 transport
+
+Returns the L<Myriad::Transport> instance according to the config value.
+
+it's designed to be used by tests, so be careful before using it in the framework code.
+
+it takes a single param
+
+=over 4
+
+=item * component - the RPC, Subscription or storage in lower case
+
+=back
+
+=cut
+
+method transport ($component) {
+    my $config_method = "${component}_transport";
+    my $myriad_method = $config->$config_method->as_string . '_transport';
+    $self->$myriad_method;
+}
+
 =head2 redis
 
 The L<Net::Async::Redis> (or compatible) instance used for service coördination.
 
 =cut
 
-method redis () {
+method redis_transport () {
     unless($redis) {
         $self->loop->add(
             $redis = Myriad::Transport::Redis->new(
@@ -345,7 +367,7 @@ method redis () {
         );
 
         $self->on_start(async method {
-            await $self->redis->start;
+            await $self->redis_transport->start;
         });
     }
     $redis

@@ -95,7 +95,7 @@ sub new {
     if ($transport eq 'redis') {
         require Myriad::RPC::Implementation::Redis;
         return Myriad::RPC::Implementation::Redis->new(
-            redis   => $myriad->redis,
+            redis   => $myriad->redis_transport,
         );
     } elsif($transport eq 'memory' or $transport eq 'perl') {
         require Myriad::RPC::Implementation::Memory;
