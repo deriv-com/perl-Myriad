@@ -3,7 +3,7 @@ requires 'mro';
 requires 'indirect';
 requires 'multidimensional';
 requires 'bareword::filehandles';
-requires 'XS::Parse::Keyword', '>= 0.10';
+requires 'XS::Parse::Keyword', '>= 0.11';
 requires 'Syntax::Keyword::Dynamically', '>= 0.08';
 requires 'Syntax::Keyword::Try', '>= 0.25';
 requires 'Syntax::Keyword::Defer', '>= 0.05';
@@ -11,7 +11,7 @@ requires 'Syntax::Keyword::Match', '>= 0.04';
 requires 'Future', '>= 0.47';
 requires 'Future::Queue';
 requires 'Future::AsyncAwait', '>= 0.52';
-requires 'Object::Pad', '>= 0.46';
+requires 'Object::Pad', '>= 0.48';
 requires 'Role::Tiny', '>= 2.002004';
 # Streams
 requires 'Ryu', '>= 3.002';
