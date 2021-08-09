@@ -11,20 +11,20 @@ requires 'Syntax::Keyword::Match', '>= 0.04';
 requires 'Future', '>= 0.47';
 requires 'Future::Queue';
 requires 'Future::AsyncAwait', '>= 0.52';
-requires 'Object::Pad', '>= 0.48';
+requires 'Object::Pad', '>= 0.50';
 requires 'Role::Tiny', '>= 2.002004';
 # Streams
 requires 'Ryu', '>= 3.002';
 requires 'Ryu::Async', '>= 0.019';
 # IO::Async
 requires 'Heap', '>= 0.80';
-requires 'IO::Async::Notifier', '>= 0.78';
-requires 'IO::Async::Test', '>= 0.78';
+requires 'IO::Async::Notifier', '>= 0.79';
+requires 'IO::Async::Test', '>= 0.79';
 requires 'IO::Async::SSL', '>= 0.22';
 # Functionality
 requires 'curry', '>= 1.001';
-requires 'Log::Any', '>= 1.709';
-requires 'Log::Any::Adapter', '>= 1.709';
+requires 'Log::Any', '>= 1.710';
+requires 'Log::Any::Adapter', '>= 1.710';
 requires 'Config::Any', '>= 0.32';
 requires 'YAML::XS', '>= 0.83';
 requires 'Metrics::Any', '>= 0.07';
