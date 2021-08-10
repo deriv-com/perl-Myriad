@@ -11,7 +11,7 @@ requires 'Syntax::Keyword::Match', '>= 0.04';
 requires 'Future', '>= 0.47';
 requires 'Future::Queue';
 requires 'Future::AsyncAwait', '>= 0.52';
-requires 'Object::Pad', '>= 0.50';
+requires 'Object::Pad', '>= 0.51';
 requires 'Role::Tiny', '>= 2.002004';
 # Streams
 requires 'Ryu', '>= 3.002';
