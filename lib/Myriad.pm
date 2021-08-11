@@ -714,6 +714,7 @@ method setup_metrics () {
     {
         no warnings 'redefine';
         *Metrics::Any::Adapter::adapter = sub {
+            return if ${^GLOBAL_PHASE} eq 'DESTRUCT';
             return $metrics_adapter //= Metrics::Any::Adapter->class_for_type(
                 $adapter->as_string,
             )->new(

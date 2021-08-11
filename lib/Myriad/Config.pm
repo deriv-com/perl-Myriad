@@ -381,6 +381,19 @@ async method service_config ($pkg, $service_name) {
     return $service_config;
 }
 
+=head2 service_name
+
+Check if the developer configured a name for this service.
+This is different from service_config because we are going
+to check args and ENV only looking using the default
+L<Myriad::Registery> assigned name
+
+=cut
+
+method service_name($name_from_registry) {
+    $config->{services}->{$name_from_registry}->{config}->{name};
+}
+
 =head2 from_storage
 
 Tries to find the config key in the storage using L<Myriad::Storage>.

@@ -76,7 +76,15 @@ async method service (@args) {
     await fmap0(async sub {
         my ($module) = @_;
         try {
-            await $myriad->add_service($module, namespace => $namespace);
+            # No need to pass namespaces here
+            my $default_service_name = $myriad->registry->make_service_name($module,'');
+
+            # Check if we should override the servicename
+            if (my $service_name = $myriad->config->service_name($default_service_name)) {
+                await $myriad->add_service($module, namespace => $namespace, name => $service_name);
+            } else {
+                await $myriad->add_service($module, namespace => $namespace);
+            }
         } catch ($e) {
             Future::Exception->throw(sprintf 'Failed to add service %s - %s', $module, $e);
         }
