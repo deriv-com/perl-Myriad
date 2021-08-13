@@ -114,59 +114,49 @@ async method create_group($receiver) {
 
 async method receive_items {
     $log->tracef('Start receiving from (%d) subscription sinks', scalar(@receivers));
-    while (1) {
-        if(@receivers) {
-            my $item = shift @receivers;
-            push @receivers, $item;
+    if(@receivers) {
+        await &fmap_void($self->$curry::curry(async method ($rcv) {
+            await $self->create_group($rcv);
+            my $stream     = $rcv->{key};
+            my $sink       = $rcv->{sink};
+            my $group_name = $rcv->{group_name};
 
-            my $stream     = $item->{key};
-            my $sink       = $item->{sink};
-            my $group_name = $item->{group_name};
+            await $sink->unblocked;
 
-            try {
-                await Future->wait_any(
-                    $self->loop->timeout_future(after => 0.5),
-                    $sink->unblocked,
+            while (1) {
+                my @events = await $redis->read_from_stream(
+                    stream => $stream,
+                    group  => $group_name,
+                    client => $client_id
                 );
-            } catch {
-                $log->tracef('skipped stream %s because sink is blocked', $stream);
-                next
-            }
 
-            await $self->create_group($item);
+                for my $event (@events) {
+                    try {
+                        my $event_data = decode_json_utf8($event->{data}->[1]);
+                        $log->tracef('Passing event: %s | from stream: %s to subscription sink: %s', $event_data, $stream, $sink->label);
+                        $sink->source->emit({
+                            data => $event_data
+                        });
+                    } catch($e) {
+                        $log->tracef(
+                            'An error happened while decoding event data for stream %s message: %s, error: %s',
+                            $stream,
+                            $event->{data},
+                            $e
+                        );
+                    }
 
-            my @events = await $redis->read_from_stream(
-                stream => $stream,
-                group  => $group_name,
-                client => $client_id
-            );
-
-            for my $event (@events) {
-                try {
-                    my $event_data = decode_json_utf8($event->{data}->[1]);
-                    $log->tracef('Passing event: %s | from stream: %s to subscription sink: %s', $event_data, $stream, $sink->label);
-                    $sink->source->emit({
-                        data => $event_data
-                    });
-                } catch($e) {
-                    $log->tracef(
-                        'An error happened while decoding event data for stream %s message: %s, error: %s',
+                    await $redis->ack(
                         $stream,
-                        $event->{data},
-                        $e
+                        $group_name,
+                        $event->{id}
                     );
                 }
-
-                await $redis->ack(
-                    $stream,
-                    $group_name,
-                    $event->{id}
-                );
             }
-        } else {
-            $log->tracef('No receivers, waiting for a few seconds');
-            await $self->loop->delay_future(after => 5);
-        }
+        }), foreach => [@receivers], concurrent => scalar @receivers);
+    } else {
+        $log->tracef('No receivers, waiting for a few seconds');
+        await $self->loop->delay_future(after => 5);
     }
 }
 
