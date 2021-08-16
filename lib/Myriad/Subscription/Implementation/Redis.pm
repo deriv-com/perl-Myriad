@@ -114,27 +114,25 @@ async method create_group($receiver) {
 
 async method receive_items {
     $log->tracef('Start receiving from (%d) subscription sinks', scalar(@receivers));
-    while (1) {
-        if(@receivers) {
-            my $item = shift @receivers;
-            push @receivers, $item;
+    while (@receivers == 0) {
+        $log->tracef('No receivers, waiting for a few seconds');
+        await $self->loop->delay_future(after => 5);
+    }
 
-            my $stream     = $item->{key};
-            my $sink       = $item->{sink};
-            my $group_name = $item->{group_name};
+    await &fmap_void($self->$curry::curry(async method ($rcv) {
+        my $stream     = $rcv->{key};
+        my $sink       = $rcv->{sink};
+        my $group_name = $rcv->{group_name};
 
+        while (1) {
             try {
-                await Future->wait_any(
-                    $self->loop->timeout_future(after => 0.5),
-                    $sink->unblocked,
-                );
-            } catch {
-                $log->tracef('skipped stream %s because sink is blocked', $stream);
-                next
+                await $self->create_group($rcv);
+            } catch ($e) {
+                $log->warnf('skipped subscription on stream %s because: %s will try again', $stream, $e);
+                await $self->loop->delay_future(after => 5);
+                next;
             }
-
-            await $self->create_group($item);
-
+            await $sink->unblocked;
             my @events = await $redis->read_from_stream(
                 stream => $stream,
                 group  => $group_name,
@@ -163,11 +161,8 @@ async method receive_items {
                     $event->{id}
                 );
             }
-        } else {
-            $log->tracef('No receivers, waiting for a few seconds');
-            await $self->loop->delay_future(after => 5);
         }
-    }
+    }), foreach => [@receivers], concurrent => scalar @receivers);
 }
 
 async method check_for_overflow () {
