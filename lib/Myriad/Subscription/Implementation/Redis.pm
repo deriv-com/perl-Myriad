@@ -124,8 +124,9 @@ async method receive_items {
                 try {
                     await $self->create_group($rcv);
                 } catch ($e) {
-                    $log->warnf('skipped subscription on stream %s because: %s will try again', $stream, $e);
-                    return;
+                    $log->tracef('skipped subscription on stream %s because: %s will try again after 1 second', $stream, $e);
+                    await $self->loop->delay_future(after => 1);
+                    next;
                 }
                 await $sink->unblocked;
                 my @events = await $redis->read_from_stream(
