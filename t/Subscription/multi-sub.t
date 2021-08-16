@@ -53,6 +53,14 @@ package Example::Sender2 {
             $sink->emit({event => $count++});
         }
     }
+
+    async method never_e : Emitter() ($sink) {
+        my $count = 1;
+        while (1) {
+            await $self->loop->delay_future(after => 10);
+            #
+        }
+    }
 }
 my %received;
 
@@ -102,6 +110,15 @@ package Example::Receiver {
             push @{$received{fast_e2}}, shift
         });
     }
+
+    async method never_receive : Receiver(
+        service => 'Example::Sender2',
+        channel => 'never_e'
+    ) ($src) {
+        return $src->map(sub {
+            push @{$received{never_e}}, shift
+        });
+    }
 }
 
 my $myriad = new_ok('Myriad');
@@ -128,6 +145,7 @@ is scalar $received{med_e}->@*, 2, 'Got the right number of events from medium_e
 is scalar $received{slow_e}->@*, 1, 'Got the right number of events from slow_emitter';
 is scalar $received{fast_e2}->@*, 15, 'Got the right number of events from fast_emitter2';
 is scalar $received{em}->@*, 3, 'Got the right number of events from secondary medium_emitter';
+is scalar $received{never_e}->@*, 0, 'Got no events from never_emit';
 
 
 done_testing;
