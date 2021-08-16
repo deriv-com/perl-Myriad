@@ -116,14 +116,18 @@ async method receive_items {
     $log->tracef('Start receiving from (%d) subscription sinks', scalar(@receivers));
     if(@receivers) {
         await &fmap_void($self->$curry::curry(async method ($rcv) {
-            await $self->create_group($rcv);
             my $stream     = $rcv->{key};
             my $sink       = $rcv->{sink};
             my $group_name = $rcv->{group_name};
 
-            await $sink->unblocked;
-
             while (1) {
+                try {
+                    await $self->create_group($rcv);
+                } catch ($e) {
+                    $log->warnf('skipped subscription on stream %s because: %s will try again', $stream, $e);
+                    return;
+                }
+                await $sink->unblocked;
                 my @events = await $redis->read_from_stream(
                     stream => $stream,
                     group  => $group_name,
