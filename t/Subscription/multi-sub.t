@@ -32,7 +32,7 @@ package Example::Sender {
             $sink->emit({event => $count++});
         }
     }
-    
+
     async method fast_e2 : Emitter() ($sink) {
         my $count = 1;
         while (1) {
@@ -41,7 +41,6 @@ package Example::Sender {
         }
     }
 }
-
 
 package Example::Sender2 {
 
@@ -67,7 +66,7 @@ package Example::Receiver {
             push @{$received{fast_e}}, shift
         });
     }
-    
+
     async method receiver_from_emitter : Receiver(
         service => 'Example::Sender',
         channel => 'med_e'
