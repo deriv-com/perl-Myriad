@@ -114,54 +114,54 @@ async method create_group($receiver) {
 
 async method receive_items {
     $log->tracef('Start receiving from (%d) subscription sinks', scalar(@receivers));
-    if(@receivers) {
-        await &fmap_void($self->$curry::curry(async method ($rcv) {
-            my $stream     = $rcv->{key};
-            my $sink       = $rcv->{sink};
-            my $group_name = $rcv->{group_name};
-
-            while (1) {
-                try {
-                    await $self->create_group($rcv);
-                } catch ($e) {
-                    $log->warnf('skipped subscription on stream %s because: %s will try again', $stream, $e);
-                    return;
-                }
-                await $sink->unblocked;
-                my @events = await $redis->read_from_stream(
-                    stream => $stream,
-                    group  => $group_name,
-                    client => $client_id
-                );
-
-                for my $event (@events) {
-                    try {
-                        my $event_data = decode_json_utf8($event->{data}->[1]);
-                        $log->tracef('Passing event: %s | from stream: %s to subscription sink: %s', $event_data, $stream, $sink->label);
-                        $sink->source->emit({
-                            data => $event_data
-                        });
-                    } catch($e) {
-                        $log->tracef(
-                            'An error happened while decoding event data for stream %s message: %s, error: %s',
-                            $stream,
-                            $event->{data},
-                            $e
-                        );
-                    }
-
-                    await $redis->ack(
-                        $stream,
-                        $group_name,
-                        $event->{id}
-                    );
-                }
-            }
-        }), foreach => [@receivers], concurrent => scalar @receivers);
-    } else {
+    while (@receivers == 0) {
         $log->tracef('No receivers, waiting for a few seconds');
         await $self->loop->delay_future(after => 5);
     }
+
+    await &fmap_void($self->$curry::curry(async method ($rcv) {
+        my $stream     = $rcv->{key};
+        my $sink       = $rcv->{sink};
+        my $group_name = $rcv->{group_name};
+
+        while (1) {
+            try {
+                await $self->create_group($rcv);
+            } catch ($e) {
+                $log->warnf('skipped subscription on stream %s because: %s will try again', $stream, $e);
+                return;
+            }
+            await $sink->unblocked;
+            my @events = await $redis->read_from_stream(
+                stream => $stream,
+                group  => $group_name,
+                client => $client_id
+            );
+
+            for my $event (@events) {
+                try {
+                    my $event_data = decode_json_utf8($event->{data}->[1]);
+                    $log->tracef('Passing event: %s | from stream: %s to subscription sink: %s', $event_data, $stream, $sink->label);
+                    $sink->source->emit({
+                        data => $event_data
+                    });
+                } catch($e) {
+                    $log->tracef(
+                        'An error happened while decoding event data for stream %s message: %s, error: %s',
+                        $stream,
+                        $event->{data},
+                        $e
+                    );
+                }
+
+                await $redis->ack(
+                    $stream,
+                    $group_name,
+                    $event->{id}
+                );
+            }
+        }
+    }), foreach => [@receivers], concurrent => scalar @receivers);
 }
 
 async method check_for_overflow () {
