@@ -160,8 +160,9 @@ async method receive_items {
             }
         }), foreach => [@receivers], concurrent => scalar @receivers);
     } else {
-        $log->tracef('No receivers, waiting for a few seconds');
-        await $self->loop->delay_future(after => 5);
+        $log->tracef('No receivers added to subscribe to');
+        # Keep future running for wait_any in $self->start
+        await $self->loop->new_future;
     }
 }
 
