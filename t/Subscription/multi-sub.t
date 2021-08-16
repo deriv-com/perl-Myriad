@@ -138,8 +138,6 @@ ok($myriad->subscription, 'subscription is initiated');
 my $loop = IO::Async::Loop->new;
 await $loop->delay_future(after => 3.2);
 
-use Data::Dumper;
-note Dumper(\%received);
 is scalar $received{fast_e}->@*, 15, 'Got the right number of events from fast_emitter';
 is scalar $received{med_e}->@*, 2, 'Got the right number of events from medium_emitter';
 is scalar $received{slow_e}->@*, 1, 'Got the right number of events from slow_emitter';
