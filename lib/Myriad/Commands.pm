@@ -61,10 +61,13 @@ async method service (@args) {
     }
 
     # Load modules to compile
+    my @services_modules;
     for my $module (@modules) {
         try {
             require_module($module);
+            next unless $module->isa('Myriad::Service');
             die 'loaded ' . $module . ' but it cannot ->new?' unless $module->can('new');
+            push @services_modules, $module;
         } catch ($e) {
             Future::Exception->throw(sprintf 'Service module %s not found', $module) if $e =~ /Can't locate.*(\Q$module\E)/;
             Future::Exception->throw(sprintf 'Failed to load module for service %s - %s', $module, $e);
@@ -88,7 +91,7 @@ async method service (@args) {
         } catch ($e) {
             Future::Exception->throw(sprintf 'Failed to add service %s - %s', $module, $e);
         }
-    }, foreach => \@modules, concurrent => 4);
+    }, foreach => \@services_modules, concurrent => 4);
 
     $cmd = {
         code => async sub {
