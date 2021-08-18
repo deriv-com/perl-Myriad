@@ -333,7 +333,7 @@ async method load () {
                     });
                     await $self->rpc->reply_success($service_name, $message, $response);
                 } catch ($e) {
-                    $e = Myriad::Exception::InternalError->new(reason => $e) unless (blessed $e and $e->isa('Myriad::Exception'));
+                    $e = Myriad::Exception::InternalError->new(reason => $e) unless (blessed $e and $e->does('Myriad::Exception'));
                     await $self->rpc->reply_error($service_name, $message, $e);
                 }
             }))->resolve->completed;

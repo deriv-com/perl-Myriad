@@ -21,7 +21,7 @@ See L<Myriad::Exception> for the rôle which defines the exception API.
 =cut
 
 no indirect qw(fatal);
-use parent 'Myriad::Exception';
+use Myriad::Exception;
 
 use overload '""' => sub { shift->as_string }, bool => sub { 1 }, fallback => 1;
 

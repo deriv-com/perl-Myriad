@@ -706,7 +706,7 @@ Prepare L<Metrics::Any::Adapter> to collect metrics.
 async method setup_metrics () {
     my $adapter = $config->metrics_adapter;
     my $host = $config->metrics_host;
-    my $port = $config->metrics_port; 
+    my $port = $config->metrics_port;
 
     try {
         await $loop->resolver->getaddrinfo(host => $host->as_string, timeout => 10);
