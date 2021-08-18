@@ -247,6 +247,16 @@ sub apply_decoding ($data, $encoding) {
     }
 }
 
+=head2 passed_deadline
+
+Check if the message is stil relevent
+
+=cut
+
+method passed_deadline {
+    time > $deadline ? 1 : 0;
+}
+
 1;
 
 =head1 AUTHOR

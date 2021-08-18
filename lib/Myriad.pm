@@ -297,7 +297,7 @@ async method configure_from_argv (@args) {
 
     $self->setup_logging;
     $self->setup_tracing;
-    $self->setup_metrics;
+    await $self->setup_metrics;
 
     $commands = Myriad::Commands->new(
         myriad => $self
@@ -703,10 +703,17 @@ Prepare L<Metrics::Any::Adapter> to collect metrics.
 
 =cut
 
-method setup_metrics () {
+async method setup_metrics () {
     my $adapter = $config->metrics_adapter;
     my $host = $config->metrics_host;
     my $port = $config->metrics_port;
+
+    try {
+        await $loop->resolver->getaddrinfo(host => $host->as_string, timeout => 10);
+    } catch ($e) {
+        $log->errorf('metrics: unable to resolve host %s - %s', $host->as_string, $e);
+        $host->set_string('127.0.0.1');
+    }
 
     # Metrics::Any::Adapter use a lexical variable to identify
     # the adapter instance that doesn't allow easy overrides.
@@ -723,8 +730,16 @@ method setup_metrics () {
         )   ;
         };
     }
+
     my $code = sub {
-        undef $metrics_adapter;
+        # Try to resolve the host first
+        $loop->resolver->getaddrinfo(host => $host->as_string, timeout => 10)
+        ->on_done(sub {
+            undef $metrics_adapter;
+        })->on_fail(sub {
+            $log->errorf('metrics: unable to resolve host %s - %s', $host->as_string, shift);
+            $host->set_string('127.0.0.1');
+        })->retain();
     };
 
     $adapter->subscribe($code);
