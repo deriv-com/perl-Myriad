@@ -106,7 +106,7 @@ async method listen () {
                     try {
                         my $message = Myriad::RPC::Message::from_hash($item->{data}->@*);
                         $log->tracef('Passing message: %s to: %s', $message, $rpc->{sink}->label);
-                        $rpc->{sink}->emit($message);
+                        $rpc->{sink}->emit($message) unless $message->passed_deadline;
                     } catch ($error) {
                         $log->tracef("error while parsing the incoming messages: %s", $error->message);
                         await $self->drop($rpc->{stream}, $item->{id});
