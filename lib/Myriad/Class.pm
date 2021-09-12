@@ -118,6 +118,7 @@ use Syntax::Keyword::Try;
 use Syntax::Keyword::Dynamically;
 use Syntax::Keyword::Defer;
 use Syntax::Keyword::Match;
+use Syntax::Operator::Equ;
 use Scalar::Util;
 use List::Util;
 use List::Keywords;
@@ -226,6 +227,7 @@ sub import {
     Syntax::Keyword::Try->import_into($pkg);
     Syntax::Keyword::Dynamically->import_into($pkg);
     Syntax::Keyword::Defer->import_into($pkg);
+    Syntax::Operator::Equ->import_into($pkg);
     Future::AsyncAwait->import_into($pkg, ':experimental(cancel)');
     Metrics::Any->import_into($pkg, '$metrics');
 
