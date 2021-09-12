@@ -54,8 +54,8 @@ requires 'Net::Async::Redis', '>= 3.015';
 requires 'Net::Async::HTTP', '>= 0.48';
 requires 'Net::Async::HTTP::Server', '>= 0.13';
 requires 'Net::Async::SMTP', '>= 0.002';
-requires 'Database::Async', '>= 0.015';
-requires 'Database::Async::Engine::PostgreSQL', '>= 0.011';
+requires 'Database::Async', '>= 0.016';
+requires 'Database::Async::Engine::PostgreSQL', '>= 0.012';
 # Introspection
 requires 'Devel::MAT::Dumper';
 
