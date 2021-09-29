@@ -86,7 +86,7 @@ A JSON encoded string contains the argument of the procedure.
 
 method args { $args }
 
-=head2 resposne
+=head2 response
 
 The response to this message.
 
@@ -245,6 +245,16 @@ sub apply_decoding ($data, $encoding) {
     } catch ($e) {
         Myriad::Exception::RPC::BadEncoding->throw(reason => $e);
     }
+}
+
+=head2 passed_deadline
+
+Check if the message is stil relevent
+
+=cut
+
+method passed_deadline {
+    time > $deadline ? 1 : 0;
 }
 
 1;

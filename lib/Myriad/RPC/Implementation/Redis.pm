@@ -124,6 +124,7 @@ async method process_pending ($rpc) {
 
 async method listen () {
     return $running //= (async sub {
+        $log->tracef('Start listening to (%d) RPC streams', scalar($self->rpc_list->@*));
         await &fmap_void($self->$curry::curry(async method ($rpc) {
             await $self->create_group($rpc);
 
@@ -138,10 +139,16 @@ async method listen () {
                     push $item->{data}->@*, ('transport_id', $item->{id});
                     try {
                         my $message = Myriad::RPC::Message::from_hash($item->{data}->@*);
+                        $log->tracef('Passing message: %s to: %s', $message, $rpc->{sink}->label);
+                        if ($message->passed_deadline) {
+                            $log->tracef('Skipping message %s because deadline is due - deadline: %s now: %s',
+                                $message->transport_id, $message->deadline, time);
+                            next;
+                        }
                         $rpc->{sink}->emit($message);
                     } catch ($error) {
                         $log->tracef("error while parsing the incoming messages: %s", $error->message);
-                        await $self->drop($rpc->{stream}, $_->{id});
+                        await $self->drop($rpc->{stream}, $item->{id});
                     }
                 }
             }
@@ -171,7 +178,7 @@ async method reply_error ($service, $message, $error) {
 }
 
 async method drop ($stream, $id) {
-    $log->tracef("Going to drop message: %s", $id);
+    $log->tracef("Going to drop message ID: %s on stream: %s", $id, $stream);
     await $self->redis->ack($stream, $self->group_name, $id);
 }
 

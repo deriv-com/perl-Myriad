@@ -70,7 +70,7 @@ sub add_service {
     } elsif ($service = delete $args{name}) {
         die 'The name should look like a Perl package name' unless $service =~ /::/;
         $pkg  = $service;
-        $meta = Object::Pad->begin_class($pkg, extends => 'Myriad::Service::Implementation');
+        $meta = Object::Pad::MOP::Class->begin_class($pkg, extends => 'Myriad::Service::Implementation');
 
         {
             no strict 'refs';
@@ -97,6 +97,16 @@ at the moment it is just a shortcut for L<Myriad> run_future.
 
 sub ready {
     return $myriad->run_future;
+}
+
+=head2 instance
+
+Returns the L<Myriad> instance we are using
+
+=cut
+
+sub instance {
+    return $myriad;
 }
 
 sub import {

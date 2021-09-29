@@ -43,14 +43,26 @@ subtest "service command" => sub {
     # Fake existence of two sibling modules
     {
         package Ta::Sibling1;
+        {
+            no strict 'refs';
+            push @{Ta::Sibling1::ISA}, 'Myriad::Service';
+        }
         sub new { }
     }
     {
         package Ta::Sibling2;
+        push @{Ta::Sibling2::ISA}, 'Myriad::Service';
         sub new { }
     }
+
+    {
+        package Ta::Sibling3;
+        sub new { }
+    }
+
     $INC{'Ta/Sibling1.pm'} = 1;
     $INC{'Ta/Sibling2.pm'} = 1;
+    $INC{'Ta/Sibling3.pm'} = 1;
     ######
 
     my $metaclass = Object::Pad::MOP::Class->for_class('Myriad');
@@ -75,15 +87,6 @@ subtest "service command" => sub {
     # Clear it for next test.
     @added_services_modules = ();
 
-
-    # Command to run multiple services should not be allowed when service_name option is set
-    my $srv_run_name = 'service.test.one';
-    $metaclass->get_slot('$config')->value($myriad) = Myriad::Config->new( commandline => ['--service_name', $srv_run_name] );
-    like (exception {wait_for_future( $command->service('Ta::') )->get}, qr/You cannot pass a service/, 'Not able to load multiple due to set service_name');
-    # However allowed to run 1
-    wait_for_future( $command->service('Ta::Sibling1')->get->{code}->() )->get;
-    cmp_deeply(\@added_services_modules, ['Ta::Sibling1'], 'Added one service');
-    cmp_deeply(\@add_services_by_name, [$srv_run_name], "Added $srv_run_name by name");
     done_testing;
 };
 

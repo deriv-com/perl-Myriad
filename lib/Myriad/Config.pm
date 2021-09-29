@@ -9,7 +9,7 @@ use Myriad::Class;
 
 =head1 NAME
 
-Myriad::Config
+Myriad::Config - dynamic configuration management for microservices
 
 =head1 DESCRIPTION
 
@@ -50,6 +50,7 @@ alternative.
 # Default values
 
 our %DEFAULTS = (
+    services               => { },
     config_path            => 'config.yml',
     transport_redis        => 'redis://localhost:6379',
     transport_redis_cache  => 0,
@@ -62,7 +63,9 @@ our %DEFAULTS = (
     rpc_transport          => undef,
     storage_transport      => undef,
     transport              => 'redis',
-    service_name           => '',
+    metrics_adapter        => 'Statsd',
+    metrics_host           => 'localhost',
+    metrics_port           => '8125',
 );
 
 =head2 FULLNAME_FOR
@@ -82,7 +85,7 @@ our %FULLNAME_FOR = (
 
 =head2 SERVICES_CONFIG
 
-A registry of configs defined by the services using the C<< config  >> helper.
+A registry of service configuration defined by the services using the C<< config >> helper.
 
 =cut
 
@@ -90,7 +93,8 @@ our %SERVICES_CONFIG;
 
 =head2 ACTIVE_SERVICES_CONFIG
 
-A collection of L<Ryu::Observable> to notify services about updates on the configs values
+A collection of L<Ryu::Observable> instances for notifying services about updates on their
+configuration.
 
 =cut
 
@@ -165,61 +169,57 @@ the best use case for this sub is during tests.
 =cut
 
 method clear_all {
-    $config = {};
+    $config = {
+        services               => { },
+    };
 }
 
 =head2 parse_subargs
 
 A helper to resolve the correct service config
 
-input is expected to look like <service_name>_[configs|instances].<key>
+input is expected to look like:
+
+ <service_name>_[config|instance].<key>
 
 and this sub will set the correct path to key with the provided value.
 
 Example:
 
-dummy_service.configs.password
+ dummy_service.config.password
 
 will end up in
 
-$config->{services}->{dummy_service}->{configs}->{password}
+ $config->{services}->{dummy_service}->{config}->{password}
 
-it takes:
+Takes the following parameters:
 
 =over 4
 
-=item * C<subarg> - the arguments as passed by the user.
+=item * C<$subarg> - the arguments as passed by the user.
 
-=item * C<root> - the level in which we should add the sub arg, we start from $config->{services}.
+=item * C<$root> - the level in which we should add the sub arg, we start from $config->{services}.
 
-=item * C<value> - the value that we should assign after resolving the config path.
+=item * C<$value> - the value that we should assign after resolving the config path.
 
 =back
 
 =cut
 
 method parse_subargs ($subarg, $root, $value) {
-    my $service_name = $subarg =~ s/(.*?)[_|\.](configs?|instances?)(.*)/$2$3/ && $1;
-    die 'invalid service name' unless $2;
+    my $instance = $subarg =~ s{[_.]instance[_.](.*)(?=[_.]config)}{} && $1;
+    my $config = $subarg =~ s{[_.]config[_.](.*)$}{} && $1;
 
-    $service_name =~ s/_/\./g;
-    $root = $root->{$service_name} //= {};
+    my $service_name = $subarg =~ tr/_/./r;
+    $instance = $instance =~ tr/_/./r if $instance;
+    $config = $config =~ tr/./_/r if $config;
 
-    my @sublist = split /_|\./, $subarg;
-    die 'config key is not formated correctly' unless @sublist;
-
-    # configs is the latest level before starting a keyname
-    # Also users might pass config instead of configs
-    while ($sublist[0] !~ s/(config)s?/$1s/) {
-        my $level = shift @sublist;
-        $level .= 's' if $level eq 'instance';
-
-        $root->{$level} //= {};
-        $root= $root->{$level};
+    die 'invalid service name' unless length $service_name;
+    if(length $instance) {
+        $root->{$service_name}{instance}{$instance}{config}{$config} = $value;
+    } else {
+        $root->{$service_name}{config}{$config} = $value;
     }
-    shift @sublist;
-    my $key_name = join '_', @sublist;
-    $root->{configs}->{$key_name} = $value;
 }
 
 =head2 lookup_from_args
@@ -227,13 +227,13 @@ method parse_subargs ($subarg, $root, $value) {
 Parse the arguments provided from the command line.
 
 There are many modules that can parse command lines arguments
-but in our case we have unknown arguments - the services configs - that
+but in our case we have unknown arguments - the services config - that
 might be passed by the user or might not and they are on top of that nested.
 
 This sub simply start looking for a match for the arg at hand in C<%DEFAULTS>
 then it searches in the shortcuts map and lastly it tries to parse it as a subarg.
 
-Currently this sub takes into account flags (0|1) configs and config written as:
+Currently this sub takes into account flags (0|1) config and config written as:
 config=value
 
 
@@ -256,7 +256,7 @@ method lookup_from_args ($commandline) {
             # Either `--example=123` or `--example 123`
             $value = shift $commandline->@* unless defined $value;
             $config->{$key} = $value;
-        } elsif ($arg =~ s/services?[_|\.]//) { # are we doing service config
+        } elsif ($arg =~ s/service[_|\.]//) { # are we doing service config
             $value = shift $commandline->@* unless $value;
             try {
                 $self->parse_subargs($arg, $config->{services}, $value);
@@ -278,16 +278,23 @@ method lookup_from_args ($commandline) {
 
 =head2 lookup_from_env
 
-Tries to find environments variables that start with MYRIAD_* and parse them.
+Try to find environment variables that start with C<MYRIAD_*> and parse them.
 
 =cut
 
 method lookup_from_env () {
-    $config->{$_} //= delete $ENV{'MYRIAD_' . uc($_)} for grep { exists $ENV{'MYRIAD_' . uc($_)} } keys %DEFAULTS;
-    map {
-        s/(MYRIAD_SERVICES?_)//;
-        $self->parse_subargs(lc($_), $config->{services} //= {}, $ENV{$1 . $_});
-    } (grep {$_ =~ /MYRIAD_SERVICES?_/} keys %ENV);
+    $config->{$_} //= $ENV{'MYRIAD_' . uc($_)} for grep {
+        exists $ENV{'MYRIAD_' . uc($_)}
+    } keys %DEFAULTS;
+
+    for(map { /^MYRIAD_SERVICE_(.*)$/ ? [ $_, $1 ] : () } sort keys %ENV) {
+        my ($k, $service) = @$_;
+        $self->parse_subargs(
+            lc($service),
+            $config->{services},
+            $ENV{$k},
+        );
+    }
 }
 
 =head2 lookup_from_file
@@ -339,7 +346,7 @@ it takes
 
 =item * C<pkg> - The package name of the service, will be used to lookup for generic config
 
-=item * C<service_name> - The current service name either from the registry or as it bassed by the user, useful for instances config
+=item * C<service_name> - The current service name either from the registry or as it bassed by the user, useful for instance config
 
 =back
 
@@ -348,11 +355,11 @@ it takes
 async method service_config ($pkg, $service_name) {
     my $service_config = {};
     my $instance = $service_name =~ s/\[(.*)\]$// && $1;
-    my $available_config = $config->{services}->{$service_name}->{configs};
+    my $available_config = $config->{services}->{$service_name}->{config};
 
     my $instance_overrides = {};
     $instance_overrides =
-        $config->{services}->{$service_name}->{instances}->{$instance}->{configs} if $instance;
+        $config->{services}->{$service_name}->{instance}->{$instance}->{config} if $instance;
     if(my $declared_config = $SERVICES_CONFIG{$pkg}) {
         for my $key (keys $declared_config->%*) {
             my $value;
@@ -372,6 +379,19 @@ async method service_config ($pkg, $service_name) {
     }
 
     return $service_config;
+}
+
+=head2 service_name
+
+Check if the developer configured a name for this service.
+This is different from service_config because we are going
+to check args and ENV only looking using the default
+L<Myriad::Registery> assigned name
+
+=cut
+
+method service_name($name_from_registry) {
+    $config->{services}->{$name_from_registry}->{config}->{name};
 }
 
 =head2 from_storage
@@ -434,7 +454,7 @@ async method listen_for_updates () {
             $log->trace('Config: transport do not support keyspace notifications');
         }
     } else {
-        $log->warn('Config: Storage is not initiated, cannot listen to configs updates');
+        $log->warn('Config: Storage is not initiated, cannot listen to config updates');
     }
 }
 

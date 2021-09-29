@@ -118,6 +118,7 @@ use Syntax::Keyword::Try;
 use Syntax::Keyword::Dynamically;
 use Syntax::Keyword::Defer;
 use Syntax::Keyword::Match;
+use Syntax::Operator::Equ;
 use Scalar::Util;
 use List::Util;
 use List::Keywords;
@@ -226,27 +227,13 @@ sub import {
     Syntax::Keyword::Try->import_into($pkg);
     Syntax::Keyword::Dynamically->import_into($pkg);
     Syntax::Keyword::Defer->import_into($pkg);
+    Syntax::Operator::Equ->import_into($pkg);
     Future::AsyncAwait->import_into($pkg, ':experimental(cancel)');
     Metrics::Any->import_into($pkg, '$metrics');
 
     # Others use lexical hints
     List::Keywords->import(qw(any all));
     Syntax::Keyword::Match->import(qw(match));
-
-    # For history here, see this:
-    # https://rt.cpan.org/Ticket/Display.html?id=132337
-    # At the time of writing, ->begin_class is undocumented
-    # but can be seen in action in this test:
-    # https://metacpan.org/source/PEVANS/Object-Pad-0.21/t/70mop-create-class.t#L30
-    Object::Pad->import_into($pkg);
-    my $meta = Object::Pad->begin_class(
-        $pkg,
-        (
-            $args{extends}
-            ? (extends => $args{extends})
-            : ()
-        )
-    );
 
     {
         no strict 'refs';
@@ -259,7 +246,26 @@ sub import {
         );
         *{$pkg . '::tracer'}  = \(OpenTracing->global_tracer);
     }
-    return $meta;
+
+    if(my $class = $args{class} || $pkg) {
+        # For history here, see this:
+        # https://rt.cpan.org/Ticket/Display.html?id=132337
+        # At the time of writing, ->begin_class is undocumented
+        # but can be seen in action in this test:
+        # https://metacpan.org/source/PEVANS/Object-Pad-0.21/t/70mop-create-class.t#L30
+        Object::Pad->import_into($pkg);
+        my $meta = Object::Pad::MOP::Class->begin_class(
+            $pkg,
+            (
+                $args{extends}
+                ? (extends => $args{extends})
+                : ()
+            ),
+        );
+        # Note that `does` is not supported yet due to https://rt.cpan.org/Ticket/Display.html?id=137952
+        return $meta;
+    }
+    return $pkg;
 }
 
 1;
