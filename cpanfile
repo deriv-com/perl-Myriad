@@ -3,16 +3,16 @@ requires 'mro';
 requires 'indirect';
 requires 'multidimensional';
 requires 'bareword::filehandles';
-requires 'XS::Parse::Keyword', '>= 0.14';
+requires 'XS::Parse::Keyword', '>= 0.18';
 requires 'Syntax::Keyword::Dynamically', '>= 0.09';
 requires 'Syntax::Keyword::Try', '>= 0.25';
 requires 'Syntax::Keyword::Defer', '>= 0.06';
 requires 'Syntax::Keyword::Match', '>= 0.08';
-requires 'Syntax::Operator::Equ', '>= 0.01';
+requires 'Syntax::Operator::Equ', '>= 0.02';
 requires 'Future', '>= 0.47';
 requires 'Future::Queue';
 requires 'Future::AsyncAwait', '>= 0.53';
-requires 'Object::Pad', '>= 0.52';
+requires 'Object::Pad', '>= 0.53';
 requires 'Role::Tiny', '>= 2.002004';
 # Streams
 requires 'Ryu', '>= 3.002';
@@ -44,14 +44,14 @@ requires 'Module::Pluggable::Object';
 requires 'Math::Random::Secure';
 requires 'Getopt::Long';
 requires 'Pod::Usage';
-requires 'List::Util', '>= 1.56';
+requires 'List::Util', '>= 1.59';
 requires 'List::Keywords', '>= 0.08';
 # Integration
 requires 'Net::Async::OpenTracing', '>= 1.000';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
 requires 'Metrics::Any::Adapter::Statsd', '>= 0.03';
 # Transport
-requires 'Net::Async::Redis', '>= 3.015';
+requires 'Net::Async::Redis', '>= 3.016';
 requires 'Net::Async::HTTP', '>= 0.48';
 requires 'Net::Async::HTTP::Server', '>= 0.13';
 requires 'Net::Async::SMTP', '>= 0.002';
