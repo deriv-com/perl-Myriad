@@ -59,33 +59,12 @@ async method start () {
         await &fmap_void($self->$curry::curry(async method ($rpc) {
             unless ($rpc->{group}) {
                  my $pending_messages = await $transport->pending_stream_by_consumer($rpc->{stream}, $self->group_name, hostname());
-                 use Data::Dumper; warn "PENDING: ". Dumper($pending_messages);
                  await $self->process_stream_messages(rpc => $rpc, messages => $pending_messages);
                  await $transport->create_consumer_group($rpc->{stream}, $self->group_name, 0, 1);
                  $rpc->{group} = 1;
             }
-
             my $messages = await $transport->read_from_stream_by_consumer($rpc->{stream}, $self->group_name, hostname());
             await $self->process_stream_messages(rpc => $rpc, messages => $messages);
-=d
-            for my $id (sort keys $messages->%*) {
-                my $message;
-                try {
-                    $messages->{$id}->{transport_id} = $id;
-                    $message = Myriad::RPC::Message::from_hash($messages->{$id}->%*);
-                    $rpc->{sink}->emit($message);
-                } catch ($e) {
-                    if (blessed $e && $e->isa('Myriad::Exception::RPC::BadEncoding')) {
-                        $log->warnf('Recived a dead message that we cannot parse, going to drop it.');
-                        $log->tracef("message was: %s", $messages->{$id});
-                        await $self->drop($rpc->{stream}, $id);
-                    } else {
-                        my ($service) = $rpc->{stream} =~ /service.(.*).rpc\//;
-                        await $self->reply_error($service, $message, $e);
-                    }
-                }
-            }
-=cut
         }), foreach => [ $self->rpc_list->@* ], concurrent => 8);
         await Future::wait_any($should_shutdown, $self->loop->delay_future(after => 0.1));
     }
