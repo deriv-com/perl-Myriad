@@ -33,12 +33,14 @@ method group_name { $group_name //= 'processors' }
 
 has $should_shutdown;
 has $rpc_list;
+has $processing;
 
 method rpc_list { $rpc_list };
 
 method configure(%args) {
     $transport = delete $args{transport} if exists $args{transport};
     $rpc_list //= [];
+    $processing //={};
     $self->next::method(%args);
 }
 
@@ -56,11 +58,16 @@ async method start () {
     while (1) {
         await &fmap_void($self->$curry::curry(async method ($rpc) {
             unless ($rpc->{group}) {
+                 my $pending_messages = await $transport->pending_stream_by_consumer($rpc->{stream}, $self->group_name, hostname());
+                 use Data::Dumper; warn "PENDING: ". Dumper($pending_messages);
+                 await $self->process_stream_messages(rpc => $rpc, messages => $pending_messages);
                  await $transport->create_consumer_group($rpc->{stream}, $self->group_name, 0, 1);
                  $rpc->{group} = 1;
             }
 
             my $messages = await $transport->read_from_stream_by_consumer($rpc->{stream}, $self->group_name, hostname());
+            await $self->process_stream_messages(rpc => $rpc, messages => $messages);
+=d
             for my $id (sort keys $messages->%*) {
                 my $message;
                 try {
@@ -78,9 +85,43 @@ async method start () {
                     }
                 }
             }
+=cut
         }), foreach => [ $self->rpc_list->@* ], concurrent => 8);
         await Future::wait_any($should_shutdown, $self->loop->delay_future(after => 0.1));
     }
+}
+
+=head2 process_stream_messages
+
+Process and emit recieved messages while making sure we respond to them
+
+=cut
+
+async method process_stream_messages (%args) {
+
+    my $rpc = $args{rpc};
+    my $messages = $args{messages};
+
+    for my $id (sort keys $messages->%*) {
+        my $message;
+        $processing->{$rpc->{stream}}->{$id} = $self->loop->new_future(label => "rpc::response::$rpc->{stream}::$id");
+        try {
+            $messages->{$id}->{transport_id} = $id;
+            $message = Myriad::RPC::Message::from_hash($messages->{$id}->%*);
+            $rpc->{sink}->emit($message);
+        } catch ($e) {
+            if (blessed $e && $e->isa('Myriad::Exception::RPC::BadEncoding')) {
+                $log->warnf('Recived a dead message that we cannot parse, going to drop it.');
+                $log->tracef("message was: %s", $messages->{$id});
+                await $self->drop($rpc->{stream}, $id);
+            } else {
+                my ($service) = $rpc->{stream} =~ /service.(.*).rpc\//;
+                await $self->reply_error($service, $message, $e);
+            }
+        }
+    }
+    await Future->needs_all(values $processing->{$rpc->{stream}}->%*);
+    $processing->{$rpc->{stream}} = {};
 }
 
 =head2 create_from_sink
@@ -120,9 +161,11 @@ In this implementation it's done by resolving the L<Future> calling C<done>.
 =cut
 
 async method reply_success ($service, $message, $response) {
+    my $stream = $self->stream_name($service, $message->rpc);
     $message->response = { response => $response };
     await $transport->publish($message->who, $message->as_json);
-    await $transport->ack_message($self->stream_name($service, $message->rpc), $self->group_name, $message->transport_id);
+    await $transport->ack_message($stream, $self->group_name, $message->transport_id);
+    $processing->{$stream}->{$message->transport_id}->done('published');
 }
 
 =head2 reply_error
@@ -134,9 +177,11 @@ In this implementation it's done by resolving the L<Future> calling C<fail>.
 =cut
 
 async method reply_error ($service, $message, $error) {
+    my $stream = $self->stream_name($service, $message->rpc);
     $message->response = { error => { category => $error->category, message => $error->message, reason => $error->reason } };
     await $transport->publish($message->who, $message->as_json);
-    await $transport->ack_message($self->stream_name($service, $message->rpc), $self->group_name, $message->transport_id);
+    await $transport->ack_message($stream, $self->group_name, $message->transport_id);
+    $processing->{$stream}->{$message->transport_id}->done('published');
 }
 
 =head2 drop
@@ -147,6 +192,7 @@ Drop the request because we can't reply to the requester.
 
 async method drop ($stream, $id) {
     await $transport->ack_message($stream, $self->group_name, $id);
+    $processing->{$stream}->{$id}->done('published');
 }
 
 =head2 stream_name

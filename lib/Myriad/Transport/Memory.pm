@@ -208,6 +208,47 @@ async method read_from_stream_by_consumer ($stream_name, $group_name, $consumer_
     return \%messages;
 }
 
+=head2 pending_stream_by_consumer
+
+Read pending elements from the stream for the given group.
+
+This operation will return messages consumed but not yet acknowledged only.
+It will return items regardless of their consumer.
+
+=over 4
+
+=item * C<stream_name> - The name of the stream should exist before calling this sub.
+
+=item * C<group_name> - The name of the group should exist before callingg this sub.
+
+=item * C<consumer_name> - The current consumer name, will be used to keep tracking of pendign messages.
+
+=item * C<offset> - If given the consumer can skip the given number of messages.
+
+=item * C<count> - The limit of messages to be received.
+
+=back
+
+=cut
+
+async method pending_stream_by_consumer ($stream_name, $group_name, $consumer_name, $offset = 0, $count = 10) {
+    my ($stream, $group);
+    try {
+        ($stream, $group) = $self->get_stream_group($stream_name, $group_name);
+    } catch ($e) {
+        return {};
+    }
+    my $group_offset = $offset + $group->{cursor};
+    my %messages;
+    for my $i ($offset..$group->{cursor}) {
+        if (my $message = $stream->{data}->{$i}) {
+            $messages{$i} = $message->{data};
+            $group->{pendings}->{$i} = {since => time, consumer => $consumer_name, delivery_count => 0};
+        }
+    }
+
+    return \%messages;
+}
 =head2 ack_message
 
 Remove a message from the pending list.

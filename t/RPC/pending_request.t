@@ -12,6 +12,10 @@ use IO::Async::Loop;
 
 use Myriad;
 
+package Service::Test {
+    use Myriad::Service;
+}
+
 package Service::RPC {
     use Myriad::Service;
     # seems that it cuase some race-condition
@@ -50,37 +54,22 @@ package Service::RPC {
     }
 };
 
-package Service::Caller {
-    use Myriad::Service;
-    has $count_req = 0;
-    has $count_res = 0;
+my $loop = IO::Async::Loop->new;
+async sub myriad_instance {
+    my $service = shift // '';
 
-    async method keep_calling : Batch () {
-        my $service = $api->service_by_name('service.rpc');
-        $count_req++;
-        $log->tracef('Calling %s', $count_req);
-        my $res = await $service->call_rpc('controlled_rpc', timeout => 1, count => $count_req);
-        $count_res = $res->{internal_count};
-        # Mainly to control frequency and get consistent numbers.
-        await $self->loop->delay_future(after => 0.1);
-        return [ { res => $res } ];
-    }
+    my $myriad = new_ok('Myriad');
+    my @config = ('--transport', $ENV{MYRIAD_TRANSPORT} // 'memory', '--transport_cluster', $ENV{MYRIAD_TRANSPORT_CLUSTER} // 0, '-l', 'trace');
+    await $myriad->configure_from_argv(@config, $service);
+    $myriad->run->retain->on_fail(sub { die shift; });
 
-    async method current_count : RPC (%args) {
-        my $rpc_storage = $api->service_by_name('service.rpc')->storage;
-        my $rpc_count = await $rpc_storage->get('count');
-        return { count_req => $count_req, count_res => $count_res, rpc_count => $rpc_count };
-    }
-};
+    return $myriad;
 
+}
 
 subtest 'RPCs on start should check and process pending messages on start'  => sub {
     (async sub {
-        my $loop = IO::Async::Loop->new;
-        my $f_rpc_m = new_ok('Myriad');  # Failing RPC Service Myriad.
-        my $caller_m = new_ok('Myriad'); # Calling Service Myriad.
-        my $p_rpc_m = new_ok('Myriad');  # Passing RPC Service Myriad.
-        my @main_args = ('--transport', $ENV{MYRIAD_TRANSPORT} // 'memory', '--transport_cluster', $ENV{MYRIAD_TRANSPORT_CLUSTER} // 0);
+
         # Need to Mock, in fact this is reassuring as this case only happens in dire situation.
         # i.e when service is forcefully stopped or got intruppted halfway through a request.
         my $redis_module = Test::MockModule->new('Myriad::RPC::Implementation::Redis');
@@ -89,82 +78,35 @@ subtest 'RPCs on start should check and process pending messages on start'  => s
             my ($self, $service, $message, $error) = @_;
             push @$drop_is_called, { service => $service, error => $error, message => $message };
         });
-        # Run the services
-        # Failing RPC service
-        await $f_rpc_m->configure_from_argv(@main_args, 'Service::RPC');
-        $f_rpc_m->run->retain->on_fail(sub {
-            die shift;
-        });
 
-        # Caller service
-        await $caller_m->configure_from_argv(@main_args, 'Service::Caller');
-        $caller_m->run->retain->on_fail(sub {
-            die shift;
-        });
+        $ENV{'fail_rpc_1'} = 1;
+        
+        my $rpc_myriad = await myriad_instance('Service::RPC');
+        my $myriad = await myriad_instance('Service::Test');
 
-        # Let the first call happen.
+        # Do not fully wait for it right now.
+        my $req = $myriad->rpc_client->call_rpc('service.rpc', 'controlled_rpc', fail => 1);
         await $loop->delay_future(after => 0.1);
-        my $response = await $caller_m->rpc_client->call_rpc('service.caller', 'current_count')->catch(sub {warn shift});
-        note time . " | RES: " . $response->{count_res} . " | REQ: " . $response->{count_req};
-        is $response->{count_req}, 1, 'We only sent one request';
-        is $response->{count_res} + 1, $response->{count_req}, 'We yet to  get a response for it.';
-        
-        note 'Shutting down Failing RPC Service and Starting a new one with a passing RPC (mimicking restart)';
-        await $f_rpc_m->shutdown;
+
+        await $rpc_myriad->shutdown;
+        undef $rpc_myriad;
         $ENV{'fail_rpc_1'} = 0;
-        await $p_rpc_m->configure_from_argv(@main_args, 'Service::RPC');
-        $p_rpc_m->run->retain->on_fail(sub {
-            die shift;
-        });
-
+        #await $loop->delay_future(after => 0.2);
+        $rpc_myriad = await myriad_instance('Service::RPC');
         
-        await $loop->delay_future(after => 0.5);
-        $response = await $caller_m->rpc_client->call_rpc('service.caller', 'current_count')->catch(sub {warn shift});
-        note time . " | RES2: " . $response->{count_res} . " | REQ: " . $response->{count_req} . " | RPC_res: ". $response->{rpc_count};
-        cmp_ok $response->{count_req}, '>', 1, "We sent more requests $response->{count_req}";
-        is $response->{count_res}, $response->{count_req}, 'We got responses for all of our requests and nothing timedout';
-        is $response->{count_res}, $response->{rpc_count}, 'We got matching response count';
-        await $caller_m->shutdown;
-        await $p_rpc_m->shutdown;
-        $loop->stop;
-=c
-=d
-            $loop->delay_future(after => 2)->then(async sub {
-                my $response = await $caller_m->rpc_client->call_rpc('service.caller', 'current_count')->catch(sub {warn shift});
-                note time . " | RES: " . $response->{count_res} . " | REQ: " . $response->{count_req};
-                # should be zero as all are timedout
-                note 'turning off';
-                $f_rpc_m->shutdown->await;
-                await $p_rpc_m->configure_from_argv(@main_args, '--services.test.service.tworpc.configs.fail_rpc_1','0', 'Service::RPC');
-                $p_rpc_m->run->retain->on_fail(sub {
-                    die shift;
-                });
-=c
-                $f_rpc_m->configure_from_argv(@main_args, '--services.test.service.tworpc.configs.fail_rpc_1', '0', 'Service::RPC')->then(async sub {
-                    $f_rpc_m->run;
-                });
-                note "re-ran with passing option";
-            }),
-        #await $myriad->configure_from_argv('--transport', $ENV{MYRIAD_TRANSPORT} // 'memory', '--transport_cluster', $ENV{MYRIAD_TRANSPORT_CLUSTER} // 0, 'Service::RPC,Service::Caller');
+        # check request now
+        my $first_req = await $req;
+        my $second_req = await $rpc_myriad->rpc_client->call_rpc('service.rpc', 'controlled_rpc', fail => 0);
+        
+        is scalar @$drop_is_called, 1, 'Drop is only called once';
+        is_deeply $first_req, {fail => 1, internal_count => 1}, 'Correct first request response'; 
+        is_deeply $second_req, {fail => 0, internal_count => 2}, 'Correct second request response'; 
 
-        # Run the service
-        $myriad->run->retain->on_fail(sub {
-            die shift;
-        });
-        await $myriad->loop->delay_future(after => 0.25);
+        # This is needed to ensure complete operation after publishing response.
+        my $finish = $loop->delay_future(after => 0.1)->on_done(sub {$rpc_myriad->shutdown->get; $myriad->shutdown->get;});
+        await Future->needs_all($finish, $rpc_myriad->shutdown_future, $myriad->shutdown_future);
 
-        # if one RPC doesn't have messages it should not block the others
-        while ( 1 ) {
-            await Future->wait_any(
-                fmap_void(async sub {
-                    my $rpc = shift;
-                    my $response = await $myriad->rpc_client->call_rpc('service.caller', $rpc)->catch(sub {warn shift});
-                    note "RES: " . $response->{count};
-                }, foreach => ['current_count'], concurrent => 3),
-                $myriad->loop->timeout_future(after => 4)
-            );
-        }
-=cut
+
     })->()->get();
 };
 

@@ -357,9 +357,8 @@ async method pending (%args) {
         @res = await &fmap_concat($self->$curry::weak(
             async method ($item) {
                 my ($id, $consumer, $age, $delivery_count) = $item->@*;
-                $log->tracef('Claiming pending message %s from %s, age %s, %d prior deliveries', $id, $consumer, $age, $delivery_count);
                 my $claim = await $redis->xclaim($stream, $group, $client, 10, $id);
-                $log->tracef('Claim is %s', $claim);
+                $log->tracef('Claimed pending message %s from %s, age %s, %d prior deliveries | Claim: %s', $id, $consumer, $age, $delivery_count, $claim);
                 my $args = $claim->[0]->[1];
                 return {
                     stream => $self->remove_prefix($stream),
