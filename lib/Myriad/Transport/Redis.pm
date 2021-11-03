@@ -340,42 +340,49 @@ Returns a L<Ryu::Source> for the pending items in this stream.
 
 =cut
 
-async method pending (%args) {
+method pending (%args) {
+    my $src = $self->source;
     my $stream = $self->apply_prefix($args{stream});
     my $group = $args{group};
     my $client = $args{client};
-    my @res = ();
-    my $instance = await $self->borrow_instance_from_pool;
-    try {
-        my ($pending) = await $instance->xpending(
-            $stream,
-            $group,
-            '-', '+',
-            $self->batch_count,
-            $client,
-        );
-        @res = await &fmap_concat($self->$curry::weak(
-            async method ($item) {
-                my ($id, $consumer, $age, $delivery_count) = $item->@*;
-                my $claim = await $redis->xclaim($stream, $group, $client, 10, $id);
-                $log->tracef('Claimed pending message %s from %s, age %s, %d prior deliveries | Claim: %s', $id, $consumer, $age, $delivery_count, $claim);
-                my $args = $claim->[0]->[1];
-                return {
-                    stream => $self->remove_prefix($stream),
-                    id => $id,
-                    data => $args ? $args : []
-                };
-            }),
-            foreach => $pending,
-            concurrent => 8
-        );
-    } catch ($e) {
-        $log->warnf('Could not read pending messages on stream: %s | error: %s', $stream, $e);
-    }
-    $self->return_instance_to_pool($instance) if $instance;
-    undef $instance;
-
-    return @res;
+    Future->wait_any(
+        $src->completed,
+        (async method {
+            my $instance = await $self->borrow_instance_from_pool;
+            try {
+                my $src = $self->source;
+                my $start = '-';
+                while (1) {
+                    await $src->unblocked;
+                    my ($pending) = await $instance->xpending(
+                        $stream,
+                        $group,
+                        $start, '+',
+                        $self->batch_count,
+                        $client,
+                    );
+                    for my $item ($pending->@*) {
+                        my ($id, $consumer, $age, $delivery_count) = $item->@*;
+                        $log->tracef('Claiming pending message %s from %s, age %s, %d prior deliveries', $id, $consumer, $age, $delivery_count);
+                        my $claim = await $redis->xclaim($stream, $group, $client, 10, $id);
+                        $log->tracef('Claim is %s', $claim);
+                        my $args = $claim->[0]->[1];
+                        if($args) {
+                            push @$args, ("message_id", $id);
+                            $src->emit($args);
+                        }
+                    }
+                    last unless @$pending >= $self->batch_count;
+                }
+            } finally {
+                $self->return_instance_to_pool($instance) if $instance;
+                undef $instance;
+            }
+        })->($self),
+    )->on_fail(sub  {
+        $src->fail(@_);
+    })->retain;
+    $src;
 }
 
 =head2 create_group

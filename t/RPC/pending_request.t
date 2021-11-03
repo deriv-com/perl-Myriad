@@ -8,7 +8,8 @@ use Future;
 use Future::AsyncAwait;
 use Future::Utils qw(fmap_void);
 use IO::Async::Loop;
-
+use Myriad::Transport::Memory;
+use Myriad::Storage::Implementation::Memory;
 
 use Myriad;
 
@@ -18,25 +19,24 @@ package Service::Test {
 
 package Service::RPC {
     use Myriad::Service;
-    # seems that it cuase some race-condition
-    # Startup tasks failed - Can't call method "get" on an undefined value at /usr/local/lib/perl5/site_perl/5.26.3/Myriad/Transport/Redis.pm line 600
-    #config 'fail_rpc', default => 1;
-    
     # Another thing would be that incrementing/counting
     # number of processed RPC calls by setting a slot like this
     # won't work (usnig build, or setting it as instance
-    has $count = 0;
-    BUILD (%args) {
+    has $count;
+    has $key = 'count';
+    BUILD {
         $count =  0;
     }
 
     async method startup () {
         # Zero our counter on startup
-        await $api->storage->set('count', 0);
+        my $c = await $api->storage->get($key);
+        unless ( defined $c && $c < 2 ) {
+            await $api->storage->set($key, $count);
+        }
     }
 
     async method controlled_rpc : RPC (%args) {
-        #my $flag = $api->config('fail_rpc_1')->as_string;
         my $flag = defined $ENV{'fail_rpc_1'} ? $ENV{'fail_rpc_1'} : 1;
 
         # Mimick a failure, only when flag is set;
@@ -44,9 +44,9 @@ package Service::RPC {
 
         # This is used to overcome, the incorrect increment
         # mentione above
-        my $count = await $api->storage->get('count');
+        my $count = await $api->storage->get($key);
         ++$count;
-        await $api->storage->set('count', $count);
+        await $api->storage->set($key, $count);
         
         $args{internal_count} = $count;
         $log->tracef('DOING %s', \%args);
@@ -55,11 +55,29 @@ package Service::RPC {
 };
 
 my $loop = IO::Async::Loop->new;
+# Only used for in memory tests
+my $transport = Myriad::Transport::Memory->new;
+my $storage =  Myriad::Storage::Implementation::Memory->new();
+
+my $added = 0;
 async sub myriad_instance {
     my $service = shift // '';
 
     my $myriad = new_ok('Myriad');
-    my @config = ('--transport', $ENV{MYRIAD_TRANSPORT} // 'memory', '--transport_cluster', $ENV{MYRIAD_TRANSPORT_CLUSTER} // 0, '-l', 'trace');
+
+    # Only in case of memory transport, we want to share the same transport instance.
+    if (!$ENV{MYRIAD_TRANSPORT} || $ENV{MYRIAD_TRANSPORT} eq 'memory' ) {
+        unless ($added) {
+            $loop->add($transport);
+            $loop->add($storage);
+            $added = 1;
+        }
+        my $metaclass = Object::Pad::MOP::Class->for_class('Myriad');
+        $metaclass->get_slot('$memory_transport')->value($myriad) = $transport;
+        $metaclass->get_slot('$storage')->value($myriad) = $storage;
+    }
+
+    my @config = ('--transport', $ENV{MYRIAD_TRANSPORT} // 'memory', '--transport_cluster', $ENV{MYRIAD_TRANSPORT_CLUSTER} // 0, '-l', 'debug');
     await $myriad->configure_from_argv(@config, $service);
     $myriad->run->retain->on_fail(sub { die shift; });
 
@@ -72,9 +90,9 @@ subtest 'RPCs on start should check and process pending messages on start'  => s
 
         # Need to Mock, in fact this is reassuring as this case only happens in dire situation.
         # i.e when service is forcefully stopped or got intruppted halfway through a request.
-        my $redis_module = Test::MockModule->new('Myriad::RPC::Implementation::Redis');
+        my $transport_module = (!$ENV{MYRIAD_TRANSPORT} || $ENV{MYRIAD_TRANSPORT} eq 'memory') ? Test::MockModule->new('Myriad::RPC::Implementation::Memory') : Test::MockModule->new('Myriad::RPC::Implementation::Redis');
         my $drop_is_called = [];
-        $redis_module->mock('reply_error', async sub {
+        $transport_module->mock('reply_error', async sub {
             my ($self, $service, $message, $error) = @_;
             push @$drop_is_called, { service => $service, error => $error, message => $message };
         });

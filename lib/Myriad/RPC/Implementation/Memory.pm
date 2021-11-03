@@ -58,14 +58,14 @@ async method start () {
     while (1) {
         await &fmap_void($self->$curry::curry(async method ($rpc) {
             unless ($rpc->{group}) {
-                 my $pending_messages = await $transport->pending_stream_by_consumer($rpc->{stream}, $self->group_name, hostname());
-                 await $self->process_stream_messages(rpc => $rpc, messages => $pending_messages);
-                 await $transport->create_consumer_group($rpc->{stream}, $self->group_name, 0, 1);
-                 $rpc->{group} = 1;
+                my $pending_messages = await $transport->pending_stream_by_consumer($rpc->{stream}, $self->group_name, hostname());
+                await $self->process_stream_messages(rpc => $rpc, messages => $pending_messages) if %$pending_messages;
+                await $transport->create_consumer_group($rpc->{stream}, $self->group_name, 0, 1);
+                $rpc->{group} = 1;
             }
             my $messages = await $transport->read_from_stream_by_consumer($rpc->{stream}, $self->group_name, hostname());
-            await $self->process_stream_messages(rpc => $rpc, messages => $messages);
-        }), foreach => [ $self->rpc_list->@* ], concurrent => 8);
+            await $self->process_stream_messages(rpc => $rpc, messages => $messages) if %$messages;
+        }), foreach => [ $self->rpc_list->@* ], concurrent => scalar $self->rpc_list->@*);
         await Future::wait_any($should_shutdown, $self->loop->delay_future(after => 0.1));
     }
 }
@@ -99,8 +99,12 @@ async method process_stream_messages (%args) {
             }
         }
     }
-    await Future->needs_all(values $processing->{$rpc->{stream}}->%*);
-    $processing->{$rpc->{stream}} = {};
+    my %pending = $processing->{$rpc->{stream}}->%*;
+    await $self->loop->delay_future(after => 0.1);
+    if ( keys %pending ) {
+        my @done = await Future->needs_all(values %pending);
+        delete $processing->{$rpc->{stream}}{$_} for @done;
+    }
 }
 
 =head2 create_from_sink
@@ -144,7 +148,7 @@ async method reply_success ($service, $message, $response) {
     $message->response = { response => $response };
     await $transport->publish($message->who, $message->as_json);
     await $transport->ack_message($stream, $self->group_name, $message->transport_id);
-    $processing->{$stream}->{$message->transport_id}->done('published');
+    $processing->{$stream}->{$message->transport_id}->done($message->transport_id) unless $processing->{$stream}->{$message->transport_id}->is_done;
 }
 
 =head2 reply_error
@@ -160,7 +164,7 @@ async method reply_error ($service, $message, $error) {
     $message->response = { error => { category => $error->category, message => $error->message, reason => $error->reason } };
     await $transport->publish($message->who, $message->as_json);
     await $transport->ack_message($stream, $self->group_name, $message->transport_id);
-    $processing->{$stream}->{$message->transport_id}->done('published');
+    $processing->{$stream}->{$message->transport_id}->done($message->transport_id) unless $processing->{$stream}->{$message->transport_id}->is_done;
 }
 
 =head2 drop
@@ -171,7 +175,7 @@ Drop the request because we can't reply to the requester.
 
 async method drop ($stream, $id) {
     await $transport->ack_message($stream, $self->group_name, $id);
-    $processing->{$stream}->{$id}->done('published');
+    $processing->{$stream}->{$id}->done($id) unless $processing->{$stream}->{$id}->is_done;
 }
 
 =head2 stream_name
