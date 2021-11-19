@@ -11,8 +11,8 @@ requires 'Syntax::Keyword::Match', '>= 0.08';
 requires 'Syntax::Operator::Equ', '>= 0.02';
 requires 'Future', '>= 0.47';
 requires 'Future::Queue';
-requires 'Future::AsyncAwait', '>= 0.53';
-requires 'Object::Pad', '>= 0.55';
+requires 'Future::AsyncAwait', '>= 0.54';
+requires 'Object::Pad', '>= 0.56';
 requires 'Role::Tiny', '>= 2.002004';
 # Streams
 requires 'Ryu', '>= 3.002';
@@ -51,7 +51,7 @@ requires 'Net::Async::OpenTracing', '>= 1.000';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
 requires 'Metrics::Any::Adapter::Statsd', '>= 0.03';
 # Transport
-requires 'Net::Async::Redis', '>= 3.016';
+requires 'Net::Async::Redis', '>= 3.017';
 requires 'Net::Async::HTTP', '>= 0.48';
 requires 'Net::Async::HTTP::Server', '>= 0.13';
 requires 'Net::Async::SMTP', '>= 0.002';
