@@ -49,29 +49,28 @@ async method create_from_source (%args) {
 async method create_from_sink (%args) {
     my $sink = delete $args{sink} or die 'need a sink';
     my $remote_service = $args{from} || $args{service};
+    my $service_name = $args{service};
     my $channel_name = $remote_service . '.' . $args{channel};
 
     push $receivers->@*, {
-        channel => $channel_name,
-        sink    => $sink
+        channel    => $channel_name,
+        sink       => $sink,
+        group_name => $service_name,
+        group      => 0
     };
     return;
 }
 
+async method create_group ($subscription) {
+    return if $subscription->{group};
+    await $transport->create_consumer_group($subscription->{channel}, $subscription->{group_name}, 0, 1);
+    $subscription->{group} = 1;
+}
 
 async method start {
-    my %groups_for_channel;
     while (1) {
         await &fmap_void($self->$curry::curry(async method ($subscription) {
-            unless(exists $groups_for_channel{$subscription->{channel}}{subscriber}) {
-                try {
-                    await $transport->create_consumer_group($subscription->{channel}, 'subscriber', 0, 1);
-                    $groups_for_channel{$subscription->{channel}}{subscriber} = 1;
-                } catch ($e) {
-                    $log->tracef('Failed to create consumer group due: %s', $e);
-                }
-            }
-
+            await $self->create_group($subscription);
             try {
                 $log->tracef('Sink blocked state: %s', $subscription->{sink}->unblocked->state);
                 await Future->wait_any(
@@ -85,12 +84,12 @@ async method start {
 
             my $messages = await $transport->read_from_stream_by_consumer(
                 $subscription->{channel},
-                'subscriber',
+                $subscription->{group_name},
                 'consumer'
             );
             for my $event_id (sort keys $messages->%*) {
                 $subscription->{sink}->emit($messages->{$event_id});
-                await $transport->ack_message($subscription->{channel}, 'subscriber', $event_id);
+                await $transport->ack_message($subscription->{channel}, $subscription->{group_name}, $event_id);
             }
 
             if($should_shutdown) {

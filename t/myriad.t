@@ -29,7 +29,7 @@ my $loop = $myriad->loop;
 testing_loop($loop);
 
 subtest "class methods and proper initialization" => sub {
-    can_ok($myriad, qw(configure_from_argv loop registry redis rpc_client rpc http subscription storage add_service service_by_name ryu shutdown run));
+    can_ok($myriad, qw(configure_from_argv loop registry redis_transport memory_transport transport rpc_client rpc http subscription storage add_service service_by_name ryu shutdown run));
 
 
     my $command_param = 'Testing';

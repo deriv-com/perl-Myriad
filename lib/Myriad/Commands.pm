@@ -61,11 +61,13 @@ async method service (@args) {
     }
 
     # Load modules to compile
+    my @services_modules;
     for my $module (@modules) {
-        $log->debugf('Loading %s', $module);
         try {
             require_module($module);
+            next unless $module->isa('Myriad::Service');
             die 'loaded ' . $module . ' but it cannot ->new?' unless $module->can('new');
+            push @services_modules, $module;
         } catch ($e) {
             Future::Exception->throw(sprintf 'Service module %s not found', $module) if $e =~ /Can't locate.*(\Q$module\E)/;
             Future::Exception->throw(sprintf 'Failed to load module for service %s - %s', $module, $e);
@@ -76,27 +78,34 @@ async method service (@args) {
 
     await fmap0(async sub {
         my ($module) = @_;
-        $log->debugf('Preparing %s', $module);
         try {
-            await $myriad->add_service($module, namespace => $namespace);
+            # No need to pass namespaces here
+            my $default_service_name = $myriad->registry->make_service_name($module,'');
+
+            # Check if we should override the servicename
+            if (my $service_name = $myriad->config->service_name($default_service_name)) {
+                await $myriad->add_service($module, namespace => $namespace, name => $service_name);
+            } else {
+                await $myriad->add_service($module, namespace => $namespace);
+            }
         } catch ($e) {
             Future::Exception->throw(sprintf 'Failed to add service %s - %s', $module, $e);
         }
-    }, foreach => \@modules, concurrent => 4);
+    }, foreach => \@services_modules, concurrent => 4);
 
     $cmd = {
         code => async sub {
             try {
                 await fmap0 {
                     my $service = shift;
-                    $log->infof('Starting service [%s]', $service->service_name);
+                    $log->infof('Starting service %s', $service->service_name);
                     $service->start->transform(fail => sub {
                         return $service->service_name . ' : ' . shift;
                     });
                 } foreach => [values $myriad->services->%*], concurrent => 4;
 
             } catch($e) {
-                $log->warnf('Failed to start services - %s', $e);
+                $log->warnf('Failed to start services, error: %s', $e);
                 await $myriad->shutdown;
             }
         },

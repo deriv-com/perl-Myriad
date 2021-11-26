@@ -6,6 +6,12 @@ Revision history for {{$dist->name}}
     - The --service_name parameter has been dropped, since it makes no sense when
     used with multiple services or instances
 
+    [New features]
+    - Thanks to Syntax::Keyword::Equ, match() now supports `equ` as an operator
+
+    [Dependencies]
+    - Object::Pad - updated to v0.55 for various bugfixes and improvements
+
 0.010     2021-07-22 07:14:15+00:00 UTC
     [New features]
     - Metrics adapter type is now configurable using --metrics_adapter.

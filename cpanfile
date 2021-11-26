@@ -3,28 +3,29 @@ requires 'mro';
 requires 'indirect';
 requires 'multidimensional';
 requires 'bareword::filehandles';
-requires 'XS::Parse::Keyword', '>= 0.10';
-requires 'Syntax::Keyword::Dynamically', '>= 0.08';
-requires 'Syntax::Keyword::Try', '>= 0.25';
-requires 'Syntax::Keyword::Defer', '>= 0.05';
-requires 'Syntax::Keyword::Match', '>= 0.04';
+requires 'XS::Parse::Keyword', '>= 0.21';
+requires 'Syntax::Keyword::Dynamically', '>= 0.09';
+requires 'Syntax::Keyword::Try', '>= 0.26';
+requires 'Syntax::Keyword::Defer', '>= 0.06';
+requires 'Syntax::Keyword::Match', '>= 0.08';
+requires 'Syntax::Operator::Equ', '>= 0.02';
 requires 'Future', '>= 0.47';
 requires 'Future::Queue';
-requires 'Future::AsyncAwait', '>= 0.52';
-requires 'Object::Pad', '>= 0.46';
+requires 'Future::AsyncAwait', '>= 0.54';
+requires 'Object::Pad', '>= 0.56';
 requires 'Role::Tiny', '>= 2.002004';
 # Streams
 requires 'Ryu', '>= 3.002';
-requires 'Ryu::Async', '>= 0.019';
+requires 'Ryu::Async', '>= 0.020';
 # IO::Async
 requires 'Heap', '>= 0.80';
-requires 'IO::Async::Notifier', '>= 0.78';
-requires 'IO::Async::Test', '>= 0.78';
+requires 'IO::Async::Notifier', '>= 0.79';
+requires 'IO::Async::Test', '>= 0.79';
 requires 'IO::Async::SSL', '>= 0.22';
 # Functionality
 requires 'curry', '>= 1.001';
-requires 'Log::Any', '>= 1.709';
-requires 'Log::Any::Adapter', '>= 1.709';
+requires 'Log::Any', '>= 1.710';
+requires 'Log::Any::Adapter', '>= 1.710';
 requires 'Config::Any', '>= 0.32';
 requires 'YAML::XS', '>= 0.83';
 requires 'Metrics::Any', '>= 0.07';
@@ -43,19 +44,19 @@ requires 'Module::Pluggable::Object';
 requires 'Math::Random::Secure';
 requires 'Getopt::Long';
 requires 'Pod::Usage';
-requires 'List::Util', '>= 1.56';
+requires 'List::Util', '>= 1.60';
 requires 'List::Keywords', '>= 0.08';
 # Integration
 requires 'Net::Async::OpenTracing', '>= 1.000';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
 requires 'Metrics::Any::Adapter::Statsd', '>= 0.03';
 # Transport
-requires 'Net::Async::Redis', '>= 3.014';
+requires 'Net::Async::Redis', '>= 3.017';
 requires 'Net::Async::HTTP', '>= 0.48';
 requires 'Net::Async::HTTP::Server', '>= 0.13';
 requires 'Net::Async::SMTP', '>= 0.002';
-requires 'Database::Async', '>= 0.015';
-requires 'Database::Async::Engine::PostgreSQL', '>= 0.011';
+requires 'Database::Async', '>= 0.016';
+requires 'Database::Async::Engine::PostgreSQL', '>= 0.012';
 # Introspection
 requires 'Devel::MAT::Dumper';
 

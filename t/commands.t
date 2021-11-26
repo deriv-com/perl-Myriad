@@ -43,14 +43,26 @@ subtest "service command" => sub {
     # Fake existence of two sibling modules
     {
         package Ta::Sibling1;
+        {
+            no strict 'refs';
+            push @{Ta::Sibling1::ISA}, 'Myriad::Service';
+        }
         sub new { }
     }
     {
         package Ta::Sibling2;
+        push @{Ta::Sibling2::ISA}, 'Myriad::Service';
         sub new { }
     }
+
+    {
+        package Ta::Sibling3;
+        sub new { }
+    }
+
     $INC{'Ta/Sibling1.pm'} = 1;
     $INC{'Ta/Sibling2.pm'} = 1;
+    $INC{'Ta/Sibling3.pm'} = 1;
     ######
 
     my $metaclass = Object::Pad::MOP::Class->for_class('Myriad');

@@ -80,7 +80,7 @@ async method add_service (%args) {
     $batch{$pkg} ||= {};
     $emitter{$pkg} ||= {};
     $receiver{$pkg} ||= {};
-    $log->tracef('Going to load service %s', $service_name);
+    $log->debugf('Adding service %s package: %s', $service_name, $pkg);
     $self->loop->add(
         $srv
     );

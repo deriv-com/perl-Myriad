@@ -99,6 +99,16 @@ sub ready {
     return $myriad->run_future;
 }
 
+=head2 instance
+
+Returns the L<Myriad> instance we are using
+
+=cut
+
+sub instance {
+    return $myriad;
+}
+
 sub import {
     my $self = shift;;
     Check::UnitCheck::unitcheckify(sub {

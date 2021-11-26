@@ -50,7 +50,7 @@ sub new {
     if ($transport eq 'redis') {
         require Myriad::Subscription::Implementation::Redis;
         return Myriad::Subscription::Implementation::Redis->new(
-            redis   => $myriad->redis,
+            redis   => $myriad->redis_transport,
         );
     } elsif ($transport eq 'memory' or $transport eq 'perl') {
         require Myriad::Subscription::Implementation::Memory;
