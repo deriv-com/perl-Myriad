@@ -11,7 +11,8 @@ requires 'Syntax::Keyword::Match', '>= 0.08';
 requires 'Syntax::Operator::Equ', '>= 0.02';
 requires 'Future', '>= 0.47';
 requires 'Future::Queue';
-requires 'Future::AsyncAwait', '>= 0.54';
+requires 'Future::AsyncAwait', '>= 0.55';
+requires 'XS::Parse::Sublike', '>= 0.16';
 requires 'Object::Pad', '>= 0.59';
 requires 'Role::Tiny', '>= 2.002004';
 # Streams
