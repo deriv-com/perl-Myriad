@@ -5,7 +5,7 @@ use Myriad::Class extends => 'IO::Async::Notifier';
 # VERSION
 # AUTHORITY
 
-use Myriad::Util::Defer;
+use parent qw(Myriad::Util::Defer);
 
 =encoding utf8
 
