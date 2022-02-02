@@ -30,7 +30,7 @@ use Myriad::Util::Secret;
 use Myriad::Exception::Builder category => 'config';
 
 declare_exception 'ConfigRequired' => (
-    message => 'A required configueration key was not set'
+    message => 'A required configuration key was not set'
 );
 
 declare_exception 'UnregisteredConfig' => (
@@ -451,7 +451,7 @@ async method listen_for_updates () {
                 $log->warnf('Config: config updates listener failed - %s', shift);
             });
         } catch {
-            $log->trace('Config: transport do not support keyspace notifications');
+            $log->trace('Config: transport does not support keyspace notifications');
         }
     } else {
         $log->warn('Config: Storage is not initiated, cannot listen to config updates');
