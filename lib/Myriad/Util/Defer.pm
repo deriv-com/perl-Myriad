@@ -29,9 +29,17 @@ our @IMPORT = our @IMPORT_OK = qw(Defer);
 
 use constant RANDOM_DELAY => $ENV{MYRIAD_RANDOM_DELAY} || 0;
 
+use Sub::Util;
+sub MODIFY_CODE_ATTRIBUTES {
+    my ($class, $code, @attrs) = @_;
+    my $name = Sub::Util::subname($code);
+    warn "apply @attrs to $name ($code) for $class\n";
+    return;
+}
+
 # Helper method that allows us to return a not-quite-immediate
 # Future from some inherently non-async code.
-sub Defer : ATTR(CODE) {
+sub Defer {
     my ($package, $symbol, $referent, $attr, $data, $phase, $filename, $linenum) = @_;
     my $name = *{$symbol}{NAME} or die 'need a symbol name';
     $log->tracef('will defer handler for %s::%s', $package, $name);

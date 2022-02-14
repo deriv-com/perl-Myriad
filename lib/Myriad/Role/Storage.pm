@@ -1,12 +1,9 @@
 package Myriad::Role::Storage;
 
-use strict;
-use warnings;
+use Myriad::Class type => 'role';
 
 # VERSION
 # AUTHORITY
-
-use utf8;
 
 =encoding utf8
 
@@ -44,30 +41,11 @@ a concrete implementation - instead, see classes such as:
 
 =cut
 
-no indirect qw(fatal);
-use Future::AsyncAwait;
+=head1 METHODS - Write
 
-use experimental qw(signatures);
-
-use Role::Tiny;
+=cut
 
 our @WRITE_METHODS = qw(set getset incr push unshift pop shift hash_set hash_add);
-our @READ_METHODS = qw(get observe watch_keyspace hash_get hash_keys hash_values hash_exists hash_count hash_as_list);
-
-requires $_ for @WRITE_METHODS;
-requires $_ for @READ_METHODS;
-
-=head2 get
-
-Takes the following parameters:
-
-=over 4
-
-=item * C<< $k >> - the relative key in storage
-
-=back
-
-Returns a L<Future> which will resolve to the corresponding value, or C<undef> if none.
 
 =head2 set
 
@@ -85,6 +63,10 @@ Note that references are currently B<not> supported - attempts to write an array
 or object will fail.
 
 Returns a L<Future> which will resolve on completion.
+
+=cut
+
+requires set;
 
 =head2 getset
 
@@ -105,11 +87,9 @@ or object will fail.
 
 Returns a L<Future> which will resolve on completion to the original value, or C<undef> if none.
 
-=head2 observe
+=cut
 
-Observe a specific key.
-
-Returns a L<Ryu::Observable> which will emit the current and all subsequent values.
+requires getset;
 
 =head2 push
 
@@ -125,6 +105,10 @@ Takes the following parameters:
 
 Returns a L<Future>.
 
+=cut
+
+requires push;
+
 =head2 unshift
 
 Takes the following parameters:
@@ -137,15 +121,27 @@ Takes the following parameters:
 
 Returns a L<Future>.
 
+=cut
+
+requires unshift;
+
 =head2 pop
 
 Returns a L<Future> which will resolve to the item removed from the list,
 or C<undef> if none available.
 
+=cut
+
+requires pop;
+
 =head2 shift
 
 Returns a L<Future> which will resolve to the item removed from the list,
 or C<undef> if none available.
+
+=cut
+
+requires shift;
 
 =head2 hash_set
 
@@ -159,17 +155,9 @@ Takes the following parameters:
 
 Returns a L<Future> which will resolve to .
 
-=head2 hash_get
+=cut
 
-Takes the following parameters:
-
-=over 4
-
-=item *
-
-=back
-
-Returns a L<Future> which will resolve to the scalar value for this key.
+requires hash_set;
 
 =head2 hash_add
 
@@ -183,6 +171,58 @@ Takes the following parameters:
 
 Returns a L<Future> indicating success or failure.
 
+=cut
+
+requires hash_add;
+
+=head1 METHODS - Read
+
+=cut
+
+our @READ_METHODS = qw(get observe watch_keyspace hash_get hash_keys hash_values hash_exists hash_count hash_as_list);
+
+=head2 get
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=back
+
+Returns a L<Future> which will resolve to the corresponding value, or C<undef> if none.
+
+=cut
+
+requires get;
+
+=head2 observe
+
+Observe a specific key.
+
+Returns a L<Ryu::Observable> which will emit the current and all subsequent values.
+
+=cut
+
+requires observe;
+
+=head2 hash_get
+
+Takes the following parameters:
+
+=over 4
+
+=item *
+
+=back
+
+Returns a L<Future> which will resolve to the scalar value for this key.
+
+=cut
+
+requires hash_get;
+
 =head2 hash_keys
 
 Takes the following parameters:
@@ -194,6 +234,10 @@ Takes the following parameters:
 =back
 
 Returns a L<Future> which will resolve to a list of the keys in no defined order.
+
+=cut
+
+requires hash_keys;
 
 =head2 hash_values
 
@@ -207,6 +251,10 @@ Takes the following parameters:
 
 Returns a L<Future> which will resolve to a list of the values in no defined order.
 
+=cut
+
+requires hash_values;
+
 =head2 hash_exists
 
 Takes the following parameters:
@@ -219,6 +267,10 @@ Takes the following parameters:
 
 Returns a L<Future> which will resolve to true if the key exists in this hash.
 
+=cut
+
+requires hash_exists;
+
 =head2 hash_count
 
 Takes the following parameters:
@@ -230,6 +282,10 @@ Takes the following parameters:
 =back
 
 Returns a L<Future> which will resolve to the count of the keys in this hash.
+
+=cut
+
+requires hash_count;
 
 =head2 hash_as_list
 
@@ -245,6 +301,8 @@ Returns a L<Future> which will resolve to a list of key/value pairs,
 suitable for assigning to a hash.
 
 =cut
+
+requires hash_as_list;
 
 1;
 

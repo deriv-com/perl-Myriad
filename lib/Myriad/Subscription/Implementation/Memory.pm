@@ -12,6 +12,9 @@ has $receivers;
 has $should_shutdown = 0;
 has $stopped;
 
+# FIXME Need to update :Defer for Object::Pad
+sub MODIFY_CODE_ATTRIBUTES { }
+
 BUILD {
     $receivers = [];
 }

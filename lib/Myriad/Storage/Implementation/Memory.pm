@@ -1,6 +1,6 @@
 package Myriad::Storage::Implementation::Memory;
 
-use Myriad::Class extends => ['IO::Async::Notifier', 'Myriad::Util::Defer'], does => 'Myriad::Role::Storage';
+use Myriad::Class extends => 'IO::Async::Notifier', does => [ 'Myriad::Role::Storage', 'Myriad::Util::Defer'];
 
 # VERSION
 # AUTHORITY
@@ -22,10 +22,11 @@ correctly.
 
 =cut
 
-use Myriad::Util::Defer;
-
 # Common datastore
 has %data;
+
+# FIXME Need to update :Defer for Object::Pad
+sub MODIFY_CODE_ATTRIBUTES { }
 
 =head2 get
 
