@@ -97,6 +97,7 @@ This will cause the method to be registered in L<Myriad::Registry/add_rpc>.
 
 sub rpc {
     my ($class, $pkg, $method, $code, $args) = @_;
+    require Myriad;
     $Myriad::REGISTRY->add_rpc(
         $pkg,
         $method,
