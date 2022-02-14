@@ -126,6 +126,7 @@ use Future::Utils;
 use Module::Load ();
 
 use JSON::MaybeUTF8;
+use Unicode::UTF8;
 
 use Heap;
 use IO::Async::Notifier;
@@ -197,6 +198,10 @@ sub import {
             decode_json_text
             decode_json_utf8
             format_json_text
+        );
+        *{$pkg . '::' . $_} = Unicode::UTF8->can($_) for qw(
+            encode_utf8
+            decode_utf8
         );
     }
     {
