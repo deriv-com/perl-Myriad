@@ -11,7 +11,7 @@ use Object::Pad;
 use Future::AsyncAwait;
 use IO::Async::Loop;
 
-class Example extends IO::Async::Notifier {
+class Example :isa(IO::Async::Notifier) {
     use parent qw(Myriad::Util::Defer);
     use Log::Any qw($log);
 
