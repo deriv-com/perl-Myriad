@@ -269,7 +269,7 @@ sub import {
         );
         $args{does} = [ $args{does} // () ] unless ref $args{does};
         for my $role ($args{does}->@*) {
-            Module::Load::load($role) unless Object::Pad::MOP::Class->for_class($role);
+            Module::Load::load($role) unless eval { Object::Pad::MOP::Class->for_class($role) };
             $meta->add_role($role);
         }
         return $meta;
