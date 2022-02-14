@@ -15,9 +15,11 @@ use Myriad;
 use Myriad::Registry;
 use Myriad::Config;
 
-my $service_module = Test::MockModule->new('Myriad::Service::Implementation');
-my $started_services = {};
-$service_module->mock('start', async sub { my ($self) = @_; $started_services->{ref($self)} = 1; });
+my $started_services;
+BEGIN {
+    my $service_module = Test::MockModule->new('Myriad::Service::Implementation');
+    $service_module->mock(start => async sub { my ($self) = @_; $started_services->{ref($self)} = 1; });
+}
 
 my $loop = IO::Async::Loop->new;
 testing_loop($loop);
@@ -30,7 +32,12 @@ sub loop_notifiers {
     return \%loaded_in_loop;
 }
 
-my $METHODS_MAP = {rpc => 'rpc_for', batch => 'batches_for', emitter => 'emitters_for', receiver => 'receivers_for'};
+my $METHODS_MAP = {
+    rpc => 'rpc_for',
+    batch => 'batches_for',
+    emitter => 'emitters_for',
+    receiver => 'receivers_for'
+};
 sub component_for_method {
     my $method = shift;
 
@@ -82,7 +89,7 @@ subtest "Adding Service" => sub {
     my $registry = $Myriad::REGISTRY;
 
     # Define our testing service
-    {
+    BEGIN {
         package Testing::Service;
         use Myriad::Service;
 
