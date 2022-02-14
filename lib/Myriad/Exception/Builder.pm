@@ -79,19 +79,37 @@ Returns the generated classname.
 =cut
 
 our %EXCEPTIONS;
+our @PENDING;
+INIT {
+    create_exception($_) for splice @PENDING;
+}
+
 sub declare_exception {
     my ($name, %args) = @_;
     my $caller = caller;
+    my $pkg = length($name) ? (join '::', (
+        delete($args{package}) || ('Myriad::Exception::' . (caller =~ s{^Myriad::}{}r))
+    ), $name) : $caller;
+    my $category = delete $args{category} // $DEFAULT_CATEGORY_FOR_CLASS{$caller};
+    die 'invalid category ' . $category unless $category =~ /^[0-9a-z_]+$/;
+    my $message = delete $args{message} // 'unknown';
+
+    die 'already have exception ' . $pkg if exists $EXCEPTIONS{$pkg};
+
+    push @PENDING, {
+        package => $pkg,
+        category => $category,
+        message => $message
+    };
+    return $pkg;
+}
+
+sub create_exception ($details) {
+    my $pkg = delete $details->{package} or die 'no package';
+    my $category = delete $details->{category} or die 'no category';
+    my $message = delete $details->{message} or die 'no message';
 
     try {
-        my $pkg = length($name) ? (join '::', (
-            delete($args{package}) || ('Myriad::Exception::' . (caller =~ s{^Myriad::}{}r))
-        ), $name) : $caller;
-        my $category = delete $args{category} // $DEFAULT_CATEGORY_FOR_CLASS{$caller};
-        die 'invalid category ' . $category unless $category =~ /^[0-9a-z_]+$/;
-        my $message = delete $args{message} // 'unknown';
-
-        die 'already have exception ' . $pkg if exists $EXCEPTIONS{$pkg};
 
     #    warn "declare_exception must be called from a BEGIN { ... } block (current phase ${^GLOBAL_PHASE}) for $pkg (category $category)"
     #        unless ${^GLOBAL_PHASE} eq 'START';
