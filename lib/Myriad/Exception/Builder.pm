@@ -1,6 +1,6 @@
 package Myriad::Exception::Builder;
 
-use Myriad::Class;
+use Myriad::Class class => '';
 
 # VERSION
 # AUTHORITY
