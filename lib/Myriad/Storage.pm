@@ -1,12 +1,9 @@
 package Myriad::Storage;
 
-use strict;
-use warnings;
+use Myriad::Class class => '';
 
 # VERSION
 # AUTHORITY
-
-use utf8;
 
 =encoding utf8
 
@@ -22,17 +19,13 @@ Myriad::Storage - microservice Storage abstraction
 
 =cut
 
-no indirect qw(fatal);
-use Scalar::Util qw(weaken);
+use Myriad::Role::Storage;
 
 use Myriad::Exception::Builder category => 'storage';
-use Myriad::Role::Storage;
 
 =head1 Exceptions
 
 =cut
-
-BEGIN {
 
 =head2 UnknownTransport
 
@@ -40,10 +33,10 @@ RPC transport does not exist.
 
 =cut
 
+BEGIN {
     declare_exception UnknownTransport => (
         message => 'Unknown transport'
     );
-
 }
 
 our $STORAGE;
