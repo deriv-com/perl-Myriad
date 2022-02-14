@@ -27,7 +27,7 @@ is(exception {
     }
     1
 EOS
-}, undef, 'can create a class');
+}, undef, 'can create a class') or die explain $@;
 my $obj = new_ok('Example::Class');
 is($obj->example, $obj, 'can call a method');
 TODO: {
