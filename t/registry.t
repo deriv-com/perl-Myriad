@@ -4,6 +4,7 @@ use warnings;
 use Test::More;
 use Test::Deep;
 use Test::Fatal;
+use Log::Any::Adapter qw(TAP);
 use Test::MockModule;
 use IO::Async::Loop;
 use IO::Async::Test;
