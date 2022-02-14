@@ -78,6 +78,7 @@ Returns the generated classname.
 
 =cut
 
+our %EXCEPTIONS;
 sub declare_exception {
     my ($name, %args) = @_;
     my $caller = caller;
@@ -91,8 +92,9 @@ sub declare_exception {
 
     warn "declare_exception must be called from a BEGIN { ... } block (current phase ${^GLOBAL_PHASE}) for $pkg (category $category)"
         unless ${^GLOBAL_PHASE} eq 'START';
+    die 'already have exception ' . $pkg if exists $EXCEPTIONS{$pkg};
 
-    my $class = Myriad::Class->import(
+    $EXCEPTIONS{$pkg} = my $class = Myriad::Class->import(
         target  => $pkg,
         extends => 'Myriad::Exception::Base',
     );
