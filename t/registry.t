@@ -137,7 +137,10 @@ subtest "Service name" => sub {
     # Only lower case sepatated by .(dot)
     like ($reg_srv_name, qr/^[a-z']+\.[a-z']+$/, 'passing regex service name');
 
-    isa_ok(exception {$registry->service_by_name("Not::Found::Service")}, 'Myriad::Exception::Registry::ServiceNotFound', "Exception for trying to get undef service");
+    my $ex = exception {
+        $registry->service_by_name("Not::Found::Service")
+    };
+    isa_ok($ex, 'Myriad::Exception::Registry::ServiceNotFound', "Exception for trying to get undef service") or note explain $ex;
 
     # Should remove the namespace from the service name;
     $reg_srv_name = $registry->make_service_name('Test::Module::Service', 'Test::Module::');
