@@ -17,12 +17,10 @@ See L<Myriad::Exception> for the rôle that defines the exception API.
 
 =cut
 
-BEGIN {
-    declare_exception '' => (
-        category => 'internal',
-        message  => 'Internal error'
-    );
-}
+declare_exception '' => (
+    category => 'internal',
+    message  => 'Internal error'
+);
 
 1;
 

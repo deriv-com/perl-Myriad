@@ -31,15 +31,13 @@ use Myriad::Exception::Builder category => 'rpc_client';
 
 =cut
 
-BEGIN {
-
 =head2 RPCFailed
 
 The RPC call has been performed correctly but the results are an error.
 
 =cut
 
-    declare_exception RPCFailed => (message => 'Your operation failed');
+declare_exception RPCFailed => (message => 'Your operation failed');
 
 =head2 UnknownTransport
 
@@ -47,10 +45,9 @@ RPC transport does not exist.
 
 =cut
 
-    declare_exception UnknownTransport => (
-        message => 'Unknown transport'
-    );
-}
+declare_exception UnknownTransport => (
+    message => 'Unknown transport'
+);
 
 sub new {
     my ($class, %args) = @_;

@@ -97,11 +97,9 @@ use OpenTracing::Any qw($tracer);
 
 use Myriad::Exception::Builder category => 'service';
 
-BEGIN {
-    declare_exception SecureDefaultValue => (
-        message => 'Secure configuration parameter may not have a default value'
-    );
-}
+declare_exception SecureDefaultValue => (
+    message => 'Secure configuration parameter may not have a default value'
+);
 
 our %SLOT;
 

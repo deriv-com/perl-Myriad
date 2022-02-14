@@ -29,8 +29,6 @@ use Myriad::Exception::Builder category => 'memory_transport';
 
 =cut
 
-BEGIN {
-
 =head2 StreamNotFound
 
 Thrown when the operation requires the stream to be
@@ -38,9 +36,9 @@ created beforehand but the stream is not currently available.
 
 =cut
 
-    declare_exception 'StreamNotFound' => (
-        message => 'The given stream does not exist'
-    );
+declare_exception 'StreamNotFound' => (
+    message => 'The given stream does not exist'
+);
 
 =head2 GroupExists
 
@@ -49,9 +47,9 @@ but the operation doesn't allow that.
 
 =cut
 
-    declare_exception 'GroupExists' => (
-        message => 'The given group name already exists'
-    );
+declare_exception 'GroupExists' => (
+    message => 'The given group name already exists'
+);
 
 =head2 GroupNotFound
 
@@ -60,11 +58,9 @@ exist but it's not.
 
 =cut
 
-    declare_exception 'GroupNotFound' => (
-        message => 'The given group does not exist'
-    );
-
-}
+declare_exception 'GroupNotFound' => (
+    message => 'The given group does not exist'
+);
 
 has $ryu;
 has $streams;

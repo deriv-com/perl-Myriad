@@ -93,9 +93,9 @@ sub declare_exception {
     die 'already have exception ' . $pkg if exists $EXCEPTIONS{$pkg};
 
     $EXCEPTIONS{$pkg} //= create_exception({
-        package => $pkg,
+        package  => $pkg,
         category => $category,
-        message => $message
+        message  => $message
     });
     return $pkg;
 }

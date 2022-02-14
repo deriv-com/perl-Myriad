@@ -42,11 +42,9 @@ use List::Util qw(pairmap);
 
 use Myriad::Exception::Builder category => 'transport_redis';
 
-BEGIN {
-    declare_exception 'NoSuchStream' => (
-        message => 'There is no such stream, is the other service running?',
-    );
-}
+declare_exception 'NoSuchStream' => (
+    message => 'There is no such stream, is the other service running?',
+);
 
 # Cluster mode by default
 has $use_cluster = 1;

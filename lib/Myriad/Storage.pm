@@ -33,11 +33,11 @@ RPC transport does not exist.
 
 =cut
 
-BEGIN {
-    declare_exception UnknownTransport => (
-        message => 'Unknown transport'
-    );
-}
+declare_exception UnknownTransport => (
+    message => 'Unknown transport'
+);
+1;
+__END__
 
 our $STORAGE;
 

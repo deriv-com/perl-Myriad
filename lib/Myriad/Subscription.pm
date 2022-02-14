@@ -32,11 +32,9 @@ Subscription transport does not exist.
 
 =cut
 
-BEGIN {
-    declare_exception UnknownTransport => (
-        message => 'Unknown transport'
-    );
-}
+declare_exception UnknownTransport => (
+    message => 'Unknown transport'
+);
 
 sub new ($class, %args) {
     my $transport = delete $args{transport};

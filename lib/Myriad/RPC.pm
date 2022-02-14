@@ -31,7 +31,6 @@ use Myriad::Exception::Builder category => 'rpc';
 
 =cut
 
-BEGIN {
 =head2 InvalidRequest
 
 Returned when there is issue parsing the request, or if the request parameters are incomplete.
@@ -82,7 +81,6 @@ declare_exception UnknownTransport => (
     message => 'Unknown transport'
 );
 
-}
 =head1 METHODS
 
 =cut

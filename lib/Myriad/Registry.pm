@@ -24,14 +24,12 @@ use Myriad::API;
 
 use Myriad::Exception::Builder category => 'registry';
 
-BEGIN {
-    declare_exception ServiceNotFound => (
-        message => 'Unable to locate the given service',
-    );
-    declare_exception UnknownClass => (
-        message => 'Unable to locate the given class for component lookup',
-    );
-}
+declare_exception ServiceNotFound => (
+    message => 'Unable to locate the given service',
+);
+declare_exception UnknownClass => (
+    message => 'Unable to locate the given class for component lookup',
+);
 
 has %rpc;
 has %service_by_name;
