@@ -109,7 +109,7 @@ sub declare_exception {
             return $str . ')';
         }
     );
-    $class
+    return $class;
 }
 
 1;

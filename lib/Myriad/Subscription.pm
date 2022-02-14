@@ -1,12 +1,9 @@
 package Myriad::Subscription;
 
-use strict;
-use warnings;
+use Myriad::Class class => '';
 
 # VERSION
 # AUTHORITY
-
-use utf8;
 
 =encoding utf8
 
@@ -35,12 +32,13 @@ Subscription transport does not exist.
 
 =cut
 
-declare_exception UnknownTransport => (
-    message => 'Unknown transport'
-);
+BEGIN {
+    declare_exception UnknownTransport => (
+        message => 'Unknown transport'
+    );
+}
 
-sub new {
-    my ($class, %args) = @_;
+BUILD (%args) {
     my $transport = delete $args{transport};
     weaken(my $myriad = delete $args{myriad});
 
