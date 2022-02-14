@@ -89,7 +89,7 @@ sub declare_exception {
     die 'invalid category ' . $category unless $category =~ /^[0-9a-z_]+$/;
     my $message = delete $args{message} // 'unknown';
 
-    die "declare_exception must be called from a BEGIN { ... } block for $pkg (category $category)"
+    warn "declare_exception must be called from a BEGIN { ... } block (current phase ${^GLOBAL_PHASE}) for $pkg (category $category)"
         unless ${^GLOBAL_PHASE} eq 'START';
 
     my $class = Myriad::Class->import(
