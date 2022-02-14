@@ -259,7 +259,7 @@ sub import {
         Object::Pad->import_into($pkg);
         my $method = 'begin_' . ($args{type} || 'class');
         my $meta = Object::Pad::MOP::Class->$method(
-            $pkg,
+            $class,
             (
                 $args{extends}
                 ? (extends => $args{extends})
