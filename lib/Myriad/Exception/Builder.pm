@@ -83,36 +83,41 @@ sub declare_exception {
     my ($name, %args) = @_;
     my $caller = caller;
 
-    my $pkg = length($name) ? (join '::', (
-        delete($args{package}) || ('Myriad::Exception::' . (caller =~ s{^Myriad::}{}r))
-    ), $name) : $caller;
-    my $category = delete $args{category} // $DEFAULT_CATEGORY_FOR_CLASS{$caller};
-    die 'invalid category ' . $category unless $category =~ /^[0-9a-z_]+$/;
-    my $message = delete $args{message} // 'unknown';
+    try {
+        my $pkg = length($name) ? (join '::', (
+            delete($args{package}) || ('Myriad::Exception::' . (caller =~ s{^Myriad::}{}r))
+        ), $name) : $caller;
+        my $category = delete $args{category} // $DEFAULT_CATEGORY_FOR_CLASS{$caller};
+        die 'invalid category ' . $category unless $category =~ /^[0-9a-z_]+$/;
+        my $message = delete $args{message} // 'unknown';
 
-    warn "declare_exception must be called from a BEGIN { ... } block (current phase ${^GLOBAL_PHASE}) for $pkg (category $category)"
-        unless ${^GLOBAL_PHASE} eq 'START';
-    die 'already have exception ' . $pkg if exists $EXCEPTIONS{$pkg};
+        die 'already have exception ' . $pkg if exists $EXCEPTIONS{$pkg};
 
-    $EXCEPTIONS{$pkg} = my $class = Myriad::Class->import(
-        target  => $pkg,
-        class   => $pkg,
-        extends => 'Myriad::Exception::Base',
-    );
-    $class->add_role('Myriad::Exception');
-    $class->add_method(
-        category => sub ($self) { $category }
-    );
-    $class->add_method(
-        message => sub ($self) {
-            my $str = $message . ' (category=' . $self->category;
-            if($self->reason) {
-                $str .= ' , reason=' . $self->reason;
+    #    warn "declare_exception must be called from a BEGIN { ... } block (current phase ${^GLOBAL_PHASE}) for $pkg (category $category)"
+    #        unless ${^GLOBAL_PHASE} eq 'START';
+
+        $EXCEPTIONS{$pkg} = my $class = Myriad::Class->import(
+            target  => $pkg,
+            class   => $pkg,
+            extends => 'Myriad::Exception::Base',
+        );
+        $class->add_role('Myriad::Exception');
+        $class->add_method(
+            category => sub ($self) { $category }
+        );
+        $class->add_method(
+            message => sub ($self) {
+                my $str = $message . ' (category=' . $self->category;
+                if($self->reason) {
+                    $str .= ' , reason=' . $self->reason;
+                }
+                return $str . ')';
             }
-            return $str . ')';
-        }
-    );
-    return $class;
+        );
+        return $class;
+    } catch ($e) {
+        $log->errorf('Failed to raise declare exception - %s', $e);
+    }
 }
 
 1;
