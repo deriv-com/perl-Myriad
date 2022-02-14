@@ -261,7 +261,8 @@ sub import {
                 : ()
             ),
         );
-        for my $role (($args{does} // [])->@*) {
+        $args{does} = [ $args{does} // () ] unless ref $args{does};
+        for my $role ($args{does}->@*) {
             Module::Load::load($role);
             $meta->add_role($role);
         }
