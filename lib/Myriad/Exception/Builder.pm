@@ -128,6 +128,13 @@ sub create_exception ($details) {
                 return $str . ')';
             }
         );
+        { # Until we get class methods in role { } blocks, need to inject this directly
+            no strict 'refs';
+            *{$pkg . '::throw'} = sub ($class, @args) {
+                my $self = blessed($class) ? $class : $class->new(@args);
+                die $self;
+            };
+        }
         $class->end_class if $class->can('end_class');
         return $class;
     } catch ($e) {
