@@ -52,11 +52,9 @@ up attributes ourselves.
 =cut
 
 our @PENDING;
-INIT {
-    $log->infof('Applying all attributes');
-    $_->() for splice @PENDING;
-    $log->infof('Attributes done');
-}
+$log->infof('Applying all attributes');
+$_->() for splice @PENDING;
+$log->infof('Attributes done');
 
 sub apply_attributes {
     my ($class, %args) = @_;
