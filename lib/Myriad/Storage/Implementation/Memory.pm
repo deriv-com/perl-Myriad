@@ -1,11 +1,9 @@
 package Myriad::Storage::Implementation::Memory;
 
-use Myriad::Class extends => 'IO::Async::Notifier';
+use Myriad::Class extends => ['IO::Async::Notifier', 'Myriad::Util::Defer'], does => 'Myriad::Role::Storage';
 
 # VERSION
 # AUTHORITY
-
-use parent qw(Myriad::Util::Defer);
 
 =encoding utf8
 
@@ -24,11 +22,7 @@ correctly.
 
 =cut
 
-use Role::Tiny::With;
-
-use Log::Any qw($log);
-
-with 'Myriad::Role::Storage';
+use Myriad::Util::Defer;
 
 # Common datastore
 has %data;

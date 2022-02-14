@@ -9,7 +9,7 @@ use Myriad::Class extends => 'IO::Async::Notifier';
 
 =head1 NAME
 
-Myriad::Service - microservice coördination
+Myriad::Service::Implementation - microservice coördination
 
 =head1 SYNOPSIS
 
@@ -19,8 +19,6 @@ Myriad::Service - microservice coördination
 
 use Myriad::Storage::Implementation::Redis;
 use Myriad::Subscription;
-
-use Myriad::Exception;
 
 use Myriad::Service::Attributes;
 

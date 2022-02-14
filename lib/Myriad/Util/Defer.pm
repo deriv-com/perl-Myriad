@@ -1,14 +1,9 @@
 package Myriad::Util::Defer;
 
-use strict;
-use warnings;
+use Myriad::Class type => 'role';
 
 # VERSION
 # AUTHORITY
-
-use utf8;
-
-no indirect qw(fatal);
 
 =encoding utf8
 
@@ -25,12 +20,10 @@ and defaults to no delay.
 
 =cut
 
-use Future::AsyncAwait;
 use Attribute::Handlers;
 use Class::Method::Modifiers;
 
 use Exporter qw(import export_to_level);
-use Log::Any qw($log);
 
 our @IMPORT = our @IMPORT_OK = qw(Defer);
 

@@ -1,13 +1,9 @@
 package Myriad::Subscription::Implementation::Memory;
 
+use Myriad::Class extends => 'IO::Async::Notifier', does => [ 'Myriad::Role::Subscription', 'Myriad::Util::Defer' ];
+
 # VERSION
 # AUTHORITY
-
-use Myriad::Class extends => qw(IO::Async::Notifier);
-
-use Role::Tiny::With;
-
-with 'Myriad::Role::Subscription';
 
 has $transport;
 
