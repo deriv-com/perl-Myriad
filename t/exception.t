@@ -7,11 +7,9 @@ use Test::Fatal;
 
 use Myriad::Exception::Builder;
 
-BEGIN {
-    is(exception {
-        declare_exception Example => category => 'some_category', message => 'this is a message';
-    }, undef, 'can declare an exception with category and message');
-}
+is(exception {
+    declare_exception Example => category => 'some_category', message => 'this is a message';
+}, undef, 'can declare an exception with category and message');
 
 subtest 'can declare exceptions' => sub {
     can_ok('Myriad::Exception::Local::Test::Example', qw(new category message reason throw));
