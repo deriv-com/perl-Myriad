@@ -27,6 +27,8 @@ our @EXPORT = our @EXPORT_OK = qw(declare_exception);
 # repetition when there's a long list of exceptions to be defining
 our %DEFAULT_CATEGORY_FOR_CLASS;
 
+our %EXCEPTIONS;
+
 sub import {
     my ($class, %args) = @_;
     my $pkg = caller;
@@ -78,12 +80,6 @@ Returns the generated classname.
 
 =cut
 
-our %EXCEPTIONS;
-our @PENDING;
-INIT {
-    create_exception($_) for splice @PENDING;
-}
-
 sub declare_exception {
     my ($name, %args) = @_;
     my $caller = caller;
@@ -96,11 +92,11 @@ sub declare_exception {
 
     die 'already have exception ' . $pkg if exists $EXCEPTIONS{$pkg};
 
-    push @PENDING, {
+    $EXCEPTIONS{$pkg} //= create_exception({
         package => $pkg,
         category => $category,
         message => $message
-    };
+    });
     return $pkg;
 }
 
@@ -132,6 +128,7 @@ sub create_exception ($details) {
                 return $str . ')';
             }
         );
+        $class->end_class if $class->can('end_class');
         return $class;
     } catch ($e) {
         $log->errorf('Failed to raise declare exception - %s', $e);
