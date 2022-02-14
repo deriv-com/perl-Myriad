@@ -1,12 +1,9 @@
 package Myriad::Exception::Builder;
 
-use strict;
-use warnings;
+use Myriad::Class;
 
 # VERSION
 # AUTHORITY
-
-use utf8;
 
 =encoding utf8
 
@@ -20,7 +17,6 @@ See L<Myriad::Exception> for the rôle that defines the exception API.
 
 =cut
 
-no indirect qw(fatal);
 use Myriad::Exception;
 use Myriad::Exception::Base;
 
@@ -89,25 +85,29 @@ sub declare_exception {
     my $pkg = join '::', (
         delete($args{package}) || ('Myriad::Exception::' . (caller =~ s{^Myriad::}{}r))
     ), $name;
-
-    no strict 'refs';
-    push @{$pkg . '::ISA'}, qw(Myriad::Exception::Base);
     my $category = delete $args{category} // $DEFAULT_CATEGORY_FOR_CLASS{$caller};
     die 'invalid category ' . $category unless $category =~ /^[0-9a-z_]+$/;
-    *{$pkg . '::category'} = sub { $category };
     my $message = delete $args{message} // 'unknown';
-    *{$pkg . '::message'} = sub {
-        my $self = shift;
-        my $str = $message . ' (category=' . $self->category;
-        if($self->reason) {
-            $str .= ' , reason=' . $self->reason;
-        }
 
-        $str . ')';
-    };
-    Role::Tiny->apply_roles_to_package(
-        $pkg => 'Myriad::Exception'
-    )
+    warn "Creating class for [$pkg]";
+    my $class = Myriad::Class->import(
+        target  => $pkg,
+        extends => 'Myriad::Exception::Base',
+    );
+    $class->add_role('Myriad::Exception');
+    $class->add_method(
+        category => sub ($self) { $category }
+    );
+    $class->add_method(
+        message => sub ($self) {
+            my $str = $message . ' (category=' . $self->category;
+            if($self->reason) {
+                $str .= ' , reason=' . $self->reason;
+            }
+            return $str . ')';
+        }
+    );
+    $class
 }
 
 1;
