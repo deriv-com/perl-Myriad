@@ -30,15 +30,21 @@ use Myriad::Role::Storage;
 
 =head1 Exceptions
 
+=cut
+
+BEGIN {
+
 =head2 UnknownTransport
 
 RPC transport does not exist.
 
 =cut
 
-declare_exception UnknownTransport => (
-    message => 'Unknown transport'
-);
+    declare_exception UnknownTransport => (
+        message => 'Unknown transport'
+    );
+
+}
 
 our $STORAGE;
 

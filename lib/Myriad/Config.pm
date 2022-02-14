@@ -236,7 +236,6 @@ then it searches in the shortcuts map and lastly it tries to parse it as a subar
 Currently this sub takes into account flags (0|1) config and config written as:
 config=value
 
-
 =cut
 
 method lookup_from_args ($commandline) {
