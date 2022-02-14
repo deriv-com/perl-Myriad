@@ -26,8 +26,8 @@ Instantiates a new exception and throws it (by calling L<perlfunc/die>).
 
 =cut
 
-method throw (@args) {
-    $self = $self->new(@args) unless blessed($self);
+sub throw ($class, @args) {
+    my $self = blessed($class) ? $class : $class->new(@args);
     die $self;
 }
 
