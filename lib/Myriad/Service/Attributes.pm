@@ -31,6 +31,7 @@ which does all the real work.
 
 use Myriad::Registry;
 
+use Check::UnitCheck ();
 use Log::Any qw($log);
 use Exporter qw(import export_to_level);
 
@@ -50,26 +51,35 @@ up attributes ourselves.
 
 =cut
 
+our @PENDING;
+INIT {
+    $log->infof('Applying all attributes');
+    $_->() for splice @PENDING;
+    $log->infof('Attributes done');
+}
+
 sub apply_attributes {
     my ($class, %args) = @_;
     my $pkg = $args{class};
     my ($method) = Sub::Util::subname($args{code}) =~ /::([^:]+)$/;
-    for my $attr ($args{attributes}->@*) {
-        my ($type, $args) = $attr =~ m{^([a-z]+)(.*$)}si;
-        # Nasty, but functional for now - this will likely be replaced by
-        # an m//gc parser later with a restricted set of options.
-        $args = eval "+{ $args }" // die 'invalid attribute parameters: ' . $@ if length $args;
+    push @PENDING, sub {
+        for my $attr ($args{attributes}->@*) {
+            my ($type, $args) = $attr =~ m{^([a-z]+)(.*$)}si;
+            # Nasty, but functional for now - this will likely be replaced by
+            # an m//gc parser later with a restricted set of options.
+            $args = eval "+{ $args }" // die 'invalid attribute parameters: ' . $@ if length $args;
 
-        $log->tracef('Applying %s attribute to %s::%s with args (%s)', $type, $pkg, $method, $args);
-        my $handler = $KNOWN_ATTRIBUTES{$type}
-            or die 'unknown attribute ' . $type;
-        $class->$handler(
-            $pkg,
-            $method,
-            $args{code},
-            $args
-        );
-    }
+            $log->tracef('Applying %s attribute to %s::%s with args (%s)', $type, $pkg, $method, $args);
+            my $handler = $KNOWN_ATTRIBUTES{$type}
+                or die 'unknown attribute ' . $type;
+            $class->$handler(
+                $pkg,
+                $method,
+                $args{code},
+                $args
+            );
+        }
+    };
     return;
 }
 
