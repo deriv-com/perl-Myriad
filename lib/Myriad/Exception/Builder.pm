@@ -96,6 +96,7 @@ sub declare_exception {
 
     $EXCEPTIONS{$pkg} = my $class = Myriad::Class->import(
         target  => $pkg,
+        class   => $pkg,
         extends => 'Myriad::Exception::Base',
     );
     $class->add_role('Myriad::Exception');
