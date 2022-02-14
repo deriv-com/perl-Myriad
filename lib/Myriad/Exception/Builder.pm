@@ -82,14 +82,13 @@ sub declare_exception {
     my ($name, %args) = @_;
     my $caller = caller;
 
-    my $pkg = join '::', (
+    my $pkg = length($name) ? (join '::', (
         delete($args{package}) || ('Myriad::Exception::' . (caller =~ s{^Myriad::}{}r))
-    ), $name;
+    ), $name) : $caller;
     my $category = delete $args{category} // $DEFAULT_CATEGORY_FOR_CLASS{$caller};
     die 'invalid category ' . $category unless $category =~ /^[0-9a-z_]+$/;
     my $message = delete $args{message} // 'unknown';
 
-    warn "Creating class for [$pkg]";
     my $class = Myriad::Class->import(
         target  => $pkg,
         extends => 'Myriad::Exception::Base',
