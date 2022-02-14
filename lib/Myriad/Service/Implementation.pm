@@ -129,9 +129,9 @@ A counter for the events emitted by emitters tagged by service and method name
 =cut
 
 $metrics->make_counter( emitters_count =>
-    name => [qw(myriad service emitter)],
+    name        => [qw(myriad service emitter)],
     description => "Counter for the events emitted by the emitters",
-    labels => [qw(method service)],
+    labels      => [qw(method service)],
 );
 
 =head1 METHODS
@@ -144,7 +144,7 @@ Populate internal configuration.
 
 method configure (%args) {
     $service_name //= (delete $args{name} || die 'need a service name');
-    Scalar::Util::weaken($myriad = delete $args{myriad}) if exists $args{myriad};
+    weaken($myriad = delete $args{myriad}) if exists $args{myriad};
     $self->next::method(%args);
 }
 
