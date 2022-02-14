@@ -123,6 +123,7 @@ use Scalar::Util;
 use List::Util;
 use List::Keywords;
 use Future::Utils;
+use Module::Load ();
 
 use JSON::MaybeUTF8;
 
@@ -260,7 +261,10 @@ sub import {
                 : ()
             ),
         );
-        # Note that `does` is not supported yet due to https://rt.cpan.org/Ticket/Display.html?id=137952
+        for my $role (($args{does} // [])->@*) {
+            Module::Load::load($role);
+            $meta->add_role($role);
+        }
         return $meta;
     }
     return $pkg;
