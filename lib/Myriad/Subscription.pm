@@ -38,7 +38,7 @@ BEGIN {
     );
 }
 
-BUILD (%args) {
+sub new ($class, %args) {
     my $transport = delete $args{transport};
     weaken(my $myriad = delete $args{myriad});
 
