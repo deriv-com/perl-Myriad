@@ -20,6 +20,8 @@ See L<Myriad::Exception> for the rôle that defines the exception API.
 use Myriad::Exception;
 use Myriad::Exception::Base;
 
+use constant CLASS_CREATION_METHOD => Object::Pad::MOP::Class->can('create_class') || Object::Pad::MOP::Class->can('begin_class');
+
 # Not currently used, but nice as a hint
 our @EXPORT = our @EXPORT_OK = qw(declare_exception);
 
@@ -110,9 +112,13 @@ sub create_exception ($details) {
     #    warn "declare_exception must be called from a BEGIN { ... } block (current phase ${^GLOBAL_PHASE}) for $pkg (category $category)"
     #        unless ${^GLOBAL_PHASE} eq 'START';
 
-        $EXCEPTIONS{$pkg} = my $class = Myriad::Class->import(
+        Myriad::Class->import(
             target  => $pkg,
-            class   => $pkg,
+            class   => '',
+        );
+        $EXCEPTIONS{$pkg} = my $class = (CLASS_CREATION_METHOD)->(
+            'Object::Pad::MOP::Class',
+            $pkg,
             extends => 'Myriad::Exception::Base',
         );
         $class->add_role('Myriad::Exception');
@@ -135,7 +141,7 @@ sub create_exception ($details) {
                 die $self;
             };
         }
-        $class->end_class if $class->can('end_class');
+        $class->seal if $class->can('seal');
         return $class;
     } catch ($e) {
         $log->errorf('Failed to raise declare exception - %s', $e);
