@@ -36,8 +36,6 @@ RPC transport does not exist.
 declare_exception UnknownTransport => (
     message => 'Unknown transport'
 );
-1;
-__END__
 
 our $STORAGE;
 
