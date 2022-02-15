@@ -156,7 +156,7 @@ as long as it exists in the stream.
 
 =cut
 
-async method read_from_stream ($stream_name, $offset = 0 , $count = 10) {
+async method read_from_stream ($stream_name, $offset = 0 , $count = 50) {
     my $stream = $streams->{$stream_name} // return ();
     return {
         map { $_ => $stream->{data}->{$_}->{data} } ($offset..$offset+$count - 1)
@@ -190,7 +190,7 @@ This is not exaclty how Redis works but it covers our need at the moment.
 
 =cut
 
-async method read_from_stream_by_consumer ($stream_name, $group_name, $consumer_name, $offset = 0, $count = 10) {
+async method read_from_stream_by_consumer ($stream_name, $group_name, $consumer_name, $offset = 0, $count = 50) {
     my ($stream, $group) = $self->get_stream_group($stream_name, $group_name);
     my $group_offset = $offset + $group->{cursor};
     my %messages;
