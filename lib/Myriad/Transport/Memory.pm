@@ -133,7 +133,6 @@ Creates a consumer group for a given stream.
 async method create_consumer_group ($stream_name, $group_name, $offset = 0, $make_stream = 0) {
     await $self->create_stream($stream_name) if $make_stream;
     my $stream = $streams->{$stream_name} // Myriad::Exception::Transport::Memory::StreamNotFound->throw(reason => 'Stream should exist before creating new consumer group');
-    #Myriad::Exception::Transport::Memory::GroupExists->throw() if exists $stream->{groups}{$group_name};
     $stream->{groups}->{$group_name} = {pendings => {}, cursor => $offset} unless exists $stream->{groups}{$group_name};
 }
 
