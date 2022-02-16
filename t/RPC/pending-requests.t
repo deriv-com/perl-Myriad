@@ -28,7 +28,7 @@ package Service::RPC {
 
     async method controlled_rpc : RPC (%args) {
         ++$count;
-        
+
         $args{internal_count} = $count;
         $log->tracef('DOING %s', \%args);
         $processed++;
@@ -47,7 +47,7 @@ async sub myriad_instance {
     # Only in case of memory transport, we want to share the same transport instance.
     if (!$ENV{MYRIAD_TRANSPORT} || $ENV{MYRIAD_TRANSPORT} eq 'memory' ) {
         my $metaclass = Object::Pad::MOP::Class->for_class('Myriad');
-        $metaclass->get_slot('$memory_transport')->value($myriad) = $transport;
+        $metaclass->get_field('$memory_transport')->value($myriad) = $transport;
     }
 
     my @config = ('--transport', $ENV{MYRIAD_TRANSPORT} // 'memory', '--transport_cluster', $ENV{MYRIAD_TRANSPORT_CLUSTER} // 0, '-l', 'debug');
