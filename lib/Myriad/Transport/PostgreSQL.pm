@@ -1,23 +1,12 @@
 package Myriad::Transport::PostgreSQL;
 
-use strict;
-use warnings;
+use Myriad::Class extends => 'IO::Async::Notifier';
 
 # VERSION
 # AUTHORITY
 
-use utf8;
-use Object::Pad;
-
-class Myriad::Transport::PostgreSQL extends IO::Async::Notifier;
-
-use Future::AsyncAwait;
-use Syntax::Keyword::Try;
-
 use Database::Async;
 use Database::Async::Engine::PostgreSQL;
-
-use Log::Any qw($log);
 
 has $dbh;
 

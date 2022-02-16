@@ -61,7 +61,7 @@ subtest "Adding and viewing components" => sub {
 
         # Always pass empty $args only with receiver set service name
         $registry->$add($srv_class, $sub_name, $dummy_sub, $component eq 'receiver'? {'service' => $srv_class} : {});
-        my $reg_slot = $reg_meta->get_slot('%'.$component)->value($registry);
+        my $reg_slot = $reg_meta->get_field('%'.$component)->value($registry);
         cmp_deeply($reg_slot, $slot, "added $component");
 
         my $for_method = $registry->$for($srv_class);
@@ -78,7 +78,7 @@ subtest "Adding Service" => sub {
 
     my $myriad = new_ok('Myriad');
     my $config = new_ok('Myriad::Config' => [commandline => ['--transport', 'memory']]);
-    $myriad_meta->get_slot('$config')->value($myriad) = $config;
+    $myriad_meta->get_field('$config')->value($myriad) = $config;
     my $registry = $Myriad::REGISTRY;
 
     # Define our testing service
@@ -101,7 +101,7 @@ subtest "Adding Service" => sub {
     wait_for_future($registry->add_service(myriad => $myriad, service => 'Testing::Service'))->get;
 
     # Get registered services in Myriad
-    my $services = $myriad_meta->get_slot('$services')->value($myriad);
+    my $services = $myriad_meta->get_field('$services')->value($myriad);
     # We should be having only one.
     is (keys %$services, 1, 'Only one service is added');
     my ($service) = values %$services;
