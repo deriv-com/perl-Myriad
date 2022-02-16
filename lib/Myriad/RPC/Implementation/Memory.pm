@@ -72,7 +72,7 @@ async method start () {
 
 =head2 process_stream_messages
 
-Process and emit recieved messages while making sure we respond to them
+Process and emit received messages, while making sure we respond to them.
 
 =cut
 
