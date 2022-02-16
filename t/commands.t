@@ -69,7 +69,7 @@ subtest "service command" => sub {
 
     my $myriad = Myriad->new;
     my $command = new_ok('Myriad::Commands'=> ['myriad', $myriad]);
-    $metaclass->get_slot('$config')->value($myriad) = Myriad::Config->new();
+    $metaclass->get_field('$config')->value($myriad) = Myriad::Config->new();
 
     # Wrong Service(module) name
     like( exception { wait_for_future( $command->service('Ta-wrong') )->get } , qr/unsupported/, 'Died when passing wrong format name');

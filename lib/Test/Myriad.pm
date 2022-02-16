@@ -76,7 +76,7 @@ sub add_service {
             no strict 'refs';
             push @{$pkg . '::ISA' }, 'Myriad::Service';
             $Myriad::Service::SLOT{$pkg} = {
-                map { $_ => $meta->add_slot('$' . $_) } qw(api)
+                map { $_ => $meta->add_field('$' . $_) } qw(api)
             };
         }
     }

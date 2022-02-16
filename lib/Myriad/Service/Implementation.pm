@@ -1,12 +1,9 @@
 package Myriad::Service::Implementation;
 
-use strict;
-use warnings;
+use Myriad::Class extends => 'IO::Async::Notifier';
 
 # VERSION
 # AUTHORITY
-
-use utf8;
 
 =encoding utf8
 
@@ -20,22 +17,11 @@ Myriad::Service - microservice coördination
 
 =cut
 
-use Object::Pad;
-use Future;
-use Future::AsyncAwait;
-use Syntax::Keyword::Try;
-
 use Myriad::Storage::Implementation::Redis;
 use Myriad::Subscription;
 
 use Myriad::Exception;
 
-class Myriad::Service::Implementation extends IO::Async::Notifier;
-
-use Log::Any qw($log);
-use Metrics::Any qw($metrics);
-use List::Util qw(min);
-use Scalar::Util qw(blessed);
 use Myriad::Service::Attributes;
 
 # Only defer up to this many seconds between batch iterations

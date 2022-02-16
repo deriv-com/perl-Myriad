@@ -1,19 +1,11 @@
 package Myriad::Storage::Implementation::Memory;
 
-use strict;
-use warnings;
+use Myriad::Class extends => 'IO::Async::Notifier';
 
 # VERSION
 # AUTHORITY
 
-use Future::AsyncAwait;
-use Object::Pad;
-
-class Myriad::Storage::Implementation::Memory extends IO::Async::Notifier;
-
 use parent qw(Myriad::Util::Defer);
-
-use experimental qw(signatures);
 
 =encoding utf8
 
@@ -33,8 +25,6 @@ correctly.
 =cut
 
 use Role::Tiny::With;
-
-use Myriad::Util::Defer;
 
 use Log::Any qw($log);
 

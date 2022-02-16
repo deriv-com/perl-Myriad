@@ -1,16 +1,9 @@
 package Myriad::Transport::HTTP;
 
-use strict;
-use warnings;
+use Myriad::Class extends => 'IO::Async::Notifier';
 
 # VERSION
 # AUTHORITY
-
-use Object::Pad;
-
-class Myriad::Transport::HTTP extends IO::Async::Notifier;
-
-use curry;
 
 use Net::Async::HTTP;
 use Net::Async::HTTP::Server;

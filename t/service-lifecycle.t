@@ -36,7 +36,7 @@ subtest 'It should throw if it failed to find required config' => sub {
     my $myriad = get_myriad;
     $myriad->configure_from_argv(service => 'Should::Fail')->get();
     like( exception { $myriad->run->get },
-        qr/A required configueration key was not set/,
+        qr/A required configuration key was not set/,
         'exception has been thrown'
     );
 
