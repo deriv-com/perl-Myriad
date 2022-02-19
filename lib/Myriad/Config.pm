@@ -236,7 +236,6 @@ then it searches in the shortcuts map and lastly it tries to parse it as a subar
 Currently this sub takes into account flags (0|1) config and config written as:
 config=value
 
-
 =cut
 
 method lookup_from_args ($commandline) {
@@ -478,5 +477,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

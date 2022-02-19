@@ -25,11 +25,9 @@ use Ryu::Async;
 use Myriad::Class extends => qw(IO::Async::Notifier);
 use Myriad::Exception::Builder category => 'memory_transport';
 
-has $ryu;
-has $streams;
-has $channels;
+=head1 Exceptions
 
-=head2 Exceptions
+=cut
 
 =head2 StreamNotFound
 
@@ -63,6 +61,10 @@ exist but it's not.
 declare_exception 'GroupNotFound' => (
     message => 'The given group does not exist'
 );
+
+has $ryu;
+has $streams;
+has $channels;
 
 BUILD {
     $streams = {};

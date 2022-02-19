@@ -9,7 +9,7 @@ use Myriad::Class extends => 'IO::Async::Notifier';
 
 =head1 NAME
 
-Myriad::Service - microservice coördination
+Myriad::Service::Implementation - microservice coördination
 
 =head1 SYNOPSIS
 
@@ -19,8 +19,6 @@ Myriad::Service - microservice coördination
 
 use Myriad::Storage::Implementation::Redis;
 use Myriad::Subscription;
-
-use Myriad::Exception;
 
 use Myriad::Service::Attributes;
 
@@ -131,9 +129,9 @@ A counter for the events emitted by emitters tagged by service and method name
 =cut
 
 $metrics->make_counter( emitters_count =>
-    name => [qw(myriad service emitter)],
+    name        => [qw(myriad service emitter)],
     description => "Counter for the events emitted by the emitters",
-    labels => [qw(method service)],
+    labels      => [qw(method service)],
 );
 
 =head1 METHODS
@@ -146,7 +144,7 @@ Populate internal configuration.
 
 method configure (%args) {
     $service_name //= (delete $args{name} || die 'need a service name');
-    Scalar::Util::weaken($myriad = delete $args{myriad}) if exists $args{myriad};
+    weaken($myriad = delete $args{myriad}) if exists $args{myriad};
     $self->next::method(%args);
 }
 
@@ -476,5 +474,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

@@ -1,19 +1,11 @@
 package Myriad::Storage::Implementation::Redis;
 
-use strict;
-use warnings;
+use Myriad::Class does => [
+    'Myriad::Role::Storage'
+];
 
 # VERSION
 # AUTHORITY
-
-use Future::AsyncAwait;
-use Object::Pad;
-
-use constant STORAGE_PREFIX => 'storage';
-
-class Myriad::Storage::Implementation::Redis;
-
-use experimental qw(signatures);
 
 =encoding utf8
 
@@ -30,9 +22,7 @@ See L<Myriad::Role::Storage> for API details.
 
 =cut
 
-use Role::Tiny::With;
-
-with 'Myriad::Role::Storage';
+use constant STORAGE_PREFIX => 'storage';
 
 # L<Myriad::Transport::Redis> instance to manage the connections.
 has $redis;
@@ -390,5 +380,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 
