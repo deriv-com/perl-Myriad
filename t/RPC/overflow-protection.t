@@ -51,9 +51,9 @@ async sub myriad_instance {
         $metaclass->get_field('$memory_transport')->value($myriad) = $transport;
     }
 
-    my @config = ('--transport', $ENV{MYRIAD_TRANSPORT} // 'memory', '--transport_cluster', $ENV{MYRIAD_TRANSPORT_CLUSTER} // 0, '-l', 'debug');
+    my @config = ('--transport', $ENV{MYRIAD_TRANSPORT} // 'memory', '--transport_cluster', $ENV{MYRIAD_TRANSPORT_CLUSTER} // 0);
     await $myriad->configure_from_argv(@config, $service);
-    $myriad->run->retain->on_fail(sub { die shift; });
+    $myriad->run->retain->on_fail(sub { fail(shift); });
 
     return $myriad;
 
@@ -66,11 +66,14 @@ sub generate_requests {
     my @req;
     for (1..$count) {
         push @req, Myriad::RPC::Message->new(
-            rpc => $rpc,
-            who => $whoami,
-            deadline => time + $expiry,
+            rpc        => $rpc,
+            who        => $whoami,
+            deadline   => time + $expiry,
             message_id => $id,
-            args => {test => $id++, who => $whoami }
+            args       => {
+                test => $id++,
+                who  => $whoami
+            }
         );
     }
     return @req;
