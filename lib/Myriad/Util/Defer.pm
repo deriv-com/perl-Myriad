@@ -23,42 +23,47 @@ and defaults to no delay.
 use Attribute::Handlers;
 use Class::Method::Modifiers;
 
-use Exporter qw(import export_to_level);
-
-our @IMPORT = our @IMPORT_OK = qw(Defer);
-
 use constant RANDOM_DELAY => $ENV{MYRIAD_RANDOM_DELAY} || 0;
 
 use Sub::Util;
-sub MODIFY_CODE_ATTRIBUTES {
-    my ($class, $code, @attrs) = @_;
+sub MODIFY_CODE_ATTRIBUTES ($class, $code, @attrs) {
     my $name = Sub::Util::subname($code);
-    warn "apply @attrs to $name ($code) for $class\n";
+    my ($method_name) = $name =~ m{::([^:]+)$};
+    for my $attr (@attrs) {
+        if($attr eq 'Defer') {
+            $class->defer_method($method_name, $name);
+        } else {
+            die 'unknown attribute ' . $attr;
+        }
+    }
     return;
 }
 
 # Helper method that allows us to return a not-quite-immediate
 # Future from some inherently non-async code.
-sub Defer {
-    my ($package, $symbol, $referent, $attr, $data, $phase, $filename, $linenum) = @_;
-    my $name = *{$symbol}{NAME} or die 'need a symbol name';
-    $log->tracef('will defer handler for %s::%s', $package, $name);
-    around join('::', $package, $name) => async sub {
-        my ($code, $self, @args) = @_;
-
+sub defer_method ($package, $name, $fqdn) {
+    $log->tracef('will defer handler for %s::%s by %f', $package, $name, RANDOM_DELAY);
+    my $code = $package->can($name);
+    my $replacement = async sub ($self, @args) {
         # effectively $loop->later, but in an await-compatible way:
         # either zero (default behaviour) or if we have a random
         # delay assigned, use that to drive a uniform rand() call
+        $log->tracef('call to %s::%s, deferring start', $package, $name);
         await $self->loop->delay_future(
             after => rand(RANDOM_DELAY)
         );
 
-        $log->tracef('deferred call to %s::%s', $package, $name);
+        $log->tracef('deferred call to %s::%s runs now', $package, $name);
 
         return await $self->$code(
             @args
         );
-    } if RANDOM_DELAY;
+    };
+    {
+        no strict 'refs';
+        no warnings 'redefine';
+        *{join '::', $package, $name} = $replacement if RANDOM_DELAY;
+    }
 }
 
 1;
