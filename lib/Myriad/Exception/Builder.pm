@@ -108,10 +108,6 @@ sub create_exception ($details) {
     my $message = delete $details->{message} or die 'no message';
 
     try {
-
-    #    warn "declare_exception must be called from a BEGIN { ... } block (current phase ${^GLOBAL_PHASE}) for $pkg (category $category)"
-    #        unless ${^GLOBAL_PHASE} eq 'START';
-
         Myriad::Class->import(
             target  => $pkg,
             class   => '',

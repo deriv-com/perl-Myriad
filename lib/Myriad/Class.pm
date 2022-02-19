@@ -256,7 +256,6 @@ sub import {
     if(my $class = $args{class} // $pkg) {
         # For history here, see this:
         # https://rt.cpan.org/Ticket/Display.html?id=132337
-        # warn "creating OP @{[ $args{type} || 'class' ]} for [$pkg] as [$class]\n";
         Object::Pad->import_into($pkg);
         my $method = 'begin_' . ($args{type} || 'class');
         my $meta = Object::Pad::MOP::Class->$method(
