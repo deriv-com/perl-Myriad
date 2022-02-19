@@ -137,7 +137,7 @@ sub create_exception ($details) {
                 die $self;
             };
         }
-        $class->seal if $class->can('seal');
+        $class->seal;
         return $class;
     } catch ($e) {
         $log->errorf('Failed to raise declare exception - %s', $e);
