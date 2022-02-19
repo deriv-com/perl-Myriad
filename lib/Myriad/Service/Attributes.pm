@@ -37,40 +37,35 @@ our %KNOWN_ATTRIBUTES = (
     Receiver => 'receiver',
 );
 
-=head2 MODIFY_CODE_ATTRIBUTES
+=head1 METHODS
+
+=head2 apply_attributes
 
 Due to L<Attribute::Handlers> limitations at runtime, we need to pick
 up attributes ourselves.
 
 =cut
 
-our @PENDING;
-$log->infof('Applying all attributes');
-$_->() for splice @PENDING;
-$log->infof('Attributes done');
-
 sub apply_attributes {
     my ($class, %args) = @_;
     my $pkg = $args{class};
     my ($method) = Sub::Util::subname($args{code}) =~ /::([^:]+)$/;
-    push @PENDING, sub {
-        for my $attr ($args{attributes}->@*) {
-            my ($type, $args) = $attr =~ m{^([a-z]+)(.*$)}si;
-            # Nasty, but functional for now - this will likely be replaced by
-            # an m//gc parser later with a restricted set of options.
-            $args = eval "+{ $args }" // die 'invalid attribute parameters: ' . $@ if length $args;
+    for my $attr ($args{attributes}->@*) {
+        my ($type, $args) = $attr =~ m{^([a-z]+)(.*$)}si;
+        # Nasty, but functional for now - this will likely be replaced by
+        # an m//gc parser later with a restricted set of options.
+        $args = eval "+{ $args }" // die 'invalid attribute parameters: ' . $@ if length $args;
 
-            $log->tracef('Applying %s attribute to %s::%s with args (%s)', $type, $pkg, $method, $args);
-            my $handler = $KNOWN_ATTRIBUTES{$type}
-                or die 'unknown attribute ' . $type;
-            $class->$handler(
-                $pkg,
-                $method,
-                $args{code},
-                $args
-            );
-        }
-    };
+        $log->tracef('Applying %s attribute to %s::%s with args (%s)', $type, $pkg, $method, $args);
+        my $handler = $KNOWN_ATTRIBUTES{$type}
+            or die 'unknown attribute ' . $type;
+        $class->$handler(
+            $pkg,
+            $method,
+            $args{code},
+            $args
+        );
+    }
     return;
 }
 
