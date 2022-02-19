@@ -1,12 +1,9 @@
 package Myriad::Service::Attributes;
 
-use strict;
-use warnings;
+use Myriad::Class;
 
 # VERSION
 # AUTHORITY
-
-use utf8;
 
 =encoding utf8
 
@@ -30,10 +27,6 @@ which does all the real work.
 =cut
 
 use Myriad::Registry;
-
-use Check::UnitCheck ();
-use Log::Any qw($log);
-use Exporter qw(import export_to_level);
 
 use Sub::Util ();
 
