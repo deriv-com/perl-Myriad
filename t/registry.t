@@ -120,7 +120,7 @@ subtest "Adding Service" => sub {
     my $srv_meta = Object::Pad::MOP::Class->for_class(ref $service);
     # Calling empty <component>_for for an added service will not trigger exception. reveiver and emitter in this case.
     my ($rpc, $batch, $receiver, $emitter) = map {my $meth = component_for_method($_); $registry->$meth('Testing::Service')} qw(rpc batch receiver emitter);
-    cmp_deeply([map {keys %$_ } ($rpc, $batch, $receiver, $emitter)], ['inc_test', 'batch_test'], 'Registry components configured after service adding');
+    cmp_deeply([map {keys %$_ } ($rpc, $batch, $receiver, $emitter)], bag('inc_test', 'batch_test'), 'Registry components configured after service adding');
 
     my $current_notifiers = loop_notifiers($myriad->loop);
     ok($current_notifiers->{'Testing::Service'}, 'Testing::Service is added to  loop');
