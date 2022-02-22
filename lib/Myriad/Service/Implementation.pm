@@ -1,18 +1,15 @@
 package Myriad::Service::Implementation;
 
-use strict;
-use warnings;
+use Myriad::Class extends => 'IO::Async::Notifier';
 
 # VERSION
 # AUTHORITY
-
-use utf8;
 
 =encoding utf8
 
 =head1 NAME
 
-Myriad::Service - microservice coördination
+Myriad::Service::Implementation - microservice coördination
 
 =head1 SYNOPSIS
 
@@ -20,22 +17,9 @@ Myriad::Service - microservice coördination
 
 =cut
 
-use Object::Pad;
-use Future;
-use Future::AsyncAwait;
-use Syntax::Keyword::Try;
-
 use Myriad::Storage::Implementation::Redis;
 use Myriad::Subscription;
 
-use Myriad::Exception;
-
-class Myriad::Service::Implementation extends IO::Async::Notifier;
-
-use Log::Any qw($log);
-use Metrics::Any qw($metrics);
-use List::Util qw(min);
-use Scalar::Util qw(blessed);
 use Myriad::Service::Attributes;
 
 # Only defer up to this many seconds between batch iterations
@@ -145,9 +129,9 @@ A counter for the events emitted by emitters tagged by service and method name
 =cut
 
 $metrics->make_counter( emitters_count =>
-    name => [qw(myriad service emitter)],
+    name        => [qw(myriad service emitter)],
     description => "Counter for the events emitted by the emitters",
-    labels => [qw(method service)],
+    labels      => [qw(method service)],
 );
 
 =head1 METHODS
@@ -160,7 +144,7 @@ Populate internal configuration.
 
 method configure (%args) {
     $service_name //= (delete $args{name} || die 'need a service name');
-    Scalar::Util::weaken($myriad = delete $args{myriad}) if exists $args{myriad};
+    weaken($myriad = delete $args{myriad}) if exists $args{myriad};
     $self->next::method(%args);
 }
 
@@ -490,5 +474,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

@@ -1,19 +1,15 @@
 package Myriad::Subscription::Implementation::Redis;
 
+use Myriad::Class extends => qw(IO::Async::Notifier), does => [
+    'Myriad::Role::Subscription'
+];
+
 # VERSION
 # AUTHORITY
 
-use Myriad::Class extends => qw(IO::Async::Notifier);
-
-use JSON::MaybeUTF8 qw(:v1);
-use Unicode::UTF8 qw(decode_utf8 encode_utf8);
 use Myriad::Util::UUID;
 
-use Role::Tiny::With;
-
 use constant MAX_ALLOWED_STREAM_LENGTH => 10_000;
-
-with 'Myriad::Role::Subscription';
 
 has $redis;
 

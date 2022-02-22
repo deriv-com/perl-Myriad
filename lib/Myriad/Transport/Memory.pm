@@ -25,11 +25,9 @@ use Ryu::Async;
 use Myriad::Class extends => qw(IO::Async::Notifier);
 use Myriad::Exception::Builder category => 'memory_transport';
 
-has $ryu;
-has $streams;
-has $channels;
+=head1 Exceptions
 
-=head2 Exceptions
+=cut
 
 =head2 StreamNotFound
 
@@ -63,6 +61,10 @@ exist but it's not.
 declare_exception 'GroupNotFound' => (
     message => 'The given group does not exist'
 );
+
+has $ryu;
+has $streams;
+has $channels;
 
 BUILD {
     $streams = {};
@@ -133,8 +135,7 @@ Creates a consumer group for a given stream.
 async method create_consumer_group ($stream_name, $group_name, $offset = 0, $make_stream = 0) {
     await $self->create_stream($stream_name) if $make_stream;
     my $stream = $streams->{$stream_name} // Myriad::Exception::Transport::Memory::StreamNotFound->throw(reason => 'Stream should exist before creating new consumer group');
-    Myriad::Exception::Transport::Memory::GroupExists->throw() if exists $stream->{groups}{$group_name};
-    $stream->{groups}->{$group_name} = {pendings => {}, cursor => $offset};
+    $stream->{groups}->{$group_name} = {pendings => {}, cursor => $offset} unless exists $stream->{groups}{$group_name};
 }
 
 =head2 read_from_stream
@@ -156,7 +157,7 @@ as long as it exists in the stream.
 
 =cut
 
-async method read_from_stream ($stream_name, $offset = 0 , $count = 10) {
+async method read_from_stream ($stream_name, $offset = 0 , $count = 50) {
     my $stream = $streams->{$stream_name} // return ();
     return {
         map { $_ => $stream->{data}->{$_}->{data} } ($offset..$offset+$count - 1)
@@ -190,7 +191,7 @@ This is not exaclty how Redis works but it covers our need at the moment.
 
 =cut
 
-async method read_from_stream_by_consumer ($stream_name, $group_name, $consumer_name, $offset = 0, $count = 10) {
+async method read_from_stream_by_consumer ($stream_name, $group_name, $consumer_name, $offset = 0, $count = 50) {
     my ($stream, $group) = $self->get_stream_group($stream_name, $group_name);
     my $group_offset = $offset + $group->{cursor};
     my %messages;
@@ -208,6 +209,45 @@ async method read_from_stream_by_consumer ($stream_name, $group_name, $consumer_
     return \%messages;
 }
 
+=head2 pending_stream_by_consumer
+
+Read pending elements from the stream for the given group.
+
+This operation will return messages consumed but not yet acknowledged only.
+It will return items regardless of their consumer.
+
+=over 4
+
+=item * C<stream_name> - The name of the stream should exist before calling this sub.
+
+=item * C<group_name> - The name of the group should exist before callingg this sub.
+
+=item * C<consumer_name> - The current consumer name, will be used to keep tracking of pendign messages.
+
+=item * C<offset> - If given the consumer can skip the given number of messages.
+
+=item * C<count> - The limit of messages to be received.
+
+=back
+
+=cut
+
+async method pending_stream_by_consumer ($stream_name, $group_name, $consumer_name, $offset = 0, $count = 10) {
+    my ($stream, $group);
+    try {
+        ($stream, $group) = $self->get_stream_group($stream_name, $group_name);
+    } catch ($e) {
+        return {};
+    }
+    my %messages;
+    for my $i (keys $group->{pendings}->%*) {
+        if (my $message = $stream->{data}->{$i}) {
+            $messages{$i} = $message->{data};
+        }
+    }
+
+    return \%messages;
+}
 =head2 ack_message
 
 Remove a message from the pending list.

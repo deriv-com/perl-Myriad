@@ -128,7 +128,7 @@ sub import ($called_on, @args) {
     # Currently we have `$api`, but might be helpful to provide `$storage`
     # and others directly here.
     $SLOT{$pkg} = {
-        map { $_ => $meta->add_slot('$' . $_) } qw(
+        map { $_ => $meta->add_field('$' . $_) } qw(
             api
         )
     };
@@ -163,5 +163,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

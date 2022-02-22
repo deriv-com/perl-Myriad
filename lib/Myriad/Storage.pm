@@ -1,12 +1,9 @@
 package Myriad::Storage;
 
-use strict;
-use warnings;
+use Myriad::Class class => '';
 
 # VERSION
 # AUTHORITY
-
-use utf8;
 
 =encoding utf8
 
@@ -22,13 +19,13 @@ Myriad::Storage - microservice Storage abstraction
 
 =cut
 
-no indirect qw(fatal);
-use Scalar::Util qw(weaken);
-
-use Myriad::Exception::Builder category => 'storage';
 use Myriad::Role::Storage;
 
+use Myriad::Exception::Builder category => 'storage';
+
 =head1 Exceptions
+
+=cut
 
 =head2 UnknownTransport
 
@@ -89,5 +86,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

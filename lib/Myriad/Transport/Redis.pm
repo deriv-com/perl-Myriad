@@ -336,53 +336,47 @@ Takes the following named parameters:
 
 =back
 
-Returns a L<Ryu::Source> for the pending items in this stream.
+Returns the pending items in this stream.
 
 =cut
 
-method pending (%args) {
+async method pending (%args) {
     my $src = $self->source;
     my $stream = $self->apply_prefix($args{stream});
     my $group = $args{group};
     my $client = $args{client};
-    Future->wait_any(
-        $src->completed,
-        (async method {
-            my $instance = await $self->borrow_instance_from_pool;
-            try {
-                my $src = $self->source;
-                my $start = '-';
-                while (1) {
-                    await $src->unblocked;
-                    my ($pending) = await $instance->xpending(
-                        $stream,
-                        $group,
-                        $start, '+',
-                        $self->batch_count,
-                        $client,
-                    );
-                    for my $item ($pending->@*) {
-                        my ($id, $consumer, $age, $delivery_count) = $item->@*;
-                        $log->tracef('Claiming pending message %s from %s, age %s, %d prior deliveries', $id, $consumer, $age, $delivery_count);
-                        my $claim = await $redis->xclaim($stream, $group, $client, 10, $id);
-                        $log->tracef('Claim is %s', $claim);
-                        my $args = $claim->[0]->[1];
-                        if($args) {
-                            push @$args, ("message_id", $id);
-                            $src->emit($args);
-                        }
-                    }
-                    last unless @$pending >= $self->batch_count;
-                }
-            } finally {
-                $self->return_instance_to_pool($instance) if $instance;
-                undef $instance;
-            }
-        })->($self),
-    )->on_fail(sub  {
-        $src->fail(@_);
-    })->retain;
-    $src;
+    my @res = ();
+
+    my $instance = await $self->borrow_instance_from_pool;
+    try {
+        my ($pending) = await $instance->xpending(
+            $stream,
+            $group,
+            '-', '+',
+            $self->batch_count,
+            $client,
+        );
+        @res = await &fmap_concat($self->$curry::weak(
+            async method ($item) {
+                my ($id, $consumer, $age, $delivery_count) = $item->@*;
+                $log->tracef('Claiming pending message %s from %s, age %s, %d prior deliveries', $id, $consumer, $age, $delivery_count);
+                my $claim = await $redis->xclaim($stream, $group, $client, 10, $id);
+                $log->tracef('Claim is %s', $claim);
+                my $args = $claim->[0]->[1];
+
+                return {stream => $self->remove_prefix($stream), id => $id, data => $args ? $args : []};
+            }),
+            foreach => $pending,
+            concurrent => scalar @$pending
+        );
+
+        } catch ($e) {
+            $log->warnf('Could not read pending messages on stream: %s | error: %s', $stream, $e);
+        }
+        $self->return_instance_to_pool($instance) if $instance;
+        undef $instance;
+
+        return @res;
 }
 
 =head2 create_group
@@ -676,5 +670,5 @@ Deriv Group Services Ltd. C<< DERIV@cpan.org >>
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

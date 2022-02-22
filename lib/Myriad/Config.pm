@@ -30,7 +30,7 @@ use Myriad::Util::Secret;
 use Myriad::Exception::Builder category => 'config';
 
 declare_exception 'ConfigRequired' => (
-    message => 'A required configueration key was not set'
+    message => 'A required configuration key was not set'
 );
 
 declare_exception 'UnregisteredConfig' => (
@@ -235,7 +235,6 @@ then it searches in the shortcuts map and lastly it tries to parse it as a subar
 
 Currently this sub takes into account flags (0|1) config and config written as:
 config=value
-
 
 =cut
 
@@ -451,7 +450,7 @@ async method listen_for_updates () {
                 $log->warnf('Config: config updates listener failed - %s', shift);
             });
         } catch {
-            $log->trace('Config: transport do not support keyspace notifications');
+            $log->trace('Config: transport does not support keyspace notifications');
         }
     } else {
         $log->warn('Config: Storage is not initiated, cannot listen to config updates');
@@ -478,5 +477,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

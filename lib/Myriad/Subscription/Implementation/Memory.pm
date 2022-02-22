@@ -1,13 +1,9 @@
 package Myriad::Subscription::Implementation::Memory;
 
+use Myriad::Class extends => 'IO::Async::Notifier', does => [ 'Myriad::Role::Subscription', 'Myriad::Util::Defer' ];
+
 # VERSION
 # AUTHORITY
-
-use Myriad::Class extends => qw(IO::Async::Notifier);
-
-use Role::Tiny::With;
-
-with 'Myriad::Role::Subscription';
 
 has $transport;
 
@@ -15,6 +11,9 @@ has $receivers;
 
 has $should_shutdown = 0;
 has $stopped;
+
+# FIXME Need to update :Defer for Object::Pad
+sub MODIFY_CODE_ATTRIBUTES { }
 
 BUILD {
     $receivers = [];
@@ -118,5 +117,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 
