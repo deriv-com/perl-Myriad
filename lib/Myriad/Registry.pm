@@ -231,7 +231,7 @@ it takes the following args:
 =cut
 
 method make_service_name ($name, $namespace = '') {
-    $name =~ s/^\Q$namespace// if $namespace;
+    $name =~ s/^\Q$namespace// if length $namespace;
     return lc($name) =~ s{::}{.}gr
 }
 
@@ -245,5 +245,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

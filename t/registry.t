@@ -4,6 +4,7 @@ use warnings;
 use Test::More;
 use Test::Deep;
 use Test::Fatal;
+use Log::Any::Adapter qw(TAP);
 use Test::MockModule;
 use IO::Async::Loop;
 use IO::Async::Test;
@@ -15,9 +16,11 @@ use Myriad;
 use Myriad::Registry;
 use Myriad::Config;
 
-my $service_module = Test::MockModule->new('Myriad::Service::Implementation');
-my $started_services = {};
-$service_module->mock('start', async sub { my ($self) = @_; $started_services->{ref($self)} = 1; });
+my $started_services;
+BEGIN {
+    my $service_module = Test::MockModule->new('Myriad::Service::Implementation');
+    $service_module->mock(start => async sub { my ($self) = @_; $started_services->{ref($self)} = 1; });
+}
 
 my $loop = IO::Async::Loop->new;
 testing_loop($loop);
@@ -26,11 +29,16 @@ sub loop_notifiers {
     my $loop = shift;
 
     my @current_notifiers = $loop->notifiers;
-    my %loaded_in_loop = map { ref()  => 1 } @current_notifiers;
+    my %loaded_in_loop = map { ref($_)  => 1 } @current_notifiers;
     return \%loaded_in_loop;
 }
 
-my $METHODS_MAP = {rpc => 'rpc_for', batch => 'batches_for', emitter => 'emitters_for', receiver => 'receivers_for'};
+my $METHODS_MAP = {
+    rpc => 'rpc_for',
+    batch => 'batches_for',
+    emitter => 'emitters_for',
+    receiver => 'receivers_for'
+};
 sub component_for_method {
     my $method = shift;
 
@@ -82,7 +90,7 @@ subtest "Adding Service" => sub {
     my $registry = $Myriad::REGISTRY;
 
     # Define our testing service
-    {
+    BEGIN {
         package Testing::Service;
         use Myriad::Service;
 
@@ -111,8 +119,15 @@ subtest "Adding Service" => sub {
 
     my $srv_meta = Object::Pad::MOP::Class->for_class(ref $service);
     # Calling empty <component>_for for an added service will not trigger exception. reveiver and emitter in this case.
-    my ($rpc, $batch, $receiver, $emitter) = map {my $meth = component_for_method($_); $registry->$meth('Testing::Service')} qw(rpc batch receiver emitter);
-    cmp_deeply([map {keys %$_ } ($rpc, $batch, $receiver, $emitter)], ['inc_test', 'batch_test'], 'Registry components configured after service adding');
+    my ($rpc, $batch, $receiver, $emitter) = map {
+        $registry->${\component_for_method($_)}('Testing::Service')
+    } qw(rpc batch receiver emitter);
+    cmp_deeply([
+        map { keys %$_ } $rpc, $batch, $receiver, $emitter
+    ],
+        bag(qw(inc_test batch_test)),
+        'Registry components configured after service adding'
+    );
 
     my $current_notifiers = loop_notifiers($myriad->loop);
     ok($current_notifiers->{'Testing::Service'}, 'Testing::Service is added to  loop');
@@ -129,7 +144,10 @@ subtest "Service name" => sub {
     # Only lower case sepatated by .(dot)
     like ($reg_srv_name, qr/^[a-z']+\.[a-z']+$/, 'passing regex service name');
 
-    isa_ok(exception {$registry->service_by_name("Not::Found::Service")}, 'Myriad::Exception::Registry::ServiceNotFound', "Exception for trying to get undef service");
+    my $ex = exception {
+        $registry->service_by_name("Not::Found::Service")
+    };
+    isa_ok($ex, 'Myriad::Exception::Registry::ServiceNotFound', "Exception for trying to get undef service") or note explain $ex;
 
     # Should remove the namespace from the service name;
     $reg_srv_name = $registry->make_service_name('Test::Module::Service', 'Test::Module::');

@@ -1,12 +1,9 @@
 package Myriad::Subscription;
 
-use strict;
-use warnings;
+use Myriad::Class class => '';
 
 # VERSION
 # AUTHORITY
-
-use utf8;
 
 =encoding utf8
 
@@ -39,8 +36,7 @@ declare_exception UnknownTransport => (
     message => 'Unknown transport'
 );
 
-sub new {
-    my ($class, %args) = @_;
+sub new ($class, %args) {
     my $transport = delete $args{transport};
     weaken(my $myriad = delete $args{myriad});
 
@@ -74,5 +70,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 
