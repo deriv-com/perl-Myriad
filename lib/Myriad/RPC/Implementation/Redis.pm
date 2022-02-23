@@ -64,7 +64,10 @@ method configure (%args) {
 
 async method start () {
     $self->listen;
-    await $running;
+    await Future->wait_any(
+        $running,
+        $self->cleanup_stream
+    );
 }
 
 method create_from_sink (%args) {
@@ -184,6 +187,26 @@ async method has_pending_requests ($service) {
     }
 
     return 0;
+}
+
+async method cleanup_stream() {
+    $log->tracef('Start cleaning process to (%d) RPC streams', scalar($self->rpc_list->@*));
+    await &fmap_void($self->$curry::curry(async method ($rpc) {
+        while (1) {
+            try {
+                # Since this one checks pending too and make sure we are only getting
+                # IDs that has been fully processed. So should be enough.
+                my $oldest = await $self->redis->oldest_processed_id($rpc->{stream});
+                $log->tracef('Stream: %s | oldest: %s', $rpc->{stream}, $oldest);
+                my ($trim) = await $self->redis->trim_old($rpc->{stream}, $oldest);
+                $log->tracef('Trimmed from stream: %s | trim: %s', $rpc->{stream}, $trim);
+            } catch ($e) {
+                $log->warnf('Could not cleanup RPC stream: %s | %s', $rpc->{stream}, $e);
+            }
+            # Run moderately
+            await $self->loop->delay_future(after => 5);
+        }
+    }), foreach => [$self->rpc_list->@*], concurrent => scalar $self->rpc_list->@*);
 }
 
 1;

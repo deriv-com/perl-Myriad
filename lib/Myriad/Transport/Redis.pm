@@ -662,6 +662,10 @@ async method watch_keyspace($pattern) {
     return $sub;
 }
 
+async method trim_old($stream, $minid) {
+    await $redis->xtrim($self->apply_prefix($stream), MINID => $minid);
+}
+
 1;
 
 =head1 AUTHOR
@@ -670,5 +674,5 @@ Deriv Group Services Ltd. C<< DERIV@cpan.org >>
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
 
