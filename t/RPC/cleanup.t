@@ -12,6 +12,7 @@ use Myriad::Transport::Memory;
 use Myriad::Transport::Redis;
 use Myriad::RPC::Message;
 use Sys::Hostname qw(hostname);
+use Test::MockModule;
 
 use Myriad;
 
@@ -39,6 +40,7 @@ package Service::RPC {
 my $loop = IO::Async::Loop->new;
 # Only used for in memory tests
 my $transport;
+my $rpc_impl = Test::MockModule->new('Myriad::RPC::Implementation::Redis');
 async sub myriad_instance {
     my $service = shift // '';
 
@@ -50,6 +52,8 @@ async sub myriad_instance {
         $loop->add($transport);
         my $metaclass = Object::Pad::MOP::Class->for_class('Myriad');
         $metaclass->get_field('$memory_transport')->value($myriad) = $transport;
+    } else {
+        $rpc_impl->mock('cleanup_delay', sub { return 0.1; });
     }
 
     my @config = ('--transport', $ENV{MYRIAD_TRANSPORT} // 'memory', '--transport_cluster', $ENV{MYRIAD_TRANSPORT_CLUSTER} // 0, '-l', 'debug');
@@ -91,7 +95,7 @@ subtest 'RPCs to cleanup their streams'  => sub {
                 cluster => $ENV{MYRIAD_TRANSPORT_CLUSTER} // 0,
             ));
             await $redis->start;
-            $transport_instance = $redis
+            $transport_instance = $redis;
         }
 
         my $message_count = 20;

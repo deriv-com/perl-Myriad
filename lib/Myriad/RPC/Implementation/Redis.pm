@@ -45,6 +45,9 @@ method whoami { $whoami }
 has $rpc_list;
 method rpc_list { $rpc_list }
 
+has $cleanup_delay = 5;
+method cleanup_delay { $cleanup_delay }
+
 has $running;
 has $processing;
 
@@ -204,7 +207,7 @@ async method cleanup_stream() {
                 $log->warnf('Could not cleanup RPC stream: %s | %s', $rpc->{stream}, $e);
             }
             # Run moderately
-            await $self->loop->delay_future(after => 5);
+            await $self->loop->delay_future(after => $self->cleanup_delay);
         }
     }), foreach => [$self->rpc_list->@*], concurrent => scalar $self->rpc_list->@*);
 }
