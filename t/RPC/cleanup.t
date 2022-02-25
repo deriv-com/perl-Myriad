@@ -30,7 +30,7 @@ package Service::RPC {
         ++$count;
 
         $args{internal_count} = $count;
-        $log->warnf('DOING %s', \%args);
+        $log->tracef('DOING %s', \%args);
         $processed++;
         return \%args;
     }
@@ -46,6 +46,8 @@ async sub myriad_instance {
 
     # Only in case of memory transport, we want to share the same transport instance.
     if (!$ENV{MYRIAD_TRANSPORT} || $ENV{MYRIAD_TRANSPORT} eq 'memory' ) {
+        $transport = Myriad::Transport::Memory->new;
+        $loop->add($transport);
         my $metaclass = Object::Pad::MOP::Class->for_class('Myriad');
         $metaclass->get_field('$memory_transport')->value($myriad) = $transport;
     }
@@ -75,42 +77,46 @@ sub generate_requests {
     return @req;
 }
 
-subtest 'RPCs on start should check and process pending messages on start'  => sub {
+subtest 'RPCs to cleanup their streams'  => sub {
     (async sub {
 
         note "starting service";
         my $rpc_myriad = await myriad_instance('Service::RPC');
-
-        my $message_count = 20;
-        my @requests = generate_requests('test_rpc', $message_count, 1000);
-        my $stream_name = 'service.service.rpc.rpc/test_rpc';
-
-        # Add messages to stream then read them without acknowleging to make them go into pending state
+        my $transport_instance;
         if (!$ENV{MYRIAD_TRANSPORT} || $ENV{MYRIAD_TRANSPORT} eq 'memory' ) {
-            $transport = Myriad::Transport::Memory->new;
-            $loop->add($transport);
-            foreach my $req (@requests) {
-                await $transport->add_to_stream($stream_name, $req->as_hash->%*);
-            }
-            await $loop->delay_future(after => 0.4);
-            is $processed, $message_count, 'Have processed all messages';
-
-            my $stream_length = $transport->stream_length($stream_name);
-            is $stream_length, 0, 'Stream has been cleaned up after processing';
+            $transport_instance = $transport;
         } else {
             $loop->add( my $redis = Myriad::Transport::Redis->new(
                 redis_uri => $ENV{MYRIAD_TRANSPORT},
                 cluster => $ENV{MYRIAD_TRANSPORT_CLUSTER} // 0,
             ));
             await $redis->start;
-            foreach my $req (@requests) {
-                await $redis->xadd($stream_name => '*', $req->as_hash->%*);
-            }
-            await $loop->delay_future(after => 0.4);
-            is $processed, $message_count, 'Have processed all messages';
-            my $stream_length = await $redis->stream_length($stream_name);
-            is $stream_length, 0, 'Stream has been cleaned up after processing';
+            $transport_instance = $redis
         }
+
+        my $message_count = 20;
+        my @requests = generate_requests('test_rpc', $message_count, 1000);
+        my $stream_name = 'service.service.rpc.rpc/test_rpc';
+        foreach my $req (@requests) {
+            await $transport_instance->xadd($stream_name => '*', $req->as_hash->%*);
+        }
+        await $loop->delay_future(after => 0.4);
+
+        is $processed, $message_count, 'Have processed all messages';
+        my $stream_length = await $transport_instance->stream_length($stream_name);
+        is $stream_length, 1, 'Stream has been cleaned up after processing';
+
+        # Test for another cycle
+        my $message_count2 = $message_count + 44;
+        @requests = generate_requests('test_rpc', $message_count2, 1000);
+        foreach my $req (@requests) {
+            await $transport_instance->xadd($stream_name => '*', $req->as_hash->%*);
+        }
+        await $loop->delay_future(after => 0.4);
+
+        is $processed, $message_count + $message_count2, 'Have processed all messages';
+        my $stream_length = await $transport_instance->stream_length($stream_name);
+        is $stream_length, 1, 'Stream has been cleaned up after processing';
 
     })->()->get();
 };
