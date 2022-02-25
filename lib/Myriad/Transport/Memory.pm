@@ -361,7 +361,7 @@ async method stream_groups_info ($stream_name) {
         $group_info->{pending} = +(keys $stream->{groups}->{$group}->{pendings}->%*);
         # Since ID starts from 0
         # in order to be more closely related to Redis behaviour
-        # so our cursor acts as ID representative.
+        # so our cursor acts as ID representative for individual consumer group.
         $group_info->{'last-delivered-id'} = $stream->{groups}->{$group}->{cursor} - 1;
         push $info->@*, $group_info;
     }

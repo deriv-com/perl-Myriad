@@ -125,5 +125,4 @@ subtest 'RPCs to cleanup their streams'  => sub {
     })->()->get();
 };
 
-
 done_testing();
