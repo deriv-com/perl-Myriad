@@ -359,7 +359,10 @@ async method stream_groups_info ($stream_name) {
         # We don't keep track of consumers yet
         $group_info->{consumers} = 0;
         $group_info->{pending} = +(keys $stream->{groups}->{$group}->{pendings}->%*);
-        $group_info->{'last-delivered-id'} = $stream->{groups}->{$group}->{cursor};
+        # Since ID starts from 0
+        # in order to be more closely related to Redis behaviour
+        # so our cursor acts as ID representative.
+        $group_info->{'last-delivered-id'} = $stream->{groups}->{$group}->{cursor} - 1;
         push $info->@*, $group_info;
     }
 
@@ -374,6 +377,67 @@ Checks if a  given key exists or not.
 
 async method exists ($key) {
     return exists $streams->{$key} || exists $channels->{$key};
+}
+
+=head2 oldest_processed_id
+
+get stream last processed ID.
+
+=cut
+
+async method oldest_processed_id ($stream_name) {
+    my $info = await $self->stream_groups_info($stream_name);
+    my $oldest;
+
+    for my $group_info (@$info) {
+        $oldest //= $group_info->{'last-delivered-id'};
+        $oldest = $group_info->{'last-delivered-id'} if $group_info->{'last-delivered-id'} and ($group_info->{'last-delivered-id'} < $oldest);
+
+        # check for pending
+        if ($group_info->{pending}) {
+            my $oldest_pending = min(keys $streams->{$stream_name}{groups}{$group_info->{name}}{pendings}->%*);
+            $oldest //= $oldest_pending;
+            $oldest = $oldest_pending if $oldest_pending and ( $oldest_pending < $oldest);
+        }
+    }
+    return $oldest;
+}
+
+=head2 stream_length
+
+Return the length of a given stream
+
+=cut
+
+async method stream_length ($stream_name) {
+    my $stream = $streams->{$stream_name} // Myriad::Exception::Transport::Memory::StreamNotFound->throw();
+    return 0 + (keys $stream->{data}->%*);
+}
+
+=head2 trim_old
+
+Removes older than given ID entries from a given stream.
+
+=cut
+
+async method trim_old($stream_name, $minid) {
+    my $stream = $streams->{$stream_name} // Myriad::Exception::Transport::Memory::StreamNotFound->throw();
+    for my $id (keys $stream->{data}->%*) {
+        if ($id < $minid) {
+            delete $stream->{data}{$id};
+        }
+    }
+}
+
+=head2 xadd
+
+Acts just like Redis xadd command
+
+=cut
+
+async method xadd($stream_name, $id, %args) {
+    # At the moment only supported without setting ID
+    await $self->add_to_stream($stream_name, %args);
 }
 
 method get_stream_group ($stream_name, $group_name) {

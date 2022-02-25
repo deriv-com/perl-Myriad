@@ -54,7 +54,19 @@ Start waiting for new requests to fill in the internal requests queue.
 
 async method start () {
     $should_shutdown //= $self->loop->new_future(label => 'rpc::memory::shutdown_future')->without_cancel;
+    await Future->needs_all(
+        $self->listen,
+        $self->cleanup_stream,
+    );
+}
 
+=head2 listen
+
+Listen to stream messages.
+
+=cut
+
+async method listen() {
     while (1) {
         await &fmap_void($self->$curry::curry(async method ($rpc) {
             unless ($rpc->{group}) {
@@ -104,6 +116,24 @@ async method process_stream_messages (%args) {
     if ( keys %pending ) {
         my @done = await Future->needs_all(values %pending);
         delete $processing->{$rpc->{stream}}{$_} for @done;
+    }
+}
+
+=head2 cleanup_stream
+
+Remove processed items from stream.
+
+=cut
+
+async method cleanup_stream() {
+    while (1) {
+        await &fmap_void($self->$curry::curry(async method ($rpc) {
+            my $oldest = await $transport->oldest_processed_id($rpc->{stream});
+            my $length = await $transport->stream_length($rpc->{stream});
+            $log->warnf('cleanup | Oldest: %s | Length: %s', $oldest, $length);
+            await $transport->trim_old($rpc->{stream}, $oldest);
+        }), foreach => [ $self->rpc_list->@* ], concurrent => scalar $self->rpc_list->@*);
+        await Future::wait_any($should_shutdown, $self->loop->delay_future(after => 0.1));
     }
 }
 
