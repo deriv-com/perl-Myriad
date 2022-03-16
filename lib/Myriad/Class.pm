@@ -233,7 +233,7 @@ sub import {
     }
 
     # Some well-designed modules provide direct support for import target
-    Syntax::Keyword::Try->import_into($pkg);
+    Syntax::Keyword::Try->import_into($pkg, try => ':experimental(typed)');
     Syntax::Keyword::Dynamically->import_into($pkg);
     Syntax::Keyword::Defer->import_into($pkg);
     Syntax::Operator::Equ->import_into($pkg);
