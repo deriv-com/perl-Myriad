@@ -107,6 +107,8 @@ with the default being C<:v1>.
 
 =cut
 
+use Object::Pad;
+use Object::Pad qw(:experimental(mop));
 no indirect qw(fatal);
 no multidimensional;
 no bareword::filehandles;
@@ -130,7 +132,6 @@ use Unicode::UTF8;
 
 use Heap;
 use IO::Async::Notifier;
-use Object::Pad ();
 
 use Log::Any qw($log);
 use OpenTracing::Any qw($tracer);
