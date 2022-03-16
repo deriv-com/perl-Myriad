@@ -257,7 +257,10 @@ sub import {
     if(my $class = $args{class} // $pkg) {
         # For history here, see this:
         # https://rt.cpan.org/Ticket/Display.html?id=132337
+        # We do this first to get the keywords...
         Object::Pad->import_into($pkg);
+        # ... and then _again_ to disable the experimental warnings
+        Object::Pad->import_into($pkg, qw(:experimental));
         my $method = 'begin_' . ($args{type} || 'class');
         my $meta = Object::Pad::MOP::Class->$method(
             $class,
