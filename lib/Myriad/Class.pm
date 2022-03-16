@@ -66,6 +66,8 @@ The following Perl language features and modules are applied:
 =item * provides L<JSON::MaybeUTF8/encode_json_text>, L<JSON::MaybeUTF8/encode_json_utf8>,
 L<JSON::MaybeUTF8/decode_json_text>, L<JSON::MaybeUTF8/decode_json_utf8>, L<JSON::MaybeUTF8/format_json_text>
 
+=item * provides L<Unicode::UTF8/encode_utf8>, L<Unicode::UTF8/decode_utf8>
+
 =back
 
 In addition, the following core L<feature>s are enabled:
