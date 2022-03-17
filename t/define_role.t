@@ -8,6 +8,7 @@ BEGIN {
 }
 
 use Test::More;
+use Object::Pad qw(:experimental);
 
 subtest 'create a rôle' => sub {
     ok(eval <<'EOF', 'create rôle')

@@ -7,6 +7,7 @@ use Test::MockObject;
 use Test::Fatal;
 use Test::Deep;
 
+use Object::Pad qw(:experimental);
 use Log::Any::Adapter qw(TAP);
 
 use Future::AsyncAwait;
