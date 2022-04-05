@@ -343,7 +343,8 @@ it takes a single param
 =cut
 
 method transport ($component) {
-    my $myriad_method = "${component}_transport";
+    my $config_method = "${component}_transport";
+    my $myriad_method = $config->$config_method->as_string . '_transport';
     $self->$myriad_method;
 }
 

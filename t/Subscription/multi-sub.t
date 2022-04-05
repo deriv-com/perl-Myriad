@@ -147,7 +147,7 @@ ok($myriad->subscription, 'subscription is initiated');
 
 my $loop = IO::Async::Loop->new;
 await $loop->delay_future(after => 3.2);
-my $transport = $myriad->transport($transport_type);
+my $transport = $myriad->transport('subscription');
 
 is scalar $received{fast_e}->@*, 15, 'Got the right number of events from fast_emitter';
 is scalar $received{med_e}->@*, 2, 'Got the right number of events from medium_emitter';
