@@ -11,6 +11,7 @@ use IO::Async::Test;
 use Future::AsyncAwait;
 # Needed to set Testing::Service method names without fully defining service as Myriad::Service
 use Sub::Util qw(subname set_subname);
+use Object::Pad qw(:experimental);
 
 use Myriad;
 use Myriad::Registry;

@@ -1,12 +1,9 @@
 package Myriad::Service;
 
-use strict;
-use warnings;
+use Myriad::Class;
 
 # VERSION
 # AUTHORITY
-
-use utf8;
 
 =encoding utf8
 
@@ -73,17 +70,6 @@ any changes to syntax or other features.
 
 =cut
 
-no indirect qw(fatal);
-no multidimensional;
-no bareword::filehandles;
-use mro;
-use experimental qw(signatures);
-use Future::AsyncAwait;
-use Syntax::Keyword::Try;
-use Syntax::Keyword::Dynamically;
-use Object::Pad;
-use Scalar::Util;
-
 use Heap;
 use IO::Async::Notifier;
 use IO::Async::SSL;
@@ -91,9 +77,6 @@ use Net::Async::HTTP;
 
 use Myriad::Service::Implementation;
 use Myriad::Config;
-
-use Log::Any qw($log);
-use OpenTracing::Any qw($tracer);
 
 use Myriad::Exception::Builder category => 'service';
 

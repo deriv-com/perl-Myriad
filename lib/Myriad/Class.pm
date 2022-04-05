@@ -66,6 +66,8 @@ The following Perl language features and modules are applied:
 =item * provides L<JSON::MaybeUTF8/encode_json_text>, L<JSON::MaybeUTF8/encode_json_utf8>,
 L<JSON::MaybeUTF8/decode_json_text>, L<JSON::MaybeUTF8/decode_json_utf8>, L<JSON::MaybeUTF8/format_json_text>
 
+=item * provides L<Unicode::UTF8/encode_utf8>, L<Unicode::UTF8/decode_utf8>
+
 =back
 
 In addition, the following core L<feature>s are enabled:
@@ -107,6 +109,8 @@ with the default being C<:v1>.
 
 =cut
 
+use Object::Pad;
+use Object::Pad qw(:experimental(mop));
 no indirect qw(fatal);
 no multidimensional;
 no bareword::filehandles;
@@ -130,7 +134,6 @@ use Unicode::UTF8;
 
 use Heap;
 use IO::Async::Notifier;
-use Object::Pad ();
 
 use Log::Any qw($log);
 use OpenTracing::Any qw($tracer);
@@ -230,7 +233,7 @@ sub import {
     }
 
     # Some well-designed modules provide direct support for import target
-    Syntax::Keyword::Try->import_into($pkg);
+    Syntax::Keyword::Try->import_into($pkg, try => ':experimental(typed)');
     Syntax::Keyword::Dynamically->import_into($pkg);
     Syntax::Keyword::Defer->import_into($pkg);
     Syntax::Operator::Equ->import_into($pkg);
@@ -256,7 +259,10 @@ sub import {
     if(my $class = $args{class} // $pkg) {
         # For history here, see this:
         # https://rt.cpan.org/Ticket/Display.html?id=132337
+        # We do this first to get the keywords...
         Object::Pad->import_into($pkg);
+        # ... and then _again_ to disable the experimental warnings
+        Object::Pad->import_into($pkg, qw(:experimental));
         my $method = 'begin_' . ($args{type} || 'class');
         my $meta = Object::Pad::MOP::Class->$method(
             $class,
