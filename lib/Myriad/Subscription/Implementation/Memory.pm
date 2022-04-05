@@ -62,7 +62,7 @@ async method create_from_sink (%args) {
 
 async method create_group ($subscription) {
     return if $subscription->{group};
-    await $transport->create_consumer_group($subscription->{channel}, $subscription->{group_name}, 0, 1);
+    await $transport->create_consumer_group($subscription->{channel}, $subscription->{group_name}, 0, 0);
     $subscription->{group} = 1;
 }
 
