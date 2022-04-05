@@ -41,26 +41,7 @@ a concrete implementation - instead, see classes such as:
 
 =cut
 
-no indirect qw(fatal);
-use Future::AsyncAwait;
-
-use experimental qw(signatures);
-
-use Role::Tiny;
-
-our @WRITE_METHODS = qw(set getset incr push unshift pop shift hash_set hash_add);
-our @READ_METHODS = qw(get observe watch_keyspace hash_get hash_keys hash_values hash_exists hash_count hash_as_list);
-
-requires $_ for @WRITE_METHODS;
-requires $_ for @READ_METHODS;
-
-=head2 get
-
-Takes the following parameters:
-
-=over 4
-
-=item * C<< $k >> - the relative key in storage
+=head1 METHODS - Write
 
 =cut
 
