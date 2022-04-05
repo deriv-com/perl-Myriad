@@ -123,15 +123,12 @@ package Example::Receiver {
 
 my $myriad = new_ok('Myriad');
 my @arg;
-my $transport_type;
 my $empty_stream_name;
 if (my $t = $ENV{MYRIAD_TEST_TRANSPORT}) {
     @arg = qw(--transport redis://redis-node-0:6379 --transport_cluster 1 --log_level warn service);
-    $transport_type = 'redis';
     $empty_stream_name = 'service.subscriptions.example.sender2/never_e';
 } else {
     @arg = qw(--transport memory --log_level warn service);
-    $transport_type = 'memory';
     $empty_stream_name = 'example.sender2.never_e';
 }
 

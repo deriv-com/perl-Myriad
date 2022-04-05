@@ -379,6 +379,29 @@ async method pending (%args) {
         return @res;
 }
 
+=head2 create_stream
+
+Creates a Redis stream.
+Note that there is no straight way to do that in Redis
+without creating a group or adding an event.
+To overcome this it will create a group with MKSTREAM option
+Then destroy that init consumer group.
+
+=over 4
+
+=item * C<stream> - name of the stream we want to create.
+
+=back
+
+=cut
+
+async method create_stream ($stream) {
+    await $self->create_group($stream, 'INIT', '$', 1);
+    await $self->remove_group($stream, 'INIT');
+    $log->tracef('created a Redis stream: %s', $stream);
+
+}
+
 =head2 create_group
 
 Create a Redis consumer group if it does NOT exist.
@@ -409,6 +432,37 @@ async method create_group ($stream, $group, $start_from = '$', $make_stream = 0)
             $log->tracef('Already exists consumer group: %s from stream: %s', $group, $stream);
             return;
         } elsif ($e =~ /requires the key to exist/) {
+            Myriad::Exception::Transport::Redis::NoSuchStream->throw(
+                reason => "no such stream: $stream",
+            );
+        } else {
+            die $e;
+        }
+    }
+}
+
+=head2 remove_group
+
+Delete a Redis consumer group.
+
+=over 4
+
+=item * C<stream> - The name of the stream group belongs to.
+
+=item * C<group> - The consumer group name.
+
+=back
+
+=cut
+
+async method remove_group ($stream, $group) {
+    try {
+        my @args = ('DESTROY', $self->apply_prefix($stream), $group);
+        await $redis->xgroup(@args);
+        $log->tracef('Deleted consumergroup: %s from stream: %s', $group, $stream);
+    } catch ($e) {
+        if ($e =~ /requires the key to exist/) {
+            $log->warnf('Trying to remove a consumergroup(%s) from stream: %s that does not exist', $group, $stream);
             Myriad::Exception::Transport::Redis::NoSuchStream->throw(
                 reason => "no such stream: $stream",
             );
