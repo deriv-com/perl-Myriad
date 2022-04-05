@@ -122,10 +122,20 @@ package Example::Receiver {
 }
 
 my $myriad = new_ok('Myriad');
-await $myriad->configure_from_argv(
-    #qw(--transport redis://redis-node-0:6379 --transport_cluster 1 --log_level warn service)
-    qw(--transport memory --log_level warn service)
-);
+my @arg;
+my $transport_type;
+my $empty_stream_name;
+if (my $t = $ENV{MYRIAD_TEST_TRANSPORT}) {
+    @arg = qw(--transport redis://redis-node-0:6379 --transport_cluster 1 --log_level warn service);
+    $transport_type = 'redis';
+    $empty_stream_name = 'service.subscriptions.example.sender2/never_e';
+} else {
+    @arg = qw(--transport memory --log_level warn service);
+    $transport_type = 'memory';
+    $empty_stream_name = 'example.sender2.never_e';
+}
+
+await $myriad->configure_from_argv(@arg);
 
 await $myriad->add_service('Example::Receiver');
 await $myriad->add_service('Example::Sender2');
@@ -137,6 +147,7 @@ ok($myriad->subscription, 'subscription is initiated');
 
 my $loop = IO::Async::Loop->new;
 await $loop->delay_future(after => 3.2);
+my $transport = $myriad->transport($transport_type);
 
 is scalar $received{fast_e}->@*, 15, 'Got the right number of events from fast_emitter';
 is scalar $received{med_e}->@*, 2, 'Got the right number of events from medium_emitter';
@@ -144,6 +155,9 @@ is scalar $received{slow_e}->@*, 1, 'Got the right number of events from slow_em
 is scalar $received{fast_e2}->@*, 15, 'Got the right number of events from fast_emitter2';
 is scalar $received{em}->@*, 3, 'Got the right number of events from secondary medium_emitter';
 is scalar $received{never_e}->@*, 0, 'Got no events from never_emit';
+
+my $info = await $transport->stream_info($empty_stream_name);
+ok($info, 'Stream has been created for the never published emitter');
 
 
 done_testing;
