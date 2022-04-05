@@ -399,7 +399,6 @@ async method create_stream ($stream) {
     await $self->create_group($stream, 'INIT', '$', 1);
     await $self->remove_group($stream, 'INIT');
     $log->tracef('created a Redis stream: %s', $stream);
-
 }
 
 =head2 create_group
