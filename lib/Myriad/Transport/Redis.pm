@@ -47,7 +47,6 @@ declare_exception 'NoSuchStream' => (
 );
 
 has $use_cluster;
-
 has $redis_uri;
 has $redis;
 has $redis_pool;
