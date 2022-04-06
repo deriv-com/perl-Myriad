@@ -87,7 +87,7 @@ async method create_from_sink (%args) {
 async method start {
     $should_shutdown //= $self->loop->new_future(label => 'subscription::redis::shutdown');
     $log->tracef('Starting subscription handler client_id: %s', $client_id);
-    await $self->create_my_streams;
+    await $self->create_streams;
     await Future->wait_any(
         $should_shutdown->without_cancel,
         $self->receive_items,
@@ -195,10 +195,8 @@ async method check_for_overflow () {
     }
 }
 
-async method create_my_streams() {
-    await &fmap_void($self->$curry::curry(async method ($emitter) {
-        await $redis->create_stream($emitter->{stream});
-    }), foreach => [@emitters], concurrent => scalar @emitters);
+async method create_streams() {
+    await Future->needs_all(map { $redis->create_stream($_->{stream}) } @emitters);
 }
 
 1;
