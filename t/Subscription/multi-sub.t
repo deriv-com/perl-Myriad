@@ -154,8 +154,10 @@ is scalar $received{em}->@*, 3, 'Got the right number of events from secondary m
 is scalar $received{never_e}->@*, 0, 'Got no events from never_emit';
 
 my $info = await $transport->stream_info($empty_stream_name);
-ok($info, 'Stream has been created for the never published emitter');
+ok($info, 'Stream has been created for the never-published emitter');
 
+# Give any pending events a chance to complete, e.g. metrics
+await $loop->later;
 
 done_testing;
 
