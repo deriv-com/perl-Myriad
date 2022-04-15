@@ -41,14 +41,14 @@ async method create_from_source (%args) {
     my $stream = "service.subscriptions.$service/$args{channel}";
 
     $log->tracef('Adding subscription source %s to handler', $stream);
+    push @emitters, {
+        stream => $stream,
+        source => $src,
+        max_len => $args{max_len} // MAX_ALLOWED_STREAM_LENGTH
+    };
     $src->unblocked->then($self->$curry::weak(async method {
         # The streams will be checked later by "check_for_overflow" to avoid unblocking the source by mistake
         # we will make "check_for_overflow" aware about this stream after the service has started
-        push @emitters, {
-            stream => $stream,
-            source => $src,
-            max_len => $args{max_len} // MAX_ALLOWED_STREAM_LENGTH
-        };
         await $src->map($self->$curry::weak(method ($event) {
             $log->tracef('Subscription source %s adding an event: %s',$stream, $event);
             return $redis->xadd(
@@ -87,6 +87,7 @@ async method create_from_sink (%args) {
 async method start {
     $should_shutdown //= $self->loop->new_future(label => 'subscription::redis::shutdown');
     $log->tracef('Starting subscription handler client_id: %s', $client_id);
+    await $self->create_streams;
     await Future->wait_any(
         $should_shutdown->without_cancel,
         $self->receive_items,
@@ -192,6 +193,10 @@ async method check_for_overflow () {
         # No need to run vigorously
         await $self->loop->delay_future(after => 5)
     }
+}
+
+async method create_streams() {
+    await Future->needs_all(map { $redis->create_stream($_->{stream}) } @emitters);
 }
 
 1;

@@ -34,6 +34,7 @@ async method create_from_source (%args) {
     my $src          = delete $args{source} or die 'need a source';
     my $service      = delete $args{service} or die 'need a service';
     my $channel_name = $service . '.' . $args{channel};
+    await $transport->create_stream($channel_name);
 
     $src->map(async sub {
         my $message = shift;
@@ -62,7 +63,7 @@ async method create_from_sink (%args) {
 
 async method create_group ($subscription) {
     return if $subscription->{group};
-    await $transport->create_consumer_group($subscription->{channel}, $subscription->{group_name}, 0, 1);
+    await $transport->create_consumer_group($subscription->{channel}, $subscription->{group_name}, 0, 0);
     $subscription->{group} = 1;
 }
 

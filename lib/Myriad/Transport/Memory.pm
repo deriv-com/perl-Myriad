@@ -88,6 +88,23 @@ async method create_stream ($stream_name) {
     $streams->{$stream_name} = {current_id => 0, data => {}};
 }
 
+=head2 stream_info
+
+Return stream details
+
+=over 4
+
+=item * C<stream_name> - The name of the stream.
+
+=back
+
+=cut
+
+async method stream_info($stream_name) {
+    return $streams->{$stream_name}
+        // Myriad::Exception::Transport::Memory::StreamNotFound->throw(reason => 'Stream should exist before creating new consumer group');
+}
+
 =head2 add_to_stream
 
 Adds a new item to a stream, if the stream doesn't exist it'll be created.
