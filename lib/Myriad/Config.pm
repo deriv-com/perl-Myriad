@@ -54,8 +54,7 @@ our %DEFAULTS = (
     config_path            => 'config.yml',
     transport_redis        => 'redis://localhost:6379',
     transport_redis_cache  => 0,
-    # Cluster mode by default
-    transport_cluster      => 1,
+    transport_cluster      => 0,
     log_level              => 'info',
     library_path           => '',
     opentracing_host       => 'localhost',
