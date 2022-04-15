@@ -13,7 +13,7 @@ requires 'Future', '>= 0.48';
 requires 'Future::Queue';
 requires 'Future::AsyncAwait', '>= 0.57';
 requires 'XS::Parse::Sublike', '>= 0.16';
-requires 'Object::Pad', '>= 0.63';
+requires 'Object::Pad', '>= 0.64';
 requires 'Role::Tiny', '>= 2.002004';
 # Streams
 requires 'Ryu', '>= 3.002';
@@ -45,14 +45,14 @@ requires 'Module::Pluggable::Object';
 requires 'Math::Random::Secure';
 requires 'Getopt::Long';
 requires 'Pod::Usage';
-requires 'List::Util', '>= 1.61';
+requires 'List::Util', '>= 1.62';
 requires 'List::Keywords', '>= 0.08';
 # Integration
 requires 'Net::Async::OpenTracing', '>= 1.001';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
 requires 'Metrics::Any::Adapter::Statsd', '>= 0.03';
 # Transport
-requires 'Net::Async::Redis', '>= 3.021';
+requires 'Net::Async::Redis', '>= 3.022';
 requires 'Net::Async::HTTP', '>= 0.48';
 requires 'Net::Async::HTTP::Server', '>= 0.13';
 requires 'Net::Async::SMTP', '>= 0.002';
