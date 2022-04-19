@@ -1,4 +1,4 @@
-package Example::Service::RPC;
+package Myriad::Example::RPC;
 use Myriad::Service ':v1';
 async method message : RPC {
  return 'Welcome to Myriad';

@@ -1,0 +1,10 @@
+package Myriad::Example::Call;
+use Myriad::Service ':v1';
+async method remote_call : RPC (%args) {
+ my $srv = await $api->service_by_name('myriad.example.call');
+ return await $srv->target_method;
+}
+async method target_method : RPC {
+ return 'This is a method we call from within another service';
+}
+1;

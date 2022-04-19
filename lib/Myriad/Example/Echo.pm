@@ -1,4 +1,4 @@
-package Example::Service::Echo;
+package Myriad::Example::Echo;
 use Myriad::Service ':v1';
 async method echo : RPC (%args) {
  return $args{message};
