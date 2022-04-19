@@ -12,6 +12,8 @@ requires 'Syntax::Operator::Equ', '>= 0.02';
 requires 'Future', '>= 0.48';
 requires 'Future::Queue';
 requires 'Future::AsyncAwait', '>= 0.57';
+requires 'Future::IO', '>= 0.11';
+requires 'Future::IO::Impl::IOAsync', '>= 0.0001';
 requires 'XS::Parse::Sublike', '>= 0.16';
 requires 'Object::Pad', '>= 0.64';
 requires 'Role::Tiny', '>= 2.002004';
