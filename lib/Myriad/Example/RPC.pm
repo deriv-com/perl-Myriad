@@ -1,4 +1,5 @@
 package Myriad::Example::RPC;
+# VERSION
 # To try this out, run:
 #  myriad.pl service Myriad::Example::RPC rpc myriad.example.rpc
 use Myriad::Service ':v1';

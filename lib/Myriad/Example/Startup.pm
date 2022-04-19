@@ -1,4 +1,5 @@
 package Myriad::Example::Startup;
+# VERSION
 # To try this out, run:
 #  myriad.pl service Myriad::Example::Startup
 use Myriad::Service ':v1';

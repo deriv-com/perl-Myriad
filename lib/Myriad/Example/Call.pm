@@ -1,4 +1,5 @@
 package Myriad::Example::Call;
+# VERSION
 # To try this out, run:
 #  myriad.pl service Myriad::Example::Call rpc myriad.example.call/remote_call
 use Myriad::Service ':v1';
