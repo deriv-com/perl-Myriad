@@ -33,7 +33,7 @@ jobs:
           command: |
             export PERL5LIB=$(pwd)/deps/lib/perl5:$(pwd)/deps/lib/perl5/$(perl -MConfig -le'print $Config{archname}'):$PERL5LIB
             cpanm -l deps --installdeps --with-develop --with-recommends -n .
-            dzil listdeps --develop | cpanm -l deps
+            dzil listdeps --develop | cpanm -l deps -n
       - save_cache:
           key: cpanfile-{{ arch }}-{{ checksum "/opt/perl.config" }}-{{ checksum "cpanfile" }}
           paths:
