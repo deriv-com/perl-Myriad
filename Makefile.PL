@@ -4,13 +4,13 @@ use warnings;
 
 
 
-use ExtUtils::MakeMaker;
+use ExtUtils::MakeMaker 7.64;
 
 my %WriteMakefileArgs = (
   "ABSTRACT" => "async microservice framework",
   "AUTHOR" => "Deriv Services Ltd <DERIV\@cpan.org>",
   "CONFIGURE_REQUIRES" => {
-    "ExtUtils::MakeMaker" => 0
+    "ExtUtils::MakeMaker" => "7.64"
   },
   "DISTNAME" => "Myriad",
   "EXE_FILES" => [
