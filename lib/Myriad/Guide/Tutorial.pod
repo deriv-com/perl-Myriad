@@ -1,0 +1,28 @@
+=encoding utf8
+
+=head1 NAME
+
+Myriad::Guide::Tutorial - introduction and tutorial for the L<Myriad> framework
+
+=head1 TUTORIAL
+
+=head2 An RPC call
+
+"Remote procedure calls", usually abbreviated RPC, are the basic building blocks for services. Creating a method marked as C<RPC> tells Myriad that this method should be available for other services to call.
+
+# EXAMPLE: lib/Myriad/Example/RPC.pm
+
+We use L<subroutine attributes|perlsub/"Subroutine Attributes"> to mark a method as an RPC call.
+
+To test this out, run:
+
+ myriad.pl --service Myriad::Example::RPC
+
+=head2 Simple RPC echo method
+
+This service 
+
+# EXAMPLE: lib/Myriad/Example/Echo.pm
+
+=cut
+
