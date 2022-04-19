@@ -418,7 +418,7 @@ async method start {
         }
     }
 
-    $log->infof('%s Service has started!', $service_name);
+    $log->infof('Service [%s] started', $service_name);
 
 };
 

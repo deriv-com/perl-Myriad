@@ -53,6 +53,7 @@ async sub myriad_instance {
     }
 
     my @config = ('--transport', $ENV{MYRIAD_TRANSPORT} // 'memory', '--transport_cluster', $ENV{MYRIAD_TRANSPORT_CLUSTER} // 0);
+    push @config, qw(--log_level warn);
     await $myriad->configure_from_argv(@config, $service);
     $myriad->run->retain->on_fail(sub { fail(shift); });
 
