@@ -12,16 +12,15 @@ The L<Myriad> framework handles loading, logging, configuration and other tasks:
 services which implement functionality, and wire them together. Instead of implementing top-level code,
 those services can call each other or subscribe to data streams.
 
+Note that if you're on Windows, you may need to run the C<myriad.pl> commands under PowerShell or WSL
+terminal, due to the nested quotes.
+
 =head2 Run code on startup
 
 Each service has a C<startup> method - this is where you put code that should run once the service is
 loaded and ready.
 
 # EXAMPLE: lib/Myriad/Example/Startup.pm
-
-To test this out, run this from a terminal or shell:
-
- myriad.pl service Myriad::Example::Startup
 
 There are 3 key lines here - firstly, we give our service a name:
 
@@ -51,35 +50,18 @@ we return.
 
 We use L<subroutine attributes|perlsub/"Subroutine Attributes"> to mark a method as an RPC call.
 
-To test this out, run this from a terminal or shell:
-
- myriad.pl service Myriad::Example::RPC rpc myriad.example.rpc
-
 =head2 Simple RPC echo method
 
 This service takes parameters, in this case returning them as the result from the RPC call:
 
 # EXAMPLE: lib/Myriad/Example/Echo.pm
 
-You can test this with the following command:
+We're using Perl core signatures for the parameters, although you can use C<@_> as usual if you prefer:
 
- myriad.pl service Myriad::Example::RPC rpc myriad.example.echo/message='{"message":"example message"}'
-
-(note that if you're on Windows, you may need to run this under PowerShell or WSL terminal, due to the
-nested quotes)
-
-=head2 Call another service
-
-This service takes parameters, in this case returning them as the result from the RPC call:
-
-# EXAMPLE: lib/Myriad/Example/Call.pm
-
-You can test this with the following command:
-
- myriad.pl service Myriad::Example::Call rpc myriad.example.call/remote_call
-
-(note that if you're on Windows, you may need to run this under PowerShell or WSL terminal, due to the
-nested quotes)
+ async method echo : RPC {
+  my (%args) = @_;
+  return $args{message};
+ }
 
 =head2 Call another service
 
@@ -87,12 +69,6 @@ This service takes parameters, in this case returning them as the result from th
 
 # EXAMPLE: lib/Myriad/Example/Call.pm
 
-You can test this with the following command:
-
- myriad.pl service Myriad::Example::Call rpc myriad.example.call/remote_call
-
-(note that if you're on Windows, you may need to run this under PowerShell or WSL terminal, due to the
-nested quotes)
+The C<$api> variable is available within services for accessing the service API - see L<Myriad::API> for more details.
 
 =cut
-

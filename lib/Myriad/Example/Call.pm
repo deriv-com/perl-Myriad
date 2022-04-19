@@ -1,4 +1,6 @@
 package Myriad::Example::Call;
+# To try this out, run:
+#  myriad.pl service Myriad::Example::Call rpc myriad.example.call/remote_call
 use Myriad::Service ':v1';
 async method remote_call : RPC (%args) {
  my $srv = await $api->service_by_name('myriad.example.call');
