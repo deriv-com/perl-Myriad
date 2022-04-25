@@ -51,6 +51,8 @@ requires 'List::Keywords', '>= 0.08';
 requires 'Net::Async::OpenTracing', '>= 1.001';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
 requires 'Metrics::Any::Adapter::Statsd', '>= 0.03';
+requires 'Metrics::Any::Adapter::Prometheus', '>= 0.05';
+requires 'Net::Prometheus', '>= 0.12';
 # Transport
 requires 'Net::Async::Redis', '>= 3.022';
 requires 'Net::Async::HTTP', '>= 0.48';

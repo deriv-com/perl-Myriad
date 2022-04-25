@@ -731,6 +731,13 @@ async method setup_metrics () {
         };
     }
 
+    if ( $adapter->as_string eq 'Prometheus' ) {
+        use Net::Prometheus;
+        my $client = Net::Prometheus->new;
+        $client->export_to_IO_Async( $loop, port => $port->as_numeric );
+        $log->warnf('Enabled Prometheus metrics exporter on port: %d', $port->as_numeric);
+    }
+
     my $code = sub {
         # Try to resolve the host first
         $loop->resolver->getaddrinfo(host => $host->as_string, timeout => 10)
