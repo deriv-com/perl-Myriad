@@ -12,6 +12,7 @@ requires 'Syntax::Operator::Equ', '>= 0.02';
 requires 'Future', '>= 0.48';
 requires 'Future::Queue';
 requires 'Future::AsyncAwait', '>= 0.57';
+requires 'Future::IO', '>= 0.11';
 requires 'XS::Parse::Sublike', '>= 0.16';
 requires 'Object::Pad', '>= 0.64';
 requires 'Role::Tiny', '>= 2.002004';
@@ -20,6 +21,7 @@ requires 'Ryu', '>= 3.002';
 requires 'Ryu::Async', '>= 0.020';
 # IO::Async
 requires 'Heap', '>= 0.80';
+requires 'IO::Async', '>= 0.801';
 requires 'IO::Async::Notifier', '>= 0.801';
 requires 'IO::Async::Test', '>= 0.801';
 requires 'IO::Async::SSL', '>= 0.22';
