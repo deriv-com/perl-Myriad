@@ -311,18 +311,7 @@ async method configure_from_argv (@args) {
     # At this point, we expect `@args` to contain only the plain
     # parameters such as the service name or a request to run an RPC
     # method.
-    my $method = 'service';
-    while(@args) {
-        my $arg = shift @args;
-        if($commands->can($arg)) {
-            $method = $arg;
-            await $commands->$method(shift @args, @args);
-            last;
-        } else {
-            await $commands->$method($arg, @args);
-            last;
-        }
-    }
+    await $commands->from_array(@args);
 
     $self->on_start(async sub {
         await $config->listen_for_updates;
@@ -785,7 +774,8 @@ async method run () {
     # Set shutdown future before starting commands.
     $self->shutdown_future();
 
-    $commands->run_cmd->retain()->on_fail(sub {
+    $commands->run_commands->retain()->on_fail(sub ($e, @) {
+        $log->errorf('Command failed: %s', $e);
         $self->shutdown->await();
     });
 
