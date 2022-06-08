@@ -3,7 +3,7 @@ requires 'mro';
 requires 'indirect';
 requires 'multidimensional';
 requires 'bareword::filehandles';
-requires 'XS::Parse::Keyword', '>= 0.22';
+requires 'XS::Parse::Keyword', '>= 0.23';
 requires 'Syntax::Keyword::Dynamically', '>= 0.10';
 requires 'Syntax::Keyword::Try', '>= 0.27';
 requires 'Syntax::Keyword::Defer', '>= 0.07';
@@ -24,7 +24,7 @@ requires 'Heap', '>= 0.80';
 requires 'IO::Async', '>= 0.801';
 requires 'IO::Async::Notifier', '>= 0.801';
 requires 'IO::Async::Test', '>= 0.801';
-requires 'IO::Async::SSL', '>= 0.22';
+requires 'IO::Async::SSL', '>= 0.23';
 # Functionality
 requires 'curry', '>= 2.000001';
 requires 'Log::Any', '>= 1.710';
