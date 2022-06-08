@@ -57,9 +57,6 @@ requires 'Metrics::Any::Adapter::Statsd', '>= 0.03';
 requires 'Net::Async::Redis', '>= 3.022';
 requires 'Net::Async::HTTP', '>= 0.48';
 requires 'Net::Async::HTTP::Server', '>= 0.13';
-requires 'Net::Async::SMTP', '>= 0.002';
-requires 'Database::Async', '>= 0.017';
-requires 'Database::Async::Engine::PostgreSQL', '>= 0.012';
 # Introspection
 requires 'Devel::MAT::Dumper';
 
