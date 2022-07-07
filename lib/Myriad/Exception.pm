@@ -17,8 +17,8 @@ This is a rôle used for all exceptions throughout the framework.
 
 =cut
 
-requires category;
-requires message;
+method category;
+method message;
 
 =head2 throw
 
