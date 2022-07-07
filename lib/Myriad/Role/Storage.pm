@@ -66,7 +66,7 @@ Returns a L<Future> which will resolve on completion.
 
 =cut
 
-requires set;
+method set;
 
 =head2 getset
 
@@ -89,7 +89,7 @@ Returns a L<Future> which will resolve on completion to the original value, or C
 
 =cut
 
-requires getset;
+method getset;
 
 =head2 push
 
@@ -107,7 +107,7 @@ Returns a L<Future>.
 
 =cut
 
-requires push;
+method push;
 
 =head2 unshift
 
@@ -123,7 +123,7 @@ Returns a L<Future>.
 
 =cut
 
-requires unshift;
+method unshift;
 
 =head2 pop
 
@@ -132,7 +132,7 @@ or C<undef> if none available.
 
 =cut
 
-requires pop;
+method pop;
 
 =head2 shift
 
@@ -141,7 +141,7 @@ or C<undef> if none available.
 
 =cut
 
-requires shift;
+method shift;
 
 =head2 hash_set
 
@@ -157,7 +157,7 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-requires hash_set;
+method hash_set;
 
 =head2 hash_add
 
@@ -173,7 +173,7 @@ Returns a L<Future> indicating success or failure.
 
 =cut
 
-requires hash_add;
+method hash_add;
 
 =head1 METHODS - Read
 
@@ -195,7 +195,7 @@ Returns a L<Future> which will resolve to the corresponding value, or C<undef> i
 
 =cut
 
-requires get;
+method get;
 
 =head2 observe
 
@@ -205,7 +205,7 @@ Returns a L<Ryu::Observable> which will emit the current and all subsequent valu
 
 =cut
 
-requires observe;
+method observe;
 
 =head2 hash_get
 
@@ -221,7 +221,7 @@ Returns a L<Future> which will resolve to the scalar value for this key.
 
 =cut
 
-requires hash_get;
+method hash_get;
 
 =head2 hash_keys
 
@@ -237,7 +237,7 @@ Returns a L<Future> which will resolve to a list of the keys in no defined order
 
 =cut
 
-requires hash_keys;
+method hash_keys;
 
 =head2 hash_values
 
@@ -253,7 +253,7 @@ Returns a L<Future> which will resolve to a list of the values in no defined ord
 
 =cut
 
-requires hash_values;
+method hash_values;
 
 =head2 hash_exists
 
@@ -269,7 +269,7 @@ Returns a L<Future> which will resolve to true if the key exists in this hash.
 
 =cut
 
-requires hash_exists;
+method hash_exists;
 
 =head2 hash_count
 
@@ -285,7 +285,7 @@ Returns a L<Future> which will resolve to the count of the keys in this hash.
 
 =cut
 
-requires hash_count;
+method hash_count;
 
 =head2 hash_as_list
 
@@ -302,7 +302,7 @@ suitable for assigning to a hash.
 
 =cut
 
-requires hash_as_list;
+method hash_as_list;
 
 1;
 

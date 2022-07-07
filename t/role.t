@@ -18,7 +18,7 @@ is(exception {
     eval <<'EOS' or die $@;
     package Example::Role {
         use Myriad::Role;
-        requires example;
+        method example;
     }
 
     package Example::Class {

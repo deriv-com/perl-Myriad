@@ -52,7 +52,7 @@ it takes a hash as an argument that should have the following
 
 =cut
 
-requires create_from_sink;
+method create_from_sink;
 
 =head2 create_from_source
 
@@ -70,7 +70,7 @@ it takes a hash as an argument that should have the following
 
 =cut
 
-requires create_from_source;
+method create_from_source;
 
 =head2 start
 
@@ -78,7 +78,7 @@ Start processing the subscriptions.
 
 =cut
 
-requires start;
+method start;
 
 =head2 stop
 
@@ -86,7 +86,7 @@ Stop processing the subscriptions.
 
 =cut
 
-requires stop;
+method stop;
 
 1;
 
