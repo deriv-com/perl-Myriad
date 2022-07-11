@@ -3,28 +3,30 @@ requires 'mro';
 requires 'indirect';
 requires 'multidimensional';
 requires 'bareword::filehandles';
-requires 'XS::Parse::Keyword', '>= 0.22';
+requires 'XS::Parse::Keyword', '>= 0.24';
 requires 'Syntax::Keyword::Dynamically', '>= 0.10';
 requires 'Syntax::Keyword::Try', '>= 0.27';
 requires 'Syntax::Keyword::Defer', '>= 0.07';
 requires 'Syntax::Keyword::Match', '>= 0.09';
-requires 'Syntax::Operator::Equ', '>= 0.02';
+requires 'Syntax::Operator::Equ', '>= 0.03';
 requires 'Future', '>= 0.48';
 requires 'Future::Queue';
-requires 'Future::AsyncAwait', '>= 0.57';
+requires 'Future::AsyncAwait', '>= 0.58';
+requires 'Future::IO', '>= 0.11';
 requires 'XS::Parse::Sublike', '>= 0.16';
-requires 'Object::Pad', '>= 0.64';
+requires 'Object::Pad', '>= 0.66';
 requires 'Role::Tiny', '>= 2.002004';
 # Streams
 requires 'Ryu', '>= 3.002';
 requires 'Ryu::Async', '>= 0.020';
 # IO::Async
 requires 'Heap', '>= 0.80';
+requires 'IO::Async', '>= 0.801';
 requires 'IO::Async::Notifier', '>= 0.801';
 requires 'IO::Async::Test', '>= 0.801';
-requires 'IO::Async::SSL', '>= 0.22';
+requires 'IO::Async::SSL', '>= 0.23';
 # Functionality
-requires 'curry', '>= 1.001';
+requires 'curry', '>= 2.000001';
 requires 'Log::Any', '>= 1.710';
 requires 'Log::Any::Adapter', '>= 1.710';
 requires 'Config::Any', '>= 0.32';
@@ -55,9 +57,6 @@ requires 'Metrics::Any::Adapter::Statsd', '>= 0.03';
 requires 'Net::Async::Redis', '>= 3.022';
 requires 'Net::Async::HTTP', '>= 0.48';
 requires 'Net::Async::HTTP::Server', '>= 0.13';
-requires 'Net::Async::SMTP', '>= 0.002';
-requires 'Database::Async', '>= 0.017';
-requires 'Database::Async::Engine::PostgreSQL', '>= 0.012';
 # Introspection
 requires 'Devel::MAT::Dumper';
 

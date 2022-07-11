@@ -46,9 +46,7 @@ declare_exception 'NoSuchStream' => (
     message => 'There is no such stream, is the other service running?',
 );
 
-# Cluster mode by default
-has $use_cluster = 1;
-
+has $use_cluster;
 has $redis_uri;
 has $redis;
 has $redis_pool;

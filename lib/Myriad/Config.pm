@@ -385,7 +385,7 @@ async method service_config ($pkg, $service_name) {
 Check if the developer configured a name for this service.
 This is different from service_config because we are going
 to check args and ENV only looking using the default
-L<Myriad::Registery> assigned name
+L<Myriad::Registry> assigned name
 
 =cut
 

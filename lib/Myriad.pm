@@ -178,6 +178,11 @@ use Myriad::Transport::HTTP;
 use Myriad::Transport::Memory;
 use Myriad::Transport::Redis;
 
+use Future::IO;
+use Future::IO::Impl::IOAsync;
+
+use IO::Async::Loop;
+
 use Log::Any::Adapter;
 
 use Net::Async::OpenTracing;

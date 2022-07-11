@@ -31,7 +31,9 @@ jobs:
       - run:
           name: Install deps
           command: |
+            export PERL5LIB=$(pwd)/deps/lib/perl5:$(pwd)/deps/lib/perl5/$(perl -MConfig -le'print $Config{archname}'):$PERL5LIB
             cpanm -l deps --installdeps --with-develop --with-recommends -n .
+            dzil listdeps --develop | cpanm -l deps -n
       - save_cache:
           key: cpanfile-{{ arch }}-{{ checksum "/opt/perl.config" }}-{{ checksum "cpanfile" }}
           paths:
@@ -64,14 +66,16 @@ jobs:
       - run:
           name: Install deps
           command: |
-              cpanm -l deps --installdeps --with-develop --with-recommends -n .
+            export PERL5LIB=$(pwd)/deps/lib/perl5:$(pwd)/deps/lib/perl5/$(perl -MConfig -le'print $Config{archname}'):$PERL5LIB
+            cpanm -l deps --installdeps --with-develop --with-recommends -n .
+            dzil listdeps --develop | cpanm -l deps
       - run:
           name: Coverage
           command: |
-              export PERL5LIB=$(pwd)/deps/lib/perl5:$(pwd)/deps/lib/perl5/$(perl -MConfig -le'print $Config{archname}'):$PERL5LIB
-              export PATH=$(pwd)/deps/bin:$PATH
-              # We don't care about failures here: those are handled by the main tests, we just want the report
-              dzil run cover -test -report coveralls || :
+            export PERL5LIB=$(pwd)/deps/lib/perl5:$(pwd)/deps/lib/perl5/$(perl -MConfig -le'print $Config{archname}'):$PERL5LIB
+            export PATH=$(pwd)/deps/bin:$PATH
+            # We don't care about failures here: those are handled by the main tests, we just want the report
+            dzil run cover -test -report coveralls || :
   
   update_docker_image:
     executor: docker/docker
