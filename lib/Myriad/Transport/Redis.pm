@@ -75,7 +75,8 @@ method configure (%args) {
     $max_pool_count = exists $args{max_pool_count} ? delete $args{max_pool_count} : 10;
     $prefix //= exists $args{prefix} ? delete $args{prefix} : 'myriad';
     $clientside_cache_size = delete $args{client_side_cache_size} if exists $args{client_side_cache_size};
-    $wait_time = exists $args{wait_time} ? delete $args{wait_time} : 15_000;
+    # limit minimum wait time to 100ms
+    $wait_time = exists $args{wait_time} ? $args{wait_time} < 100 ? 100 : delete $args{wait_time} : 15_000;
     return $self->next::method(%args);
 }
 
