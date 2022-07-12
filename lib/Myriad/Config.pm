@@ -56,6 +56,7 @@ our %DEFAULTS = (
     transport_redis_cache  => 0,
     transport_cluster      => 0,
     transport_pool_count   => 10,
+    transport_wait_time    => 15_000,
     log_level              => 'info',
     library_path           => '',
     opentracing_host       => 'localhost',
