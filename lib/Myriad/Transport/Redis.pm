@@ -52,7 +52,7 @@ has $redis;
 has $redis_pool;
 has $waiting_redis_pool;
 has $pending_redis_count = 0;
-has $wait_time = 15_000;
+has $wait_time;
 has $batch_count = 50;
 has $max_pool_count;
 has $clientside_cache_size = 0;
@@ -75,6 +75,9 @@ method configure (%args) {
     $max_pool_count = exists $args{max_pool_count} ? delete $args{max_pool_count} : 10;
     $prefix //= exists $args{prefix} ? delete $args{prefix} : 'myriad';
     $clientside_cache_size = delete $args{client_side_cache_size} if exists $args{client_side_cache_size};
+    $wait_time = exists $args{wait_time} ? delete $args{wait_time} : 15_000;
+    # limit minimum wait time to 100ms
+    $wait_time = 100 if $wait_time < 100;
     return $self->next::method(%args);
 }
 

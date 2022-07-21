@@ -367,6 +367,8 @@ method redis_transport () {
                     redis_uri              => $config->transport_redis->as_string,
                     cluster                => ($config->transport_cluster->as_string ? 1 : 0),
                     client_side_cache_size => $config->transport_redis_cache->as_number,
+                    max_pool_count         => $config->transport_pool_count->as_number,
+                    wait_time              => $config->transport_wait_time->as_number,
                 ) : ()
             )
         );

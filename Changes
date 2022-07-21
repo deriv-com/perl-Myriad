@@ -10,6 +10,7 @@ Revision history for {{$dist->name}}
     - Thanks to Syntax::Keyword::Equ, match() now supports `equ` as an operator
     - RPC on start handle existing pending messages in stream, if not expired.
     - RPC overflow protection (will not connsume more than it can process).
+    - Transport Redis connection pool count and wait time can be controlled through config parameters.
 
     [Bugs fixed]
     - Subscriptions to create streams from source without a published event.
