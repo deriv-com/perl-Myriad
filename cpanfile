@@ -3,7 +3,7 @@ requires 'mro';
 requires 'indirect';
 requires 'multidimensional';
 requires 'bareword::filehandles';
-requires 'XS::Parse::Keyword', '>= 0.24';
+requires 'XS::Parse::Keyword', '>= 0.25';
 requires 'Syntax::Keyword::Dynamically', '>= 0.10';
 requires 'Syntax::Keyword::Try', '>= 0.27';
 requires 'Syntax::Keyword::Defer', '>= 0.07';
