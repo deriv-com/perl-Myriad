@@ -47,7 +47,7 @@ requires 'Module::Pluggable::Object';
 requires 'Math::Random::Secure';
 requires 'Getopt::Long';
 requires 'Pod::Usage';
-requires 'List::Util', '>= 1.62';
+requires 'List::Util', '>= 1.63';
 requires 'List::Keywords', '>= 0.08';
 # Integration
 requires 'Net::Async::OpenTracing', '>= 1.001';
