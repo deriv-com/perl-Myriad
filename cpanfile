@@ -21,9 +21,9 @@ requires 'Ryu', '>= 3.002';
 requires 'Ryu::Async', '>= 0.020';
 # IO::Async
 requires 'Heap', '>= 0.80';
-requires 'IO::Async', '>= 0.801';
-requires 'IO::Async::Notifier', '>= 0.801';
-requires 'IO::Async::Test', '>= 0.801';
+requires 'IO::Async', '>= 0.802';
+requires 'IO::Async::Notifier', '>= 0.802';
+requires 'IO::Async::Test', '>= 0.802';
 requires 'IO::Async::SSL', '>= 0.23';
 # Functionality
 requires 'curry', '>= 2.000001';
