@@ -470,7 +470,7 @@ Returns a L<Future> which will resolve on completion.
 =cut
 
 async method orderedset_member_count ($k, $min = '-inf', $max = '+inf') {
-    await $redis->zcount($self->apply_prefix($k), $min => $max);
+    await $redis->zcount($self->apply_prefix($k), $min => $max, 'BYSCORE');
 }
 
 =head2 orderedset_members
