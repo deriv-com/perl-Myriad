@@ -367,6 +367,21 @@ async method hash_as_list : Defer ($k) {
     return $data{$k}->%*;
 }
 
+async method orderedset_add($k, $s, $m) {}
+
+async method orderedset_remove_member ($k, $m) {
+}
+
+async method orderedset_remove_byscore ($k, $min, $max) {
+}
+
+async method orderedset_member_count ($k, $min, $max) {
+    $min //= '-inf';
+}
+
+async method orderedset_members ($k, $min = '-inf', $max = '+inf', $by_score = 1, $with_score = 0) {
+}
+
 1;
 
 =head1 AUTHOR
