@@ -455,7 +455,7 @@ Takes the following parameters:
 
 =item * C<< $min >> - minimum score for selection
 
-=item * C<< $max >>-- maximum score for selection
+=item * C<< $max >> - maximum score for selection
 
 =back
 
@@ -479,7 +479,7 @@ Takes the following parameters:
 
 =item * C<< $min >> - minimum score for selection
 
-=item * C<< $max >>-- maximum score for selection
+=item * C<< $max >> - maximum score for selection
 
 =back
 
