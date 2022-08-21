@@ -390,7 +390,7 @@ Returns a L<Future> which will resolve on completion.
 
 async method orderedset_add : Defer ($k, $s, $m) {
     die 'score & member values cannot be a reference for ' . $k . ' - ' . ref($s) . ref($m) if (ref $s or ref $m);
-    $data{$k} = {} unless exists $data{$k};
+    $data{$k} = {} unless defined $data{$k};
     return $data{$k}->{$s} = $m;
 }
 
@@ -411,7 +411,10 @@ Returns a L<Future> which will resolve on completion.
 =cut
 
 async method orderedset_remove_member : Defer ($k, $m) {
-    return $data{$k} = { map { $data{$k}->{$_} !~ /$m/ ? ($_ => $data{$k}->{$_}) : ()  } keys $data{$k}->%* };
+    my @keys_before  = keys $data{$k}->%*;
+    $data{$k} = { map { $data{$k}->{$_} !~ /$m/ ? ($_ => $data{$k}->{$_}) : ()  } keys $data{$k}->%* };
+    my @keys_after = keys $data{$k}->%*;
+    return 0 + @keys_before - @keys_after;
 }
 
 =head2 orderedset_remove_byscore
@@ -435,7 +438,10 @@ Returns a L<Future> which will resolve on completion.
 async method orderedset_remove_byscore : Defer ($k, $min, $max) {
     $min = -100000 if $min =~ /-inf/;
     $max = 100000 if $max =~ /\+inf/;
-    return $data{$k} = { map { ($_ <  $min and $_ > $max ) ? ($_ => $data{$k}->{$_}) : ()  } keys $data{$k}->%* };
+    my @keys_before  = keys $data{$k}->%*;
+    $data{$k} = { map { ($_ >= $min and $_ <= $max ) ? () : ($_ => $data{$k}->{$_})  } keys $data{$k}->%* };
+    my @keys_after = keys $data{$k}->%*;
+    return 0 + @keys_before - @keys_after;
 
 }
 
@@ -460,7 +466,7 @@ Returns a L<Future> which will resolve on completion.
 async method orderedset_member_count : Defer ($k, $min, $max) {
     $min = -100000 if $min =~ /-inf/;
     $max = 100000 if $max =~ /\+inf/;
-    return scalar map { ($_ <  $min and $_ > $max ) ? (1) : ()  } keys $data{$k}->%*;
+    return scalar map { ($_ >= $min and $_ <= $max) ? (1) : ()  } keys $data{$k}->%*;
 }
 
 =head2 orderedset_members
@@ -484,11 +490,7 @@ Returns a L<Future> which will resolve on completion.
 async method orderedset_members : Defer ($k, $min = '-inf', $max = '+inf', $with_score = 0) {
     $min = -100000 if $min =~ /-inf/;
     $max = 100000 if $max =~ /\+inf/;
-    if ( $with_score ) {
-        return { map { ($_ <  $min and $_ > $max ) ? ($_ => $data{$k}->{$_}) : ()  } keys $data{$k}->%* };
-    } else {
-        return { map { ($_ <  $min and $_ > $max ) ? ($data{$k}->{$_}) : ()  } keys $data{$k}->%* };
-    }
+    return [ map { ($_ >= $min and $_ <= $max ) ? $with_score ? ($data{$k}->{$_}, $_) : ($data{$k}->{$_}) : ()  } sort keys $data{$k}->%* ];
 }
 
 1;

@@ -282,6 +282,7 @@ Returns a L<Future> indicating success or failure.
 async method hash_add ($k, $hash_key, $v) {
     $v //= 1;
     die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
+    await $redis->hincrby($k, $self->apply_prefix($hash_key), $v);
 }
 
 =head2 hash_keys
@@ -470,7 +471,7 @@ Returns a L<Future> which will resolve on completion.
 =cut
 
 async method orderedset_member_count ($k, $min = '-inf', $max = '+inf') {
-    await $redis->zcount($self->apply_prefix($k), $min => $max, 'BYSCORE');
+    await $redis->zcount($self->apply_prefix($k), $min => $max);
 }
 
 =head2 orderedset_members
@@ -497,7 +498,7 @@ Returns a L<Future> which will resolve on completion.
 =cut
 
 async method orderedset_members ($k, $min = '-inf', $max = '+inf', $with_score = 0) {
-    await $redis->zrange($self->apply_prefix($k), $min => $max, 'BYSCORE', ($with_score ? 'WITHSCORES' : ''));
+    await $redis->zrange($self->apply_prefix($k), $min => $max, 'BYSCORE', ($with_score ? 'WITHSCORES' : ()));
 }
 
 1;
