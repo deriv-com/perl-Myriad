@@ -282,6 +282,7 @@ Returns a L<Future> indicating success or failure.
 async method hash_add ($k, $hash_key, $v) {
     $v //= 1;
     die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
+    await $redis->hincrby($k, $self->apply_prefix($hash_key), $v);
 }
 
 =head2 hash_keys
@@ -368,6 +369,136 @@ suitable for assigning to a hash.
 =cut
 
 async method hash_as_list ($k) {
+}
+
+
+=head2 orderedset_add
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $s >> - the scalar score to be attached to member
+
+=item * C<< $m >> - the scalar member value
+
+=back
+
+Note that references are B<not> supported - attempts to write an arrayref, hashref
+or object will fail.
+
+Redis sorted sets data structure family.
+add a scored member value to a storage key
+
+Returns a L<Future> which will resolve on completion.
+
+=cut
+
+async method orderedset_add ($k, $s, $m) {
+    die 'score & member values cannot be a reference for key:' . $k . ' - ' . ref($m) . ref($s) if (ref $m or ref $s);
+    await $redis->zadd($self->apply_prefix($k), $s => $m);
+}
+
+=head2 orderedset_remove_member
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $m >> - the scalar member value
+
+=back
+
+Redis sorted sets data structure family.
+removes a specific member from ordered set in storage
+
+Returns a L<Future> which will resolve on completion.
+
+=cut
+
+async method orderedset_remove_member ($k, $m) {
+    await $redis->zrem($self->apply_prefix($k), $m);
+}
+
+=head2 orderedset_remove_byscore
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $min >> - the minimum score
+
+=item * C<< $max >> - the max score
+
+=back
+
+Redis sorted sets data structure family.
+removes all members with scores between minimum and maximum within an ordered set in storage
+
+Returns a L<Future> which will resolve on completion.
+
+=cut
+
+async method orderedset_remove_byscore ($k, $min, $max) {
+    await $redis->zremrangebyscore($self->apply_prefix($k), $min => $max);
+}
+
+=head2 orderedset_member_count
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $min >> - the minimum score
+
+=item * C<< $max >> - the max score
+
+=back
+
+Redis sorted sets data structure family.
+gives the members count within the provided min and max scores in an ordered set.
+
+Returns a L<Future> which will resolve on completion.
+
+=cut
+
+async method orderedset_member_count ($k, $min = '-inf', $max = '+inf') {
+    await $redis->zcount($self->apply_prefix($k), $min => $max);
+}
+
+=head2 orderedset_members
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $min >> - the minimum score
+
+=item * C<< $max >> - the max score
+
+=item * C<< $with_score >> - flag to return members with or without scores
+
+=back
+
+Redis sorted sets data structure family.
+gives list of members within the provided min and max scores in an ordered set.
+
+Returns a L<Future> which will resolve on completion.
+
+=cut
+
+async method orderedset_members ($k, $min = '-inf', $max = '+inf', $with_score = 0) {
+    await $redis->zrange($self->apply_prefix($k), $min => $max, 'BYSCORE', ($with_score ? 'WITHSCORES' : ()));
 }
 
 1;

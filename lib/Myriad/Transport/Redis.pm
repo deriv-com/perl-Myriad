@@ -690,6 +690,30 @@ async method hget($k, $hash_key) {
     await $redis->hget($k, $self->apply_prefix($hash_key));
 }
 
+async method hincrby($k, $hash_key, $v) {
+    await $redis->hincrby($k, $self->apply_prefix($hash_key), $v);
+}
+
+async method zadd ($key, @v) {
+    await $redis->zadd($self->apply_prefix($key), @v);
+}
+
+async method zrem ($k, $m) {
+    await $redis->zrem($self->apply_prefix($k), $m);
+}
+
+async method zremrangebyscore ($k, $min, $max) {
+    await $redis->zremrangebyscore($self->apply_prefix($k), $min => $max);
+}
+
+async method zcount ($k, $min, $max) {
+    await $redis->zcount($self->apply_prefix($k), $min, $max);
+}
+
+async method zrange ($k, @v) {
+    await $redis->zrange($self->apply_prefix($k), @v);
+}
+
 async method watch_keyspace($pattern) {
     my $sub;
     if ($clientside_cache_size) {

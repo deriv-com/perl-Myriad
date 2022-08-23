@@ -102,6 +102,7 @@ workflows:
   build-workflow:
     jobs:
       - run_tests
+      - coverage
   merged:
     jobs:
       - run_tests:

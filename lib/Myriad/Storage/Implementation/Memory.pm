@@ -367,6 +367,132 @@ async method hash_as_list : Defer ($k) {
     return $data{$k}->%*;
 }
 
+=head2 orderedset_add
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $s >> - the scalar score value
+
+=item * C<< $m >> - the scalar member value
+
+=back
+
+Note that references are currently B<not> supported - attempts to write an arrayref, hashref
+or object will fail.
+
+Returns a L<Future> which will resolve on completion.
+
+=cut
+
+async method orderedset_add : Defer ($k, $s, $m) {
+    die 'score & member values cannot be a reference for ' . $k . ' - ' . ref($s) . ref($m) if (ref $s or ref $m);
+    $data{$k} = {} unless defined $data{$k};
+    return $data{$k}->{$s} = $m;
+}
+
+=head2 orderedset_remove_member
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $m >> - the scalar member value
+
+=back
+
+Returns a L<Future> which will resolve on completion.
+
+=cut
+
+async method orderedset_remove_member : Defer ($k, $m) {
+    my @keys_before  = keys $data{$k}->%*;
+    $data{$k} = { map { $data{$k}->{$_} !~ /$m/ ? ($_ => $data{$k}->{$_}) : ()  } keys $data{$k}->%* };
+    my @keys_after = keys $data{$k}->%*;
+    return 0 + @keys_before - @keys_after;
+}
+
+=head2 orderedset_remove_byscore
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $min >> - the minimum score to remove
+
+=item * C<< $max >> - the maximum score to remove
+
+=back
+
+Returns a L<Future> which will resolve on completion.
+
+=cut
+
+async method orderedset_remove_byscore : Defer ($k, $min, $max) {
+    $min = -100000 if $min =~ /-inf/;
+    $max = 100000 if $max =~ /\+inf/;
+    my @keys_before  = keys $data{$k}->%*;
+    $data{$k} = { map { ($_ >= $min and $_ <= $max ) ? () : ($_ => $data{$k}->{$_})  } keys $data{$k}->%* };
+    my @keys_after = keys $data{$k}->%*;
+    return 0 + @keys_before - @keys_after;
+
+}
+
+=head2 orderedset_member_count
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $min >> - minimum score for selection
+
+=item * C<< $max >> - maximum score for selection
+
+=back
+
+Returns a L<Future> which will resolve on completion.
+
+=cut
+
+async method orderedset_member_count : Defer ($k, $min, $max) {
+    $min = -100000 if $min =~ /-inf/;
+    $max = 100000 if $max =~ /\+inf/;
+    return scalar map { ($_ >= $min and $_ <= $max) ? (1) : ()  } keys $data{$k}->%*;
+}
+
+=head2 orderedset_members
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $min >> - minimum score for selection
+
+=item * C<< $max >> - maximum score for selection
+
+=back
+
+Returns a L<Future> which will resolve on completion.
+
+=cut
+
+async method orderedset_members : Defer ($k, $min = '-inf', $max = '+inf', $with_score = 0) {
+    $min = -100000 if $min =~ /-inf/;
+    $max = 100000 if $max =~ /\+inf/;
+    return [ map { ($_ >= $min and $_ <= $max ) ? $with_score ? ($data{$k}->{$_}, $_) : ($data{$k}->{$_}) : ()  } sort keys $data{$k}->%* ];
+}
+
 1;
 
 =head1 AUTHOR
