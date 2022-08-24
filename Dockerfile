@@ -2,7 +2,8 @@ FROM deriv/dzil
 ARG HTTP_PROXY
 
 WORKDIR /app
-ONBUILD COPY aptfile cpanfile dist.ini /app/
+# Conditional copy - we want whichever files exist, and we'd typically expect to see at least one
+ONBUILD COPY aptfil[e] cpanfil[e] dist.in[i] /app/
 ONBUILD RUN prepare-apt-cpan.sh \
  && dzil authordeps | cpanm -n
 ONBUILD COPY . /app/
