@@ -93,7 +93,7 @@ my %WriteMakefileArgs = (
     "Test::More" => "0.98",
     "Test::NoTabs" => 0
   },
-  "VERSION" => "0.010",
+  "VERSION" => "1.000",
   "test" => {
     "TESTS" => "t/*.t t/RPC/*.t t/Subscription/*.t t/transport/*.t t/util/*.t"
   }
