@@ -126,6 +126,16 @@ modules under that immediate namespace will be loaded
 - if it contains `::`, it's treated as a comma-separated list of service module names to load
 - a `-` prefix is a standard getopt parameter
 
+## transport
+
+Returns the [Myriad::Transport](https://metacpan.org/pod/Myriad%3A%3ATransport) instance according to the config value.
+
+it's designed to be used by tests, so be careful before using it in the framework code.
+
+it takes a single param
+
+- component - the RPC, Subscription or storage in lower case
+
 ## redis
 
 The [Net::Async::Redis](https://metacpan.org/pod/Net%3A%3AAsync%3A%3ARedis) (or compatible) instance used for service coördination.
@@ -308,4 +318,4 @@ Deriv Group Services Ltd. `DERIV@cpan.org`
 
 # LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.

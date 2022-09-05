@@ -2,6 +2,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+
+1.000     2022-09-05 10:25:25+08:00 Asia/Singapore
     [API changes]
     - The --service_name parameter has been dropped, since it makes no sense when
     used with multiple services or instances
