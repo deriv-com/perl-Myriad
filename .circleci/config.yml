@@ -100,7 +100,6 @@ jobs:
   create_docker_image:
     machine:
       image: ubuntu-2204:2022.07.1
-    executor: docker/docker
     resource_class: arm.medium
     parameters:
       tag:
@@ -108,12 +107,10 @@ jobs:
         default: 'latest'
     steps:
       - checkout
-      - setup_remote_docker:
-          docker_layer_caching: true
-      - docker/build:
-          image: deriv/myriad
-          tag: <<parameters.tag>>
-          use-buildkit: true
+      - build:
+          name: 'Docker build'
+          command: |
+            docker build -t ${DOCKER_REGISTRY}/${DOCKER_REPO}:arm64-${CIRCLE_SHA1} .
 
 workflows:
   version: 2
