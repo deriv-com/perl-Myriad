@@ -105,6 +105,12 @@ jobs:
       tag:
         type: string
         default: 'latest'
+      DOCKER_REGISTRY:
+        type: string
+        default: 'docker.io'
+      DOCKER_REPO:
+        type: string
+        default: 'deriv/myriad'
     steps:
       - checkout
       - run:
@@ -119,6 +125,12 @@ jobs:
       tag:
         type: string
         default: 'latest'
+      DOCKER_REGISTRY:
+        type: string
+        default: 'docker.io'
+      DOCKER_REPO:
+        type: string
+        default: 'deriv/myriad'
     steps:
       - checkout
       - run:
