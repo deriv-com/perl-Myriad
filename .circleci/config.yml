@@ -97,11 +97,31 @@ jobs:
           image: deriv/myriad
           tag: <<parameters.tag>>
 
+  create_docker_image:
+    machine:
+      image: ubuntu-2204:2022.07.1
+    executor: docker/docker
+    resource_class: arm.medium
+    parameters:
+      tag:
+        type: string
+        default: 'latest'
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - docker/build:
+          image: deriv/myriad
+          tag: <<parameters.tag>>
+          use-buildkit: true
+
 workflows:
   version: 2
   build-workflow:
     jobs:
       - run_tests
+      - create_docker_image:
+          tag: testing
   merged:
     jobs:
       - run_tests:
