@@ -66,7 +66,7 @@ async method start () {
             my $messages = await $transport->read_from_stream_by_consumer($rpc->{stream}, $self->group_name, hostname());
             await $self->process_stream_messages(rpc => $rpc, messages => $messages) if %$messages;
         }), foreach => [ $self->rpc_list->@* ], concurrent => scalar $self->rpc_list->@*);
-        await Future::wait_any($should_shutdown, $self->loop->delay_future(after => 0.1));
+        await Future->wait_any($should_shutdown, $self->loop->delay_future(after => 0.1));
     }
 }
 

@@ -9,7 +9,7 @@ requires 'Syntax::Keyword::Try', '>= 0.27';
 requires 'Syntax::Keyword::Defer', '>= 0.07';
 requires 'Syntax::Keyword::Match', '>= 0.09';
 requires 'Syntax::Operator::Equ', '>= 0.03';
-requires 'Future', '>= 0.48';
+requires 'Future', '>= 0.49';
 requires 'Future::Queue';
 requires 'Future::AsyncAwait', '>= 0.58';
 requires 'Future::IO', '>= 0.11';
