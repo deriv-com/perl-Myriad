@@ -27,12 +27,26 @@ use Myriad::Util::UUID;
 use Myriad::Service::Remote;
 
 has $myriad;
-has $cmd;
+has $commands { [] };
 
 BUILD (%args) {
     weaken(
         $myriad = $args{myriad} // die 'needs a Myriad parent object'
     );
+}
+
+async method from_array (@args) {
+    while(@args) {
+        my $method = shift @args;
+        $log->infof('Attempting command %s with remaining %s', $method, \@args);
+        if($self->can($method)) {
+            await $self->$method(\@args);
+        } else {
+            # Put this back in and try again
+            unshift @args, $method;
+            await $self->service(\@args);
+        }
+    }
 }
 
 =head2 service
@@ -41,11 +55,14 @@ Attempts to load and start one or more services.
 
 =cut
 
-async method service (@args) {
+async method service ($args) {
     my (@modules, $namespace);
-    while(my $entry = shift @args) {
+    return unless $args->@*;
+
+    my @pending = split /,/, shift(@$args);
+    while(my $entry = shift @pending) {
         if($entry =~ /,/) {
-            unshift @args, split /,/, $entry;
+            unshift @pending, split /,/, $entry;
         } elsif(my ($base, $hierarchy) = $entry =~ m{^([a-z0-9_:]+)::(\*(?:::\*)*)?$}i) {
             $namespace = $base . '::' if $hierarchy;
             require Module::Pluggable::Object;
@@ -93,7 +110,7 @@ async method service (@args) {
         }
     }, foreach => \@services_modules, concurrent => 4);
 
-    $cmd = {
+    push $commands->@*, {
         code => async sub {
             try {
                 await fmap0 {
@@ -111,6 +128,7 @@ async method service (@args) {
         },
         params => {},
     };
+    return;
 }
 
 =head2 remote_service
@@ -121,7 +139,7 @@ method remote_service {
     return Myriad::Service::Remote->new(
         myriad       => $myriad,
         service_name => $myriad->registry->make_service_name(
-            $myriad->config->service_name->as_string
+            $myriad->config->service_name('')->as_string, ''
         ) // die 'no service name found'
     );
 }
@@ -133,7 +151,7 @@ method remote_service {
 async method rpc ($rpc, @args) {
     my $remote_service = $self->remote_service;
     die 'RPC args should be passed as (key value) pairs' unless @args % 2 == 0;
-    $cmd = {
+    push $commands->@*, {
         code => async sub {
             my $params = shift;
             my ($remote_service, $rpc, $args) = map { $params->{$_} } qw(remote_service rpc args);
@@ -145,7 +163,11 @@ async method rpc ($rpc, @args) {
             }
             await $myriad->shutdown;
         },
-        params => { rpc => $rpc, args => \@args, remote_service => $remote_service}
+        params => {
+            rpc            => $rpc,
+            args           => \@args,
+            remote_service => $remote_service
+        }
     };
 }
 
@@ -158,7 +180,7 @@ async method subscription ($stream, @args) {
     my $uuid = Myriad::Util::UUID::uuid();
     my $subscription = await $remote_service->subscribe($stream, "$0/$uuid");
     $log->infof('Subscribing to: %s | %s', $remote_service->service_name, $stream);
-    $cmd = {
+    push $commands->@*, {
         code => async sub {
             my $params = shift;
             my ($subscription, $args) = @{$params}{qw(subscription args)};
@@ -178,7 +200,7 @@ async method subscription ($stream, @args) {
 
 async method storage ($action, $key, $extra = undef) {
     my $remote_service = Myriad::Service::Remote->new(myriad => $myriad, service_name => $myriad->registry->make_service_name($myriad->config->service_name->as_string));
-    $cmd = {
+    push $commands->@*, {
         code => async sub {
             my $params = shift;
             my ($remote_service, $action, $key, $extra) = map { $params->{$_} } qw(remote_service action key extra);
@@ -192,15 +214,22 @@ async method storage ($action, $key, $extra = undef) {
 
             await $myriad->shutdown;
         },
-        params => { action => $action, key => $key, extra => $extra, remote_service => $remote_service} };
+        params => { action => $action, key => $key, extra => $extra, remote_service => $remote_service}
+    };
 }
 
-=head2 run_cmd
+=head2 run_commands
+
+Execute all the pending commands collected up so far.
 
 =cut
 
-async method run_cmd () {
-    await $cmd->{code}->($cmd->{params}) if exists $cmd->{code};
+async method run_commands () {
+    await Future->needs_all(
+        map {;
+            $_->{code} ? $_->{code}->($_->{params}) : ()
+        } splice @$commands, 0
+    );
 }
 
 1;

@@ -73,17 +73,19 @@ subtest "service command" => sub {
     $metaclass->get_field('$config')->value($myriad) = Myriad::Config->new();
 
     # Wrong Service(module) name
-    like( exception { wait_for_future( $command->service('Ta-wrong') )->get } , qr/unsupported/, 'Died when passing wrong format name');
-    like( exception { wait_for_future( $command->service('Ta_wrong') )->get } , qr/not found/, 'Died when passing module that does not exist');
+    like( exception { wait_for_future( $command->service(['Ta-wrong']) )->get } , qr/unsupported/, 'Died when passing wrong format name');
+    like( exception { wait_for_future( $command->service(['Ta_wrong']) )->get } , qr/not found/, 'Died when passing module that does not exist');
 
     # Running multiple services
-    wait_for_future( $command->service('Ta::')->get->{code}->() )->get;
+    wait_for_future( $command->service(['Ta::']) )->get;
+    wait_for_future( $command->run_commands )->get;
     cmp_deeply(\@added_services_modules, ['Ta::Sibling1', 'Ta::Sibling2'], 'Added both modules');
     # Clear it for next test.
     @added_services_modules = ();
 
     # Running services under the same namespace
-    wait_for_future( $command->service('Ta::*')->get->{code}->() )->get;
+    wait_for_future( $command->service(['Ta::*']) )->get;
+    wait_for_future( $command->run_commands )->get;
     cmp_deeply(\@added_services_modules, ['Ta::Sibling1', 'Ta::Sibling2'], 'Added modules under the namespace');
     # Clear it for next test.
     @added_services_modules = ();
