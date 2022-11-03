@@ -14,7 +14,7 @@ requires 'Future::Queue';
 requires 'Future::AsyncAwait', '>= 0.59';
 requires 'Future::IO', '>= 0.11';
 requires 'XS::Parse::Sublike', '>= 0.16';
-requires 'Object::Pad', '>= 0.70';
+requires 'Object::Pad', '>= 0.71';
 requires 'Role::Tiny', '>= 2.002004';
 # Streams
 requires 'Ryu', '>= 3.002';
