@@ -1,15 +1,9 @@
 package Myriad::RPC::Message;
 
-use strict;
-use warnings;
+use Myriad::Class;
 
-our $VERSION = '0.004'; # VERSION
+our $VERSION = '1.001'; # VERSION
 our $AUTHORITY = 'cpan:DERIV'; # AUTHORITY
-
-use Object::Pad;
-class Myriad::RPC::Message;
-
-use utf8;
 
 =encoding utf8
 
@@ -92,7 +86,7 @@ A JSON encoded string contains the argument of the procedure.
 
 method args { $args }
 
-=head2 resposne
+=head2 response
 
 The response to this message.
 
@@ -253,5 +247,25 @@ sub apply_decoding ($data, $encoding) {
     }
 }
 
+=head2 passed_deadline
+
+Check if the message is stil relevent
+
+=cut
+
+method passed_deadline {
+    time > $deadline ? 1 : 0;
+}
+
 1;
+
+=head1 AUTHOR
+
+Deriv Group Services Ltd. C<< DERIV@cpan.org >>.
+
+See L<Myriad/CONTRIBUTORS> for full details.
+
+=head1 LICENSE
+
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

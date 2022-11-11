@@ -1,6 +1,87 @@
 
 Revision history for Myriad
 
+1.001     2022-11-11 09:42:07+08:00 Asia/Singapore
+    [Bugs fixed]
+    - Latest Future (and Future::XS) were failing tests due to `Future->needs_all`
+    being a class method, the test was incorrectly trying to use it as a plain function
+    (only affects the memory transport, not Redis)
+
+1.000     2022-09-05 10:25:25+08:00 Asia/Singapore
+    [API changes]
+    - The --service_name parameter has been dropped, since it makes no sense when
+    used with multiple services or instances
+
+    [New features]
+    - Thanks to Syntax::Keyword::Equ, match() now supports `equ` as an operator
+    - RPC on start handle existing pending messages in stream, if not expired.
+    - RPC overflow protection (will not connsume more than it can process).
+    - Transport Redis connection pool count and wait time can be controlled through config parameters.
+    - Add orderedset data structure to Myriad storage.
+
+    [Bugs fixed]
+    - Subscriptions to create streams from source without a published event.
+
+    [Dependencies]
+    - Object::Pad - updated to v0.55 for various bugfixes and improvements
+
+0.010     2021-07-22 07:14:15+00:00 UTC
+    [New features]
+    - Metrics adapter type is now configurable using --metrics_adapter.
+    - Metrics destination can be changed using --metrics_host and --metrics_port.
+
+    [Bugs fixed]
+    - RPC client to track message id for response before sending it.
+    - Subscription to use the right group name to acknowledge from stream.
+
+    [Dependencies]
+    - Object::Pad - use new ->begin_class from MOB package.
+    - Metrics::Any - update to v0.07 to disable metrics from certain packages.
+    - Metrics::Any::Adapter::Statsd - instead of DogStatsd standard.
+
+0.009     2021-07-14 18:39:34+08:00 Asia/Kuala_Lumpur
+    [API Changes]
+    - Syntax::Keyword::Match is now imported in Myriad::Service code
+    - Redis: A service will not create another service's stream.
+    - Allow service namespaces by adding '::*' to the startup command.
+
+    [New features]
+    - Added incr method for storage keys.
+
+0.008     2021-06-18 05:24:31+00:00 UTC
+    [API Changes]
+    - Breaking: RPC client will unwrap the extra 'response' level from the response.
+    - Myriad now has run_future like shutdown_future, to tell when the framework is running.
+    - Test::Myriad has a ready sub, to tell when the underlying Myriad is running.
+    - Batch will now throw an exception and fail if the developer didn't return arrayref.
+
+    [Bugs fixed]
+    - Having multiple RPC added will not block and wait each others from reading from stream.
+
+0.007     2021-05-21 14:22:03+00:00 UTC
+    [Bugs fixed]
+    - RPC reading multiple items from stream but processing only one.
+
+    [Dependencies]
+    - Object::Pad - Use officially documented way to obtain metaclasses.
+
+0.006     2021-05-07 04:16:11+00:00 UTC
+    [API Changes]
+    - `fmap_void`, `fmap_concat` and `fmap_scalar` are imported from Future::Utils into classes by default
+    - RPC streams are now organized differently - there will be a stream for each method
+    instead of one stream per service. To migrate, use the script in `bin/myriad-migrate-rpc-streams.pl`
+
+    [Bugs fixed]
+    - RPC reads no longer not block each other when multiple services have been loaded into one Myriad
+    process
+
+0.005     2021-04-30 12:52:41+00:00 UTC
+    [Bugs fixed]
+    - small memory leak due to defer blocks not being cleared up, now uses try/finally
+    to avoid this
+    - minor issues in command line parser for services' config
+    - bootstrap test to be skipped if Linux::Inotify2 is not available
+
 0.004     2021-04-28 13:27:36+08:00 Asia/Kuala_Lumpur
     [API Changes]
     - Helper methods from List::Util - `min`, `max` and `sum0` - plus JSON functions

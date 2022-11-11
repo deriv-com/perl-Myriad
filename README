@@ -73,11 +73,11 @@ Modules and code layout
     Details on the request are in Myriad::RPC::Request and the response to
     be sent back is in Myriad::RPC::Response.
 
-      * Myriad::RPC::Redis
+      * Myriad::RPC::Implementation::Redis
 
-      * Myriad::RPC::PostgreSQL
+      * Myriad::RPC::Implementation::PostgreSQL
 
-      * Myriad::RPC::Memory
+      * Myriad::RPC::Implementation::Memory
 
     Additional transport mechanisms may be available, see CPAN for details.
 
@@ -88,11 +88,11 @@ Modules and code layout
 
     Subscription implementations include:
 
-      * Myriad::Subscription::Redis
+      * Myriad::Subscription::Implementation::Redis
 
-      * Myriad::Subscription::PostgreSQL
+      * Myriad::Subscription::Implementation::PostgreSQL
 
-      * Myriad::Subscription::Memory
+      * Myriad::Subscription::Implementation::Memory
 
     Additional transport mechanisms may be available, see CPAN for details.
 
@@ -163,6 +163,17 @@ METHODS
 
       * a - prefix is a standard getopt parameter
 
+ transport
+
+    Returns the Myriad::Transport instance according to the config value.
+
+    it's designed to be used by tests, so be careful before using it in the
+    framework code.
+
+    it takes a single param
+
+      * component - the RPC, Subscription or storage in lower case
+
  redis
 
     The Net::Async::Redis (or compatible) instance used for service
@@ -229,6 +240,13 @@ METHODS
 
     The coderef is expected to return a Future indicating completion.
 
+ run_future
+
+    Returns a copy of the run Future.
+
+    This would resolve once the process is running and it's ready to accept
+    requests.
+
  shutdown_future
 
     Returns a copy of the shutdown Future.
@@ -243,6 +261,10 @@ METHODS
  setup_tracing
 
     Prepare OpenTracing collection.
+
+ setup_metrics
+
+    Prepare Metrics::Any::Adapter to collect metrics.
 
  run
 
@@ -385,6 +407,6 @@ CONTRIBUTORS
 
 LICENSE
 
-    Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same
+    Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same
     terms as Perl itself.
 

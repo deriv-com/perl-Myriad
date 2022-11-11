@@ -2,11 +2,7 @@ package Myriad::API;
 
 use Myriad::Class;
 
-use Myriad::Config;
-use Myriad::Service::Remote;
-use Myriad::Service::Storage;
-
-our $VERSION = '0.004'; # VERSION
+our $VERSION = '1.001'; # VERSION
 our $AUTHORITY = 'cpan:DERIV'; # AUTHORITY
 
 =encoding utf8
@@ -24,10 +20,18 @@ storage, subscription and RPC behaviour.
 
 =cut
 
+use Myriad::Config;
+use Myriad::Service::Remote;
+use Myriad::Service::Storage;
+
 has $myriad;
 has $service_name;
 has $storage;
 has $config;
+
+=head1 METHODS
+
+=cut
 
 BUILD (%args) {
     weaken($myriad = delete $args{myriad});
@@ -90,5 +94,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

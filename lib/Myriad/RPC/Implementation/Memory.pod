@@ -1,7 +1,6 @@
 =encoding utf8
 
 =for comment POD_DERIVED_INDEX_GENERATED
-
 The following documentation is automatically generated.  Please do not edit
 this file, but rather the original, inline with Myriad::RPC::Implementation::Memory
 at lib/Myriad/RPC/Implementation/Memory.pm
@@ -22,6 +21,10 @@ Myriad::RPC::Implementation::Memory - microservice RPC in-memory implementation.
 =head2 start
 
 Start waiting for new requests to fill in the internal requests queue.
+
+=head2 process_stream_messages
+
+Process and emit received messages, while making sure we respond to them.
 
 =head2 create_from_sink
 
@@ -47,6 +50,22 @@ In this implementation it's done by resolving the L<Future> calling C<fail>.
 
 Drop the request because we can't reply to the requester.
 
+=head2 stream_name
+
+Get the stream name of the service the current template is
+
+service.$service_name.rpc/$method
+
+it takes:
+
+=over 4
+
+=item * L<service> - the name of service
+
+=item * L<method> - the name of the method
+
+=back
+
 =head1 INHERITED METHODS
 
 =over 4
@@ -69,5 +88,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

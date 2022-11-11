@@ -1,7 +1,6 @@
 =encoding utf8
 
 =for comment POD_DERIVED_INDEX_GENERATED
-
 The following documentation is automatically generated.  Please do not edit
 this file, but rather the original, inline with Myriad
 at lib/Myriad.pm
@@ -14,6 +13,14 @@ sure you change the first line.
 =head1 NAME
 
 Myriad - microservice coördination
+
+=begin markdown
+
+[![Coverage status](https://coveralls.io/repos/github/binary-com/perl-Myriad/badge.svg?branch=master)](https://coveralls.io/github/binary-com/perl-Myriad?branch=master)
+[![Test status](https://circleci.com/gh/binary-com/perl-Myriad.svg?style=shield&circle-token=55b191c6582ef5932e57b142fb29d8e13ae19598)](https://app.circleci.com/pipelines/github/binary-com/perl-Myriad)
+[![Docker](https://img.shields.io/docker/pulls/deriv/myriad.svg)](https://hub.docker.com/r/deriv/myriad)
+
+=end markdown
 
 =head1 SYNOPSIS
 
@@ -86,11 +93,11 @@ Details on the request are in L<Myriad::RPC::Request> and the response to be sen
 
 =over 4
 
-=item * L<Myriad::RPC::Redis>
+=item * L<Myriad::RPC::Implementation::Redis>
 
-=item * L<Myriad::RPC::PostgreSQL>
+=item * L<Myriad::RPC::Implementation::PostgreSQL>
 
-=item * L<Myriad::RPC::Memory>
+=item * L<Myriad::RPC::Implementation::Memory>
 
 =back
 
@@ -104,11 +111,11 @@ Subscription implementations include:
 
 =over 4
 
-=item * L<Myriad::Subscription::Redis>
+=item * L<Myriad::Subscription::Implementation::Redis>
 
-=item * L<Myriad::Subscription::PostgreSQL>
+=item * L<Myriad::Subscription::Implementation::PostgreSQL>
 
-=item * L<Myriad::Subscription::Memory>
+=item * L<Myriad::Subscription::Implementation::Memory>
 
 =back
 
@@ -181,6 +188,20 @@ modules under that immediate namespace will be loaded
 
 =back
 
+=head2 transport
+
+Returns the L<Myriad::Transport> instance according to the config value.
+
+it's designed to be used by tests, so be careful before using it in the framework code.
+
+it takes a single param
+
+=over 4
+
+=item * component - the RPC, Subscription or storage in lower case
+
+=back
+
 =head2 redis
 
 The L<Net::Async::Redis> (or compatible) instance used for service coördination.
@@ -245,6 +266,13 @@ Registers a coderef to be called during shutdown.
 
 The coderef is expected to return a L<Future> indicating completion.
 
+=head2 run_future
+
+Returns a copy of the run L<Future>.
+
+This would resolve once the process is running and it's
+ready to accept requests.
+
 =head2 shutdown_future
 
 Returns a copy of the shutdown L<Future>.
@@ -259,6 +287,10 @@ Prepare for logging.
 =head2 setup_tracing
 
 Prepare L<OpenTracing> collection.
+
+=head2 setup_metrics
+
+Prepare L<Metrics::Any::Adapter> to collect metrics.
 
 =head2 run
 
@@ -412,5 +444,5 @@ L<BUILDARGS|Object::Pad::UNIVERSAL/BUILDARGS>
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

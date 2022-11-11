@@ -3,7 +3,7 @@ package Myriad::Class;
 use strict;
 use warnings;
 
-our $VERSION = '0.004'; # VERSION
+our $VERSION = '1.001'; # VERSION
 our $AUTHORITY = 'cpan:DERIV'; # AUTHORITY
 
 use utf8;
@@ -61,8 +61,12 @@ The following Perl language features and modules are applied:
 
 =item * provides L<List::Util/min>, L<List::Util/max>, L<List::Util/sum0>
 
+=item * provides L<List::Keywords/any>, L<List::Keywords/all>
+
 =item * provides L<JSON::MaybeUTF8/encode_json_text>, L<JSON::MaybeUTF8/encode_json_utf8>,
 L<JSON::MaybeUTF8/decode_json_text>, L<JSON::MaybeUTF8/decode_json_utf8>, L<JSON::MaybeUTF8/format_json_text>
+
+=item * provides L<Unicode::UTF8/encode_utf8>, L<Unicode::UTF8/decode_utf8>
 
 =back
 
@@ -105,23 +109,31 @@ with the default being C<:v1>.
 
 =cut
 
+use Object::Pad;
+use Object::Pad qw(:experimental(mop));
 no indirect qw(fatal);
 no multidimensional;
 no bareword::filehandles;
 use mro;
 use experimental qw(signatures);
+use curry;
 use Future::AsyncAwait;
 use Syntax::Keyword::Try;
 use Syntax::Keyword::Dynamically;
 use Syntax::Keyword::Defer;
+use Syntax::Keyword::Match;
+use Syntax::Operator::Equ;
 use Scalar::Util;
 use List::Util;
+use List::Keywords;
+use Future::Utils;
+use Module::Load ();
 
 use JSON::MaybeUTF8;
+use Unicode::UTF8;
 
 use Heap;
 use IO::Async::Notifier;
-use Object::Pad ();
 
 use Log::Any qw($log);
 use OpenTracing::Any qw($tracer);
@@ -190,6 +202,20 @@ sub import {
             decode_json_utf8
             format_json_text
         );
+        *{$pkg . '::' . $_} = Unicode::UTF8->can($_) for qw(
+            encode_utf8
+            decode_utf8
+        );
+    }
+    {
+        no strict 'refs';
+        *{$pkg . '::' . $_} = Future::Utils->can($_) for qw(
+            fmap_void
+            fmap_concat
+            fmap_scalar
+            fmap0
+            fmap1
+        );
     }
 
     {
@@ -207,26 +233,16 @@ sub import {
     }
 
     # Some well-designed modules provide direct support for import target
-    Syntax::Keyword::Try->import_into($pkg);
+    Syntax::Keyword::Try->import_into($pkg, try => ':experimental(typed)');
     Syntax::Keyword::Dynamically->import_into($pkg);
     Syntax::Keyword::Defer->import_into($pkg);
-    Future::AsyncAwait->import_into($pkg);
+    Syntax::Operator::Equ->import_into($pkg);
+    Future::AsyncAwait->import_into($pkg, ':experimental(cancel)');
     Metrics::Any->import_into($pkg, '$metrics');
 
-    # For history here, see this:
-    # https://rt.cpan.org/Ticket/Display.html?id=132337
-    # At the time of writing, ->begin_class is undocumented
-    # but can be seen in action in this test:
-    # https://metacpan.org/source/PEVANS/Object-Pad-0.21/t/70mop-create-class.t#L30
-    Object::Pad->import_into($pkg);
-    my $meta = Object::Pad->begin_class(
-        $pkg,
-        (
-            $args{extends}
-            ? (extends => $args{extends})
-            : ()
-        )
-    );
+    # Others use lexical hints
+    List::Keywords->import(qw(any all));
+    Syntax::Keyword::Match->import(qw(match));
 
     {
         no strict 'refs';
@@ -239,7 +255,31 @@ sub import {
         );
         *{$pkg . '::tracer'}  = \(OpenTracing->global_tracer);
     }
-    return $meta;
+
+    if(my $class = $args{class} // $pkg) {
+        # For history here, see this:
+        # https://rt.cpan.org/Ticket/Display.html?id=132337
+        # We do this first to get the keywords...
+        Object::Pad->import_into($pkg);
+        # ... and then _again_ to disable the experimental warnings
+        Object::Pad->import_into($pkg, qw(:experimental));
+        my $method = 'begin_' . ($args{type} || 'class');
+        my $meta = Object::Pad::MOP::Class->$method(
+            $class,
+            (
+                $args{extends}
+                ? (extends => $args{extends})
+                : ()
+            ),
+        );
+        $args{does} = [ $args{does} // () ] unless ref $args{does};
+        for my $role ($args{does}->@*) {
+            Module::Load::load($role) unless eval { Object::Pad::MOP::Class->for_class($role) };
+            $meta->add_role($role);
+        }
+        return $meta;
+    }
+    return $pkg;
 }
 
 1;
@@ -254,5 +294,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

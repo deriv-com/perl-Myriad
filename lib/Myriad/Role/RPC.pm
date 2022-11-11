@@ -3,10 +3,9 @@ package Myriad::Role::RPC;
 use strict;
 use warnings;
 
-our $VERSION = '0.004'; # VERSION
+our $VERSION = '1.001'; # VERSION
 our $AUTHORITY = 'cpan:DERIV'; # AUTHORITY
 
-no indirect qw(fatal);
 use utf8;
 
 =encoding utf8
@@ -36,6 +35,7 @@ a concrete implementation - instead, see classes such as:
 
 =cut
 
+no indirect qw(fatal);
 use Role::Tiny;
 
 use Future::AsyncAwait;
@@ -140,5 +140,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

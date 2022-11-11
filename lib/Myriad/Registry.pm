@@ -2,7 +2,7 @@ package Myriad::Registry;
 
 use Myriad::Class extends => 'IO::Async::Notifier';
 
-our $VERSION = '0.004'; # VERSION
+our $VERSION = '1.001'; # VERSION
 our $AUTHORITY = 'cpan:DERIV'; # AUTHORITY
 
 =encoding utf8
@@ -20,6 +20,8 @@ are available, and what they can do.
 
 =cut
 
+use Myriad::API;
+
 use Myriad::Exception::Builder category => 'registry';
 
 declare_exception ServiceNotFound => (
@@ -28,8 +30,6 @@ declare_exception ServiceNotFound => (
 declare_exception UnknownClass => (
     message => 'Unable to locate the given class for component lookup',
 );
-
-use Myriad::API;
 
 has %rpc;
 has %service_by_name;
@@ -50,7 +50,8 @@ async method add_service (%args) {
     weaken(my $myriad = delete $args{myriad});
 
     my $pkg = blessed($srv) ? ref $srv : $srv;
-    my $service_name = delete $args{name} // $self->make_service_name($pkg);
+    my $namespace = delete $args{namespace};
+    my $service_name = delete $args{name} // $self->make_service_name($pkg, $namespace);
 
     $srv = $srv->new(
         %args,
@@ -79,7 +80,7 @@ async method add_service (%args) {
     $batch{$pkg} ||= {};
     $emitter{$pkg} ||= {};
     $receiver{$pkg} ||= {};
-    $log->tracef('Going to load service %s', $service_name);
+    $log->debugf('Adding service %s package: %s', $service_name, $pkg);
     $self->loop->add(
         $srv
     );
@@ -217,9 +218,20 @@ method receivers_for ($pkg) {
 Reformat a given string to make it combatible with our services
 naming strategy
 
+it takes the following args:
+
+=over 4
+
+=item * name - a String with the original name
+
+=item * namespace - If available the service name will not contain the namespace
+
+=back
+
 =cut
 
-method make_service_name ($name) {
+method make_service_name ($name, $namespace = '') {
+    $name =~ s/^\Q$namespace// if length $namespace;
     return lc($name) =~ s{::}{.}gr
 }
 
@@ -233,5 +245,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

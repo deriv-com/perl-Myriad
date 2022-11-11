@@ -1,20 +1,15 @@
 package Myriad::Subscription;
 
-use strict;
-use warnings;
+use Myriad::Class class => '';
 
-our $VERSION = '0.004'; # VERSION
+our $VERSION = '1.001'; # VERSION
 our $AUTHORITY = 'cpan:DERIV'; # AUTHORITY
-
-no indirect qw(fatal);
-use Scalar::Util qw(weaken);
-use utf8;
 
 =encoding utf8
 
 =head1 NAME
 
-Myriad::Subscription - microservice Subscription abstraction
+Myriad::Subscription - microservice subscription abstraction
 
 =head1 SYNOPSIS
 
@@ -23,6 +18,9 @@ Myriad::Subscription - microservice Subscription abstraction
 =head1 DESCRIPTION
 
 =cut
+
+no indirect qw(fatal);
+use Scalar::Util qw(weaken);
 
 use Myriad::Exception::Builder category => 'subscription';
 
@@ -38,8 +36,7 @@ declare_exception UnknownTransport => (
     message => 'Unknown transport'
 );
 
-sub new {
-    my ($class, %args) = @_;
+sub new ($class, %args) {
     my $transport = delete $args{transport};
     weaken(my $myriad = delete $args{myriad});
 
@@ -49,7 +46,7 @@ sub new {
     if ($transport eq 'redis') {
         require Myriad::Subscription::Implementation::Redis;
         return Myriad::Subscription::Implementation::Redis->new(
-            redis   => $myriad->redis,
+            redis   => $myriad->redis_transport,
         );
     } elsif ($transport eq 'memory' or $transport eq 'perl') {
         require Myriad::Subscription::Implementation::Memory;
@@ -73,5 +70,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

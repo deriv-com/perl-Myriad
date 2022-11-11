@@ -1,7 +1,6 @@
 =encoding utf8
 
 =for comment POD_DERIVED_INDEX_GENERATED
-
 The following documentation is automatically generated.  Please do not edit
 this file, but rather the original, inline with Myriad::RPC::Message
 at lib/Myriad/RPC/Message.pm
@@ -49,7 +48,7 @@ An epoch that represents when the timeout of the message.
 
 A JSON encoded string contains the argument of the procedure.
 
-=head2 resposne
+=head2 response
 
 The response to this message.
 
@@ -99,6 +98,10 @@ A helper method to enode the hash fields into JSON string.
 
 A helper sub to decode some field from JSON string into Perl hashes.
 
+=head2 passed_deadline
+
+Check if the message is stil relevent
+
 =head1 INHERITED METHODS
 
 =over 4
@@ -108,4 +111,14 @@ A helper sub to decode some field from JSON string into Perl hashes.
 L<BUILDARGS|Object::Pad::UNIVERSAL/BUILDARGS>
 
 =back
+
+=head1 AUTHOR
+
+Deriv Group Services Ltd. C<DERIV@cpan.org>.
+
+See L<Myriad/CONTRIBUTORS> for full details.
+
+=head1 LICENSE
+
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

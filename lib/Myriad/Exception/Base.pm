@@ -3,10 +3,9 @@ package Myriad::Exception::Base;
 use strict;
 use warnings;
 
-our $VERSION = '0.004'; # VERSION
+our $VERSION = '1.001'; # VERSION
 our $AUTHORITY = 'cpan:DERIV'; # AUTHORITY
 
-no indirect qw(fatal);
 use utf8;
 
 =encoding utf8
@@ -21,6 +20,7 @@ See L<Myriad::Exception> for the rôle which defines the exception API.
 
 =cut
 
+no indirect qw(fatal);
 use Myriad::Exception;
 
 use overload '""' => sub { shift->as_string }, bool => sub { 1 }, fallback => 1;
@@ -56,5 +56,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

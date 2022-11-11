@@ -2,7 +2,7 @@ package Myriad::Service::Storage::Remote;
 
 use Myriad::Class;
 
-our $VERSION = '0.004'; # VERSION
+our $VERSION = '1.001'; # VERSION
 our $AUTHORITY = 'cpan:DERIV'; # AUTHORITY
 
 =encoding utf8
@@ -32,7 +32,7 @@ BEGIN {
         labels => [qw(method status service)],
     );
 
-    my $meta = Myriad::Service::Storage::Remote->META;
+    my $meta = Object::Pad::MOP::Class->for_class('Myriad::Service::Storage::Remote');
 
     for my $method (@Myriad::Role::Storage::READ_METHODS) {
         $meta->add_method($method, sub {
@@ -40,7 +40,7 @@ BEGIN {
             return $self->storage->$method($self->apply_prefix($key), @rest)->on_ready(sub {
                 my $f = shift;
                 $metrics->report_timer(time_elapsed =>
-                    $f->elapsed, {method => $method, status => $f->state, service => $self->local_service_name});
+                    $f->elapsed // 0, {method => $method, status => $f->state, service => $self->local_service_name});
             });
         });
     }
@@ -91,6 +91,6 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 
 

@@ -7,6 +7,7 @@ use Test::MockObject;
 use Test::Fatal;
 use Test::Deep;
 
+use Object::Pad qw(:experimental);
 use Log::Any::Adapter qw(TAP);
 
 use Future::AsyncAwait;
@@ -43,19 +44,33 @@ subtest "service command" => sub {
     # Fake existence of two sibling modules
     {
         package Ta::Sibling1;
+        {
+            no strict 'refs';
+            push @{Ta::Sibling1::ISA}, 'Myriad::Service';
+        }
         sub new { }
     }
     {
         package Ta::Sibling2;
+        push @{Ta::Sibling2::ISA}, 'Myriad::Service';
         sub new { }
     }
+
+    {
+        package Ta::Sibling3;
+        sub new { }
+    }
+
     $INC{'Ta/Sibling1.pm'} = 1;
     $INC{'Ta/Sibling2.pm'} = 1;
+    $INC{'Ta/Sibling3.pm'} = 1;
     ######
+
+    my $metaclass = Object::Pad::MOP::Class->for_class('Myriad');
 
     my $myriad = Myriad->new;
     my $command = new_ok('Myriad::Commands'=> ['myriad', $myriad]);
-    $myriad->META->get_slot('$config')->value($myriad) = Myriad::Config->new();
+    $metaclass->get_field('$config')->value($myriad) = Myriad::Config->new();
 
     # Wrong Service(module) name
     like( exception { wait_for_future( $command->service('Ta-wrong') )->get } , qr/unsupported/, 'Died when passing wrong format name');
@@ -65,16 +80,14 @@ subtest "service command" => sub {
     wait_for_future( $command->service('Ta::')->get->{code}->() )->get;
     cmp_deeply(\@added_services_modules, ['Ta::Sibling1', 'Ta::Sibling2'], 'Added both modules');
     # Clear it for next test.
-    undef @added_services_modules;
+    @added_services_modules = ();
 
-    # Command to run multiple services should not be allowed when service_name option is set
-    my $srv_run_name = 'service.test.one';
-    $myriad->META->get_slot('$config')->value($myriad) = Myriad::Config->new( commandline => ['--service_name', $srv_run_name] );
-    like (exception {wait_for_future( $command->service('Ta::') )->get}, qr/You cannot pass a service/, 'Not able to load multiple due to set service_name');
-    # However allowed to run 1
-    wait_for_future( $command->service('Ta::Sibling1')->get->{code}->() )->get;
-    cmp_deeply(\@added_services_modules, ['Ta::Sibling1'], 'Added one service');
-    cmp_deeply(\@add_services_by_name, [$srv_run_name], "Added $srv_run_name by name");
+    # Running services under the same namespace
+    wait_for_future( $command->service('Ta::*')->get->{code}->() )->get;
+    cmp_deeply(\@added_services_modules, ['Ta::Sibling1', 'Ta::Sibling2'], 'Added modules under the namespace');
+    # Clear it for next test.
+    @added_services_modules = ();
+
     done_testing;
 };
 
@@ -98,9 +111,9 @@ sub mock_component {
     my ($component, $cmd, $test_name) = @_;
 
     $test_cmd = $test_name;
-    undef %calls;
+    %calls = ();
     $rmt_svc_cmd_called = {};
-    undef %started_components;
+    %started_components = ();
     $myriad_mod->mock($component, sub {
         my ($self) = @_;
         my $mock = Test::MockObject->new();

@@ -2,7 +2,7 @@ package Myriad::Transport::Redis;
 
 use Myriad::Class extends => qw(IO::Async::Notifier);
 
-our $VERSION = '0.004'; # VERSION
+our $VERSION = '1.001'; # VERSION
 our $AUTHORITY = 'cpan:DERIV'; # AUTHORITY
 
 =pod
@@ -40,15 +40,19 @@ use Net::Async::Redis::Cluster;
 
 use List::Util qw(pairmap);
 
-# Cluster mode by default
-has $use_cluster = 1;
+use Myriad::Exception::Builder category => 'transport_redis';
 
+declare_exception 'NoSuchStream' => (
+    message => 'There is no such stream, is the other service running?',
+);
+
+has $use_cluster;
 has $redis_uri;
 has $redis;
 has $redis_pool;
 has $waiting_redis_pool;
 has $pending_redis_count = 0;
-has $wait_time = 15_000;
+has $wait_time;
 has $batch_count = 50;
 has $max_pool_count;
 has $clientside_cache_size = 0;
@@ -71,6 +75,9 @@ method configure (%args) {
     $max_pool_count = exists $args{max_pool_count} ? delete $args{max_pool_count} : 10;
     $prefix //= exists $args{prefix} ? delete $args{prefix} : 'myriad';
     $clientside_cache_size = delete $args{client_side_cache_size} if exists $args{client_side_cache_size};
+    $wait_time = exists $args{wait_time} ? delete $args{wait_time} : 15_000;
+    # limit minimum wait time to 100ms
+    $wait_time = 100 if $wait_time < 100;
     return $self->next::method(%args);
 }
 
@@ -220,7 +227,7 @@ async method read_from_stream (%args) {
         STREAMS => ($stream, '>'),
     );
 
-    $log->tracef('Read group %s', $delivery);
+    $log->tracef('Read group: %s as `%s` from [%s]: %s', $group, $client, $stream, $delivery);
 
     # We are strictly reading for one stream
     my $batch = $delivery->[0];
@@ -228,8 +235,7 @@ async method read_from_stream (%args) {
         my  ($stream, $data) = $batch->@*;
         return map {
             my ($id, $args) = $_->@*;
-            $log->tracef('Item from stream %s is ID %s and args %s', $stream, $id, $args);
-            return {
+            +{
                 stream => $self->remove_prefix($stream),
                 id     => $id,
                 data   => $args,
@@ -270,7 +276,7 @@ async method cleanup (%args) {
 
     # Track how far back our active stream list goes - anything older than this is fair game
     my $oldest = await $self->oldest_processed_id($stream);
-    $log->debugf('Earliest ID to care about: %s', $oldest);
+    $log->tracef('Attempting to clean up [%s] Size: %d | Earliest ID to care about: %s', $stream, $info->{length}, $oldest);
     if ($oldest and $oldest ne '0-0' and $self->compare_id($oldest, $info->{first_entry}[0]) > 0) {
         # At this point we know we have some older items that can go. We'll need to finesse
         # the direction to search: for now, take the naïve but workable assumption that we
@@ -304,15 +310,14 @@ async method cleanup (%args) {
             $endpoint = $v->[-1][0];
         }
         $total = $info->{length} - $total if $direction eq 'xrange';
-        $log->tracef('Would trim to %d items', $total);
 
 #        my ($before) = await $redis->memory_usage($stream);
         my ($trim) = await $redis->xtrim($stream, MAXLEN => $total);
 #        my ($after) = await $redis->memory_usage($stream);
-        $log->tracef('Size changed from %d to %d after trim which removed %d items', 1, 1, $trim);
+        $log->tracef('Trimmed %d items from stream: %s', $total, $stream);
     }
     else {
-        $log->tracef('No point in trimming: oldest is %s and this compares to %s', $oldest, $info->{first_entry}[0]);
+        $log->tracef('No point in trimming (%s) where: oldest is %s and this compares to %s', $stream, $oldest, $info->{first_entry}[0]);
     }
 }
 
@@ -332,53 +337,69 @@ Takes the following named parameters:
 
 =back
 
-Returns a L<Ryu::Source> for the pending items in this stream.
+Returns the pending items in this stream.
 
 =cut
 
-method pending (%args) {
+async method pending (%args) {
     my $src = $self->source;
     my $stream = $self->apply_prefix($args{stream});
     my $group = $args{group};
     my $client = $args{client};
-    Future->wait_any(
-        $src->completed->without_cancel,
-        (async method {
-            my $instance = await $self->borrow_instance_from_pool;
-            defer {
-                $self->return_instance_to_pool($instance) if $instance;
-                undef $instance;
-            }
+    my @res = ();
 
-            my $src = $self->source;
-            my $start = '-';
-            while (1) {
-                await $src->unblocked;
-                my ($pending) = await $instance->xpending(
-                    $stream,
-                    $group,
-                    $start, '+',
-                    $self->batch_count,
-                    $client,
-                );
-                for my $item ($pending->@*) {
-                    my ($id, $consumer, $age, $delivery_count) = $item->@*;
-                    $log->tracef('Claiming pending message %s from %s, age %s, %d prior deliveries', $id, $consumer, $age, $delivery_count);
-                    my $claim = await $redis->xclaim($stream, $group, $client, 10, $id);
-                    $log->tracef('Claim is %s', $claim);
-                    my $args = $claim->[0]->[1];
-                    if($args) {
-                        push @$args, ("message_id", $id);
-                        $src->emit($args);
-                    }
-                }
-                last unless @$pending >= $self->batch_count;
-            }
-        })->($self),
-    )->on_fail(sub  {
-        $src->fail(@_);
-    })->retain;
-    $src;
+    my $instance = await $self->borrow_instance_from_pool;
+    try {
+        my ($pending) = await $instance->xpending(
+            $stream,
+            $group,
+            '-', '+',
+            $self->batch_count,
+            $client,
+        );
+        @res = await &fmap_concat($self->$curry::weak(
+            async method ($item) {
+                my ($id, $consumer, $age, $delivery_count) = $item->@*;
+                $log->tracef('Claiming pending message %s from %s, age %s, %d prior deliveries', $id, $consumer, $age, $delivery_count);
+                my $claim = await $redis->xclaim($stream, $group, $client, 10, $id);
+                $log->tracef('Claim is %s', $claim);
+                my $args = $claim->[0]->[1];
+
+                return {stream => $self->remove_prefix($stream), id => $id, data => $args ? $args : []};
+            }),
+            foreach => $pending,
+            concurrent => scalar @$pending
+        );
+
+        } catch ($e) {
+            $log->warnf('Could not read pending messages on stream: %s | error: %s', $stream, $e);
+        }
+        $self->return_instance_to_pool($instance) if $instance;
+        undef $instance;
+
+        return @res;
+}
+
+=head2 create_stream
+
+Creates a Redis stream.
+Note that there is no straight way to do that in Redis
+without creating a group or adding an event.
+To overcome this it will create a group with MKSTREAM option
+Then destroy that init consumer group.
+
+=over 4
+
+=item * C<stream> - name of the stream we want to create.
+
+=back
+
+=cut
+
+async method create_stream ($stream) {
+    await $self->create_group($stream, 'INIT', '$', 1);
+    await $self->remove_group($stream, 'INIT');
+    $log->tracef('created a Redis stream: %s', $stream);
 }
 
 =head2 create_group
@@ -400,12 +421,51 @@ by default it's C<$> which means the last message.
 
 =cut
 
-async method create_group ($stream, $group, $start_from = '$') {
+async method create_group ($stream, $group, $start_from = '$', $make_stream = 0) {
     try {
-        await $redis->xgroup('CREATE', $self->apply_prefix($stream), $group, $start_from, 'MKSTREAM');
+        my @args = ('CREATE', $self->apply_prefix($stream), $group, $start_from);
+        push @args, 'MKSTREAM' if $make_stream;
+        await $redis->xgroup(@args);
+        $log->tracef('Created new consumer group: %s from stream: %s', $group, $stream);
     } catch ($e) {
         if($e =~ /BUSYGROUP/){
+            $log->tracef('Already exists consumer group: %s from stream: %s', $group, $stream);
             return;
+        } elsif ($e =~ /requires the key to exist/) {
+            Myriad::Exception::Transport::Redis::NoSuchStream->throw(
+                reason => "no such stream: $stream",
+            );
+        } else {
+            die $e;
+        }
+    }
+}
+
+=head2 remove_group
+
+Delete a Redis consumer group.
+
+=over 4
+
+=item * C<stream> - The name of the stream group belongs to.
+
+=item * C<group> - The consumer group name.
+
+=back
+
+=cut
+
+async method remove_group ($stream, $group) {
+    try {
+        my @args = ('DESTROY', $self->apply_prefix($stream), $group);
+        await $redis->xgroup(@args);
+        $log->tracef('Deleted consumergroup: %s from stream: %s', $group, $stream);
+    } catch ($e) {
+        if ($e =~ /requires the key to exist/) {
+            $log->warnf('Trying to remove a consumergroup(%s) from stream: %s that does not exist', $group, $stream);
+            Myriad::Exception::Transport::Redis::NoSuchStream->throw(
+                reason => "no such stream: $stream",
+            );
         } else {
             die $e;
         }
@@ -452,14 +512,14 @@ With the possibility of waiting to get one, if all connection were busy and we m
 async method borrow_instance_from_pool {
     $log->tracef('Available Redis pool count: %d', 0 + $redis_pool->@*);
     if (my $available_redis = shift $redis_pool->@*) {
-        $pending_redis_count++;
-        return await $self->loop->new_future->done($available_redis);
+        ++$pending_redis_count;
+        return $available_redis;
     } elsif ($pending_redis_count < $max_pool_count) {
         ++$pending_redis_count;
         return await $self->redis;
     }
     push @$waiting_redis_pool, my $f = $self->loop->new_future;
-    $log->warnf('All Redis instances are pending, added to waiting list. Current Redis count: %d/%d | Waiting count: %d', $pending_redis_count, $max_pool_count, 0 + $waiting_redis_pool->@*);
+    $log->debugf('All Redis instances are pending, added to waiting list. Current Redis count: %d/%d | Waiting count: %d', $pending_redis_count, $max_pool_count, 0 + $waiting_redis_pool->@*);
     return await $f;
 }
 
@@ -471,9 +531,11 @@ It should be called at the end of every usage, as on_ready.
 It should also be possible with a try/finally combination..
 but that's currently failing with the $redis_pool slot not being defined.
 
+Takes the following parameters:
+
 =over 4
 
-=item * C<$instance> - Redis connection, to be returned.
+=item * C<$instance> - Redis connection to be returned.
 
 =back
 
@@ -487,6 +549,7 @@ method return_instance_to_pool ($instance) {
         $log->tracef('Returning instance to pool, Redis used/available now %d/%d', $pending_redis_count, 0 + $redis_pool->@*);
         $pending_redis_count--;
     }
+    return;
 }
 
 =head2 redis
@@ -496,7 +559,7 @@ instance, depending on the setting of C<$use_cluster>.
 
 =cut
 
-async method redis {
+async method redis () {
     my $instance;
     if($use_cluster) {
         $instance = Net::Async::Redis::Cluster->new(
@@ -518,6 +581,7 @@ async method redis {
         $self->add_child(
             $instance
         );
+        $log->tracef('Added new Redis connection (%s) to pool', $redis_uri->as_string);
         await $instance->connect;
     }
     return $instance;
@@ -598,6 +662,10 @@ async method getset($key, $v) {
     await $redis->set($self->apply_prefix($key), $v);
 }
 
+async method incr ($key) {
+    await $redis->incr($self->apply_prefix($key));
+}
+
 async method rpush($key, @v) {
     await $redis->rpush($self->apply_prefix($key), @v);
 }
@@ -620,6 +688,30 @@ async method hset ($k, $hash_key, $v) {
 
 async method hget($k, $hash_key) {
     await $redis->hget($k, $self->apply_prefix($hash_key));
+}
+
+async method hincrby($k, $hash_key, $v) {
+    await $redis->hincrby($k, $self->apply_prefix($hash_key), $v);
+}
+
+async method zadd ($key, @v) {
+    await $redis->zadd($self->apply_prefix($key), @v);
+}
+
+async method zrem ($k, $m) {
+    await $redis->zrem($self->apply_prefix($k), $m);
+}
+
+async method zremrangebyscore ($k, $min, $max) {
+    await $redis->zremrangebyscore($self->apply_prefix($k), $min => $max);
+}
+
+async method zcount ($k, $min, $max) {
+    await $redis->zcount($self->apply_prefix($k), $min, $max);
+}
+
+async method zrange ($k, @v) {
+    await $redis->zrange($self->apply_prefix($k), @v);
 }
 
 async method watch_keyspace($pattern) {
@@ -656,5 +748,5 @@ Deriv Group Services Ltd. C<< DERIV@cpan.org >>
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

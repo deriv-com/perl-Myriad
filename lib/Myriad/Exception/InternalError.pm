@@ -1,14 +1,9 @@
 package Myriad::Exception::InternalError;
 
-use strict;
-use warnings;
+use Myriad::Exception::Builder;
 
-our $VERSION = '0.004'; # VERSION
+our $VERSION = '1.001'; # VERSION
 our $AUTHORITY = 'cpan:DERIV'; # AUTHORITY
-
-no indirect qw(fatal);
-
-use utf8;
 
 =encoding utf8
 
@@ -22,14 +17,10 @@ See L<Myriad::Exception> for the rôle that defines the exception API.
 
 =cut
 
-use base qw(Myriad::Exception::Base);
-
-use Role::Tiny::With;
-
-with 'Myriad::Exception';
-
-sub category { 'internal' }
-sub message { shift->{message} //= 'Internal error' }
+declare_exception '' => (
+    category => 'internal',
+    message  => 'Internal error'
+);
 
 1;
 
@@ -41,5 +32,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

@@ -1,14 +1,24 @@
 package Myriad::RPC::Client::Implementation::Memory;
 
-our $VERSION = '0.004'; # VERSION
+use Myriad::Class extends => qw(IO::Async::Notifier);
+
+our $VERSION = '1.001'; # VERSION
 our $AUTHORITY = 'cpan:DERIV'; # AUTHORITY
 
-use strict;
-use warnings;
+=encoding utf8
+
+=head1 NAME
+
+Myriad::RPC::Client::Implementation::Memory
+
+=head1 SYNOPSIS
+
+=head1 DESCRIPTION
+
+=cut
 
 use Myriad::Util::UUID;
 use Myriad::RPC::Message;
-use Myriad::Class extends => qw(IO::Async::Notifier);
 
 has $transport;
 has $whoami;
@@ -71,19 +81,19 @@ async method call_rpc ($service, $method, %args) {
 
     $pending_requests->{$message_id} = $pending;
     await $self->is_started();
-    await $transport->add_to_stream($service, $request->as_hash->%*);
+    await $transport->add_to_stream("service.$service.rpc/$method", $request->as_hash->%*);
 
     try {
         my $message = await Future->wait_any(
             $self->loop->timeout_future(at => $deadline),
             $pending
         );
-        return $message->response;
+        return $message->response->{response};
     } catch ($e) {
         if ($e =~ /Timeout/) {
             $e  = Myriad::Exception::RPC::Timeout->new(reason => 'deadline is due');
         } else {
-            $e = Myriad::Exception::InternalError->new(reason => $e) unless blessed $e && $e->isa('Myriad::Exception');
+            $e = Myriad::Exception::InternalError->new(reason => $e) unless blessed $e && $e->does('Myriad::Exception');
         }
         $pending->fail($e);
         delete $pending_requests->{$message_id};
@@ -97,4 +107,14 @@ method _add_to_loop ($loop) {
 }
 
 1;
+
+=head1 AUTHOR
+
+Deriv Group Services Ltd. C<< DERIV@cpan.org >>.
+
+See L<Myriad/CONTRIBUTORS> for full details.
+
+=head1 LICENSE
+
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

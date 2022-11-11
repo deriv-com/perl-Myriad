@@ -2,12 +2,14 @@ package Myriad::Plugin;
 
 use Myriad::Class;
 
-our $VERSION = '0.004'; # VERSION
+our $VERSION = '1.001'; # VERSION
 our $AUTHORITY = 'cpan:DERIV'; # AUTHORITY
+
+=encoding utf8
 
 =head1 NAME
 
-Myriad::Plugin
+Myriad::Plugin - extensible L<Myriad> functionality using attributes
 
 =head1 DESCRIPTION
 
@@ -81,5 +83,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
 

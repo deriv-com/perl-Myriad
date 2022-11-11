@@ -3,7 +3,7 @@ package Myriad;
 
 use Myriad::Class;
 
-our $VERSION = '0.004';
+our $VERSION = '1.001';
 our $AUTHORITY = 'cpan:DERIV'; # AUTHORITY
 
 =encoding utf8
@@ -11,6 +11,14 @@ our $AUTHORITY = 'cpan:DERIV'; # AUTHORITY
 =head1 NAME
 
 Myriad - microservice coördination
+
+=begin markdown
+
+[![Coverage status](https://coveralls.io/repos/github/binary-com/perl-Myriad/badge.svg?branch=master)](https://coveralls.io/github/binary-com/perl-Myriad?branch=master)
+[![Test status](https://circleci.com/gh/binary-com/perl-Myriad.svg?style=shield&circle-token=55b191c6582ef5932e57b142fb29d8e13ae19598)](https://app.circleci.com/pipelines/github/binary-com/perl-Myriad)
+[![Docker](https://img.shields.io/docker/pulls/deriv/myriad.svg)](https://hub.docker.com/r/deriv/myriad)
+
+=end markdown
 
 =head1 SYNOPSIS
 
@@ -83,11 +91,11 @@ Details on the request are in L<Myriad::RPC::Request> and the response to be sen
 
 =over 4
 
-=item * L<Myriad::RPC::Redis>
+=item * L<Myriad::RPC::Implementation::Redis>
 
-=item * L<Myriad::RPC::PostgreSQL>
+=item * L<Myriad::RPC::Implementation::PostgreSQL>
 
-=item * L<Myriad::RPC::Memory>
+=item * L<Myriad::RPC::Implementation::Memory>
 
 =back
 
@@ -101,11 +109,11 @@ Subscription implementations include:
 
 =over 4
 
-=item * L<Myriad::Subscription::Redis>
+=item * L<Myriad::Subscription::Implementation::Redis>
 
-=item * L<Myriad::Subscription::PostgreSQL>
+=item * L<Myriad::Subscription::Implementation::PostgreSQL>
 
-=item * L<Myriad::Subscription::Memory>
+=item * L<Myriad::Subscription::Implementation::Memory>
 
 =back
 
@@ -170,10 +178,14 @@ use Myriad::Transport::HTTP;
 use Myriad::Transport::Memory;
 use Myriad::Transport::Redis;
 
+use Future::IO;
+use Future::IO::Impl::IOAsync;
+
+use IO::Async::Loop;
+
 use Log::Any::Adapter;
 
 use Net::Async::OpenTracing;
-use Metrics::Any::Adapter qw(DogStatsd);
 
 our $REGISTRY;
 BEGIN {
@@ -218,6 +230,11 @@ has $subscription;
 # The Myriad::Storage instance to manage data
 # stored by the service or access other services data.
 has $storage;
+# Future representing run
+has $run;
+# Future for passing to things that want to react to
+# run, anything outside this file
+has $run_without_cancel;
 # Future representing shutdown
 has $shutdown;
 # Future for passing to things that want to react to
@@ -285,6 +302,7 @@ async method configure_from_argv (@args) {
 
     $self->setup_logging;
     $self->setup_tracing;
+    await $self->setup_metrics;
 
     $commands = Myriad::Commands->new(
         myriad => $self
@@ -313,13 +331,35 @@ async method configure_from_argv (@args) {
 
 method config () { $config }
 
+=head2 transport
+
+Returns the L<Myriad::Transport> instance according to the config value.
+
+it's designed to be used by tests, so be careful before using it in the framework code.
+
+it takes a single param
+
+=over 4
+
+=item * component - the RPC, Subscription or storage in lower case
+
+=back
+
+=cut
+
+method transport ($component) {
+    my $config_method = "${component}_transport";
+    my $myriad_method = $config->$config_method->as_string . '_transport';
+    $self->$myriad_method;
+}
+
 =head2 redis
 
 The L<Net::Async::Redis> (or compatible) instance used for service coördination.
 
 =cut
 
-method redis () {
+method redis_transport () {
     unless($redis) {
         $self->loop->add(
             $redis = Myriad::Transport::Redis->new(
@@ -327,12 +367,14 @@ method redis () {
                     redis_uri              => $config->transport_redis->as_string,
                     cluster                => ($config->transport_cluster->as_string ? 1 : 0),
                     client_side_cache_size => $config->transport_redis_cache->as_number,
+                    max_pool_count         => $config->transport_pool_count->as_number,
+                    wait_time              => $config->transport_wait_time->as_number,
                 ) : ()
             )
         );
 
         $self->on_start(async method {
-            await $self->redis->start;
+            await $self->redis_transport->start;
         });
     }
     $redis
@@ -532,6 +574,9 @@ Requests shutdown.
 =cut
 
 async method shutdown () {
+    # if this is regular shutdown $run should be already resolved
+    $run->fail('Myriad was unable to start correctly') if $run && !$run->is_ready;
+
     my $f = $shutdown
         or die 'attempting to shut down before we have started, this will not end well';
 
@@ -585,6 +630,21 @@ method on_shutdown ($code) {
     $self
 }
 
+=head2 run_future
+
+Returns a copy of the run L<Future>.
+
+This would resolve once the process is running and it's
+ready to accept requests.
+
+=cut
+
+method run_future () {
+    return $run_without_cancel //= (
+        $run //= $self->loop->new_future->set_label('run'),
+    )->without_cancel;
+}
+
 =head2 shutdown_future
 
 Returns a copy of the shutdown L<Future>.
@@ -606,16 +666,21 @@ Prepare for logging.
 
 =cut
 
-method setup_logging () {
-    my $level = $config->log_level;
-    STDERR->autoflush(1);
-    $level->subscribe(my $code = sub {
-        Log::Any::Adapter->import(
-            qw(Stderr),
-            log_level => $level->as_string,
-        );
-    });
-    $code->();
+method setup_logging ($code = undef) {
+    state $logging = do {
+        my $level = $config->log_level;
+        $code ||= sub {
+            state $flushed = do {
+                STDERR->autoflush(1);
+            };
+            Log::Any::Adapter->import(
+                qw(Stderr),
+                log_level => $level->as_string,
+            );
+        };
+        $level->subscribe($code);
+        $code->();
+    };
     return;
 }
 
@@ -639,6 +704,58 @@ method setup_tracing () {
     return;
 }
 
+=head2 setup_metrics
+
+Prepare L<Metrics::Any::Adapter> to collect metrics.
+
+=cut
+
+async method setup_metrics () {
+    my $adapter = $config->metrics_adapter;
+    my $host = $config->metrics_host;
+    my $port = $config->metrics_port;
+
+    try {
+        await $loop->resolver->getaddrinfo(host => $host->as_string, timeout => 10);
+    } catch ($e) {
+        $log->errorf('metrics: unable to resolve host %s - %s', $host->as_string, $e);
+        $host->set_string('127.0.0.1');
+    }
+
+    # Metrics::Any::Adapter use a lexical variable to identify
+    # the adapter instance that doesn't allow easy overrides.
+    my $metrics_adapter;
+    {
+        no warnings 'redefine';
+        *Metrics::Any::Adapter::adapter = sub {
+            return $metrics_adapter if ${^GLOBAL_PHASE} eq 'DESTRUCT';
+            return $metrics_adapter //= Metrics::Any::Adapter->class_for_type(
+                $adapter->as_string,
+            )->new(
+                host => $host->as_string,
+                port => $port->as_numeric,
+        )   ;
+        };
+    }
+
+    my $code = sub {
+        # Try to resolve the host first
+        $loop->resolver->getaddrinfo(host => $host->as_string, timeout => 10)
+        ->on_done(sub {
+            undef $metrics_adapter;
+        })->on_fail(sub {
+            $log->errorf('metrics: unable to resolve host %s - %s', $host->as_string, shift);
+            $host->set_string('127.0.0.1');
+        })->retain();
+    };
+
+    $adapter->subscribe($code);
+    $host->subscribe($code);
+    $port->subscribe($code);
+
+    return;
+}
+
 =head2 run
 
 Starts the main loop.
@@ -648,6 +765,9 @@ Applies signal handlers for TERM and QUIT, then starts the loop.
 =cut
 
 async method run () {
+    # Initiate the run future.
+    $self->run_future();
+
     for my $signal (qw(TERM INT QUIT)) {
         $self->loop->attach_signal($signal => $self->$curry::weak(method {
             $log->infof("%s received, exit", $signal);
@@ -665,11 +785,15 @@ async method run () {
     }
 
     # Set shutdown future before starting commands.
-    $shutdown //= $self->loop->new_future->set_label('shutdown');
+    $self->shutdown_future();
 
     $commands->run_cmd->retain()->on_fail(sub {
         $self->shutdown->await();
     });
+
+    # Process is running but there is a possibility
+    # the command above failed.
+    $run->done unless $run->is_ready;
 
     await $self->shutdown_future;
 }
@@ -814,5 +938,4 @@ Deriv Group Services Ltd. C<< DERIV@cpan.org >>
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
-
+Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
