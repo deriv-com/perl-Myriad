@@ -2,6 +2,10 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+    [Bugs fixed]
+    - Latest Future (and Future::XS) were failing tests due to `Future->needs_all`
+    being a class method, the test was incorrectly trying to use it as a plain function
+    (only affects the memory transport, not Redis)
 
 1.000     2022-09-05 10:25:25+08:00 Asia/Singapore
     [API changes]
