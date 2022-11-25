@@ -300,6 +300,7 @@ Returns a L<Future> which will resolve to a list of the keys in no defined order
 =cut
 
 async method hash_keys ($k) {
+    await $redis->hkeys($k);
 }
 
 =head2 hash_values
@@ -317,6 +318,7 @@ Returns a L<Future> which will resolve to a list of the values in no defined ord
 =cut
 
 async method hash_values ($k) {
+    await $redis->hvals($k);
 }
 
 =head2 hash_exists
@@ -334,6 +336,7 @@ Returns a L<Future> which will resolve to true if the key exists in this hash.
 =cut
 
 async method hash_exists ($k, $hash_key) {
+    await $redis->hexists($k, $hash_key)
 }
 
 =head2 hash_count
@@ -351,6 +354,7 @@ Returns a L<Future> which will resolve to the count of the keys in this hash.
 =cut
 
 async method hash_count ($k) {
+    await $redis->hlen($k);
 }
 
 =head2 hash_as_list
@@ -369,6 +373,7 @@ suitable for assigning to a hash.
 =cut
 
 async method hash_as_list ($k) {
+    await $redis->hgetall($k);
 }
 
 

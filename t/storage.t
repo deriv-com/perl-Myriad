@@ -48,6 +48,12 @@ for my $class (@classes) {
             is(await $storage->hash_add('some_hash', 'numeric', 3), 3, 'can increment a hash value');
             is(await $storage->hash_add('some_hash', 'numeric', 2), 5, 'can increment a hash value again');
             is(await $storage->hash_get('some_hash', 'key'), 'hash value', 'can read our original hash value back');
+            is(await $storage->hash_keys('some_hash'), ['key', 'numeric'], 'can read our hash keys back');
+            is(await $storage->hash_values('some_hash'), ['hash value', 5], 'can read our hash values back');
+            is(await $storage->hash_exists('some_hash'), 1, 'can recognize our hash exists');
+            is(await $storage->hash_exists('_hash'), ' ', 'can recognize our hash does not exist');
+            is(await $storage->hash_count('some_hash'), 4, 'can read our hash count');
+            is(await $storage->hash_as_list('some_hash'), ['key', 'hash value' ,'numeric', 5], 'can read our hash as list');
         })->()->get;
 
         # OrderedSet
