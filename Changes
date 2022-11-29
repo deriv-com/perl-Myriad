@@ -2,6 +2,9 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+    [Dependencies]
+    - Future::AsyncAwait - updated to v0.61 for some minor bugfixes and Future::XS
+    compatibility
 
 1.001     2022-11-11 09:42:07+08:00 Asia/Singapore
     [Bugs fixed]
