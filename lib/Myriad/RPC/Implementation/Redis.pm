@@ -26,7 +26,7 @@ use Myriad::RPC::Message;
 
 use constant RPC_SUFFIX => 'rpc';
 use constant RPC_PREFIX => 'service';
-use constant MAX_ALLOWED_STREAM_LENGTH => 4_000;
+use constant MAX_ALLOWED_STREAM_LENGTH => 10_000;
 
 use Exporter qw(import export_to_level);
 
