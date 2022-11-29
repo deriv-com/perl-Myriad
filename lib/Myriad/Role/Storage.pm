@@ -45,7 +45,7 @@ a concrete implementation - instead, see classes such as:
 
 =cut
 
-our @WRITE_METHODS = qw(set getset incr push unshift pop shift hash_set hash_add);
+our @WRITE_METHODS = qw(set getset incr push unshift pop shift hash_set hash_add orderedset_add orderedset_remove_member orderedset_remove_byscore );
 
 =head2 set
 
@@ -175,11 +175,72 @@ Returns a L<Future> indicating success or failure.
 
 method hash_add;
 
+=head2 orderedset_add
+
+Adds a member to an orderedset structure
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $s >> - the scalar value of the score attached to member
+
+=item * C<< $m >> - the scalar value of member
+
+=back
+
+Returns a L<Future>.
+
+=cut
+
+method orderedset_add;
+
+=head2 orderedset_remove_memeber
+
+Removes a member from an orderedset structure
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $m >> - the scalar value of member
+
+=back
+
+Returns a L<Future>.
+
+=cut
+
+method orderedset_remove_member;
+
+=head2 orderedset_remove_byscore
+
+Removes members that have scores within the range passed from an orderedset structure
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $min >> - the value of minimum score
+
+=item * C<< $max >> - the value of maximum score
+
+=back
+
+Returns a L<Future>.
+
+=cut
+
+method orderedset_remove_byscore;
+
 =head1 METHODS - Read
 
 =cut
 
-our @READ_METHODS = qw(get observe watch_keyspace hash_get hash_keys hash_values hash_exists hash_count hash_as_list);
+our @READ_METHODS = qw(get observe watch_keyspace hash_get hash_keys hash_values hash_exists hash_count hash_as_list orderedset_member_count orderedset_members);
 
 =head2 get
 
@@ -303,6 +364,48 @@ suitable for assigning to a hash.
 =cut
 
 method hash_as_list;
+
+=head2 orderedset_member_count
+
+Returns the count of members that have scores within the range passed from an orderedset structure
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $min >> - the value of minimum score
+
+=item * C<< $max >> - the value of maximum score
+
+=back
+
+Returns a L<Future>.
+
+=cut
+
+method orderedset_member_count;
+
+=head2 orderedset_members
+
+Returns the members that have scores within the range passed from an orderedset structure
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $min >> - the value of minimum score
+
+=item * C<< $max >> - the value of maximum score
+
+=back
+
+Returns a L<Future>.
+
+=cut
+
+method orderedset_members;
 
 1;
 
