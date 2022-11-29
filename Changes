@@ -2,14 +2,6 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
-
-1.001     2022-11-11 09:42:07+08:00 Asia/Singapore
-    [Bugs fixed]
-    - Latest Future (and Future::XS) were failing tests due to `Future->needs_all`
-    being a class method, the test was incorrectly trying to use it as a plain function
-    (only affects the memory transport, not Redis)
-
-1.000     2022-09-05 10:25:25+08:00 Asia/Singapore
     [API changes]
     - The --service_name parameter has been dropped, since it makes no sense when
     used with multiple services or instances
@@ -18,8 +10,6 @@ Revision history for {{$dist->name}}
     - Thanks to Syntax::Keyword::Equ, match() now supports `equ` as an operator
     - RPC on start handle existing pending messages in stream, if not expired.
     - RPC overflow protection (will not connsume more than it can process).
-    - Transport Redis connection pool count and wait time can be controlled through config parameters.
-    - Add orderedset data structure to Myriad storage.
 
     [Bugs fixed]
     - Subscriptions to create streams from source without a published event.
@@ -46,8 +36,6 @@ Revision history for {{$dist->name}}
     - Syntax::Keyword::Match is now imported in Myriad::Service code
     - Redis: A service will not create another service's stream.
     - Allow service namespaces by adding '::*' to the startup command.
-    [New features]
-    - Added incr method for storage keys.
 
     [New features]
     - Added incr method for storage keys.
