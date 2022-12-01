@@ -31,7 +31,7 @@ requires 'Log::Any', '>= 1.710';
 requires 'Log::Any::Adapter', '>= 1.710';
 requires 'Config::Any', '>= 0.32';
 requires 'YAML::XS', '>= 0.85';
-requires 'Metrics::Any', '>= 0.08';
+requires 'Metrics::Any', '>= 0.09';
 requires 'OpenTracing::Any', '>= 1.006';
 requires 'JSON::MaybeUTF8', '>= 2.000';
 requires 'Unicode::UTF8';
