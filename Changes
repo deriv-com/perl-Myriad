@@ -6,6 +6,10 @@ Revision history for {{$dist->name}}
     - Future::AsyncAwait - updated to v0.61 for some minor bugfixes and Future::XS
     compatibility
 
+    [New features]
+    - support for Net::Async::Redis::XS, set the environment variable `PERL_REDIS_XS` to `1`
+    to load and use the XS versions for better performance
+
 1.001     2022-11-11 09:42:07+08:00 Asia/Singapore
     [Bugs fixed]
     - Latest Future (and Future::XS) were failing tests due to `Future->needs_all`
