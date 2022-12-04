@@ -28,13 +28,13 @@ Test::Myriad::Service - an abstraction to mock microservices.
 
 =cut
 
-has $name;
-has $pkg;
-has $meta_service;
-has $myriad;
+field $name;
+field $pkg;
+field $meta_service;
+field $myriad;
 
-has $default_rpc;
-has $mocked_rpc;
+field $default_rpc;
+field $mocked_rpc;
 
 BUILD (%args) {
     $meta_service = delete $args{meta};

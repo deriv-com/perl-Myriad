@@ -5,12 +5,12 @@ use Myriad::Class extends => 'IO::Async::Notifier', does => [ 'Myriad::Role::Sub
 # VERSION
 # AUTHORITY
 
-has $transport;
+field $transport;
 
-has $receivers;
+field $receivers;
 
-has $should_shutdown = 0;
-has $stopped;
+field $should_shutdown = 0;
+field $stopped;
 
 # FIXME Need to update :Defer for Object::Pad
 sub MODIFY_CODE_ATTRIBUTES { }

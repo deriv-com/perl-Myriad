@@ -17,11 +17,11 @@ Myriad::Redis::Pending
 
 =cut
 
-has $redis;
-has $stream;
-has $group;
-has $id;
-has $finished;
+field $redis;
+field $stream;
+field $group;
+field $id;
+field $finished;
 
 BUILD (%args) {
     $redis = $args{redis} // die 'need a redis';

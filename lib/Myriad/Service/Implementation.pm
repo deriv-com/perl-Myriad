@@ -34,11 +34,11 @@ sub MODIFY_CODE_ATTRIBUTES {
     );
 }
 
-has $ryu;
-has $storage;
-has $myriad;
-has $service_name;
-has %active_batch;
+field $ryu;
+field $storage;
+field $myriad;
+field $service_name;
+field %active_batch;
 
 =head1 ATTRIBUTES
 

@@ -8,11 +8,11 @@ use Myriad::Class extends => 'IO::Async::Notifier';
 use Net::Async::HTTP;
 use Net::Async::HTTP::Server;
 
-has $client;
-has $server;
-has $listener;
-has $requests;
-has $ryu;
+field $client;
+field $server;
+field $listener;
+field $requests;
+field $ryu;
 
 method configure (%args) {
 

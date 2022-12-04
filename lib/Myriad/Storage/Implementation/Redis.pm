@@ -25,7 +25,7 @@ See L<Myriad::Role::Storage> for API details.
 use constant STORAGE_PREFIX => 'storage';
 
 # L<Myriad::Transport::Redis> instance to manage the connections.
-has $redis;
+field $redis;
 
 BUILD (%args) {
     $redis = delete $args{redis} // die 'need a Transport instance';
