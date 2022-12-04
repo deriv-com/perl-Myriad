@@ -24,10 +24,10 @@ use Myriad::Config;
 use Myriad::Service::Remote;
 use Myriad::Service::Storage;
 
-has $myriad;
-has $service_name;
-has $storage;
-has $config;
+field $myriad;
+field $service_name;
+field $storage;
+field $config;
 
 =head1 METHODS
 

@@ -26,8 +26,8 @@ use Module::Runtime qw(require_module);
 use Myriad::Util::UUID;
 use Myriad::Service::Remote;
 
-has $myriad;
-has $cmd;
+field $myriad;
+field $cmd;
 
 BUILD (%args) {
     weaken(

@@ -104,9 +104,9 @@ our %ACTIVE_SERVICES_CONFIG;
 
 # Our configuration so far. Populated via L</BUILD>,
 # can be updated by other mechanisms later.
-has $config;
+field $config;
 
-has $config_updates_src;
+field $config_updates_src;
 
 BUILD (%args) {
     $config //= {};

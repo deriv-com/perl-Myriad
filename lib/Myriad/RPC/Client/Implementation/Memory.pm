@@ -20,12 +20,12 @@ Myriad::RPC::Client::Implementation::Memory
 use Myriad::Util::UUID;
 use Myriad::RPC::Message;
 
-has $transport;
-has $whoami;
-has $current_id;
-has $subscription;
-has $pending_requests;
-has $started;
+field $transport;
+field $whoami;
+field $current_id;
+field $subscription;
+field $pending_requests;
+field $started;
 
 BUILD {
     $whoami = Myriad::Util::UUID::uuid();

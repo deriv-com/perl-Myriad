@@ -31,11 +31,11 @@ declare_exception UnknownClass => (
     message => 'Unable to locate the given class for component lookup',
 );
 
-has %rpc;
-has %service_by_name;
-has %batch;
-has %emitter;
-has %receiver;
+field %rpc;
+field %service_by_name;
+field %batch;
+field %emitter;
+field %receiver;
 
 =head2 add_service
 

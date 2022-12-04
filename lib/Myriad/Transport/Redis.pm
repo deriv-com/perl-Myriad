@@ -46,18 +46,18 @@ declare_exception 'NoSuchStream' => (
     message => 'There is no such stream, is the other service running?',
 );
 
-has $use_cluster;
-has $redis_uri;
-has $redis;
-has $redis_pool;
-has $waiting_redis_pool;
-has $pending_redis_count = 0;
-has $wait_time;
-has $batch_count = 50;
-has $max_pool_count;
-has $clientside_cache_size = 0;
-has $prefix;
-has $ryu;
+field $use_cluster;
+field $redis_uri;
+field $redis;
+field $redis_pool;
+field $waiting_redis_pool;
+field $pending_redis_count = 0;
+field $wait_time;
+field $batch_count = 50;
+field $max_pool_count;
+field $clientside_cache_size = 0;
+field $prefix;
+field $ryu;
 
 BUILD {
     $redis_pool = [];

@@ -23,12 +23,12 @@ use Myriad::RPC::Message;
 
 use constant DEFAULT_RPC_TIMEOUT_SECONDS => 30;
 
-has $redis;
-has $subscription;
-has $pending_requests;
-has $whoami;
-has $current_id;
-has $started;
+field $redis;
+field $subscription;
+field $pending_requests;
+field $whoami;
+field $current_id;
+field $started;
 
 BUILD {
     $pending_requests = {};

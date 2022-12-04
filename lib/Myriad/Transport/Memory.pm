@@ -62,9 +62,9 @@ declare_exception 'GroupNotFound' => (
     message => 'The given group does not exist'
 );
 
-has $ryu;
-has $streams;
-has $channels;
+field $ryu;
+field $streams;
+field $channels;
 
 BUILD {
     $streams = {};

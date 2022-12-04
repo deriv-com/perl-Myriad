@@ -30,7 +30,7 @@ would proceed to load C<< Myriad::Plugin::Reverse >> and try again.
 # instances.
 our $REGISTRY = __PACKAGE__->new;
 
-has $plugin;
+field $plugin;
 
 =head1 METHODS
 

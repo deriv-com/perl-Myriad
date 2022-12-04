@@ -25,15 +25,15 @@ use Myriad::RPC::Message;
 
 with 'Myriad::Role::RPC';
 
-has $transport;
+field $transport;
 
-has $group_name;
+field $group_name;
 method group_name { $group_name //= 'processors' }
 
 
-has $should_shutdown;
-has $rpc_list;
-has $processing;
+field $should_shutdown;
+field $rpc_list;
+field $processing;
 
 method rpc_list { $rpc_list };
 
