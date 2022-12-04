@@ -9,7 +9,7 @@ require V;
 
 path('cpanfile')->edit_lines_utf8(sub {
     if(/^require/) {
-        my ($module, $version) = /^requires\s+['"]([^'"]+)['"](?:\s*,\s*["']>= ([^'"]+)['"])?/;
+        my ($module, $version) = /^(?:requires|suggests|recommends)\s+['"]([^'"]+)['"](?:\s*,\s*["']>= ([^'"]+)['"])?/;
         $version //= 0;
         my $target = V::get_version($module) // do {
             Module::Load::load($module);
