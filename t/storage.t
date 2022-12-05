@@ -39,6 +39,12 @@ for my $class (@classes) {
         # worth checking an unifyig that. but for now
         $loop->add($storage) if $class->[0] eq 'Myriad::Storage::Implementation::Memory';
 
+        # String
+        (async sub {
+            await $storage->set(some_key => 'value');
+            is(await $storage->get('some_key'), 'value', 'can read our value back');
+        })->()->get;
+
         # Hash
         (async sub {
             await $storage->set(some_key => 'value');
@@ -48,13 +54,14 @@ for my $class (@classes) {
             is(await $storage->hash_add('some_hash', 'numeric', 3), 3, 'can increment a hash value');
             is(await $storage->hash_add('some_hash', 'numeric', 2), 5, 'can increment a hash value again');
             is(await $storage->hash_get('some_hash', 'key'), 'hash_value', 'can read our original hash value back');
-            is(await $storage->hash_keys('some_hash'), ('key', 'numeric'), 'can read our hash keys');
-            is(await $storage->hash_values('some_hash'), ( 'hash_value', 5 ), 'can read our hash values back');
-            is(await $storage->hash_exists('some_key', 'numeric'), 1, 'can recognize our hash exists');
-            is(await $storage->hash_exists('some_hash', 'newkey'), ' ', 'can recognize that newkey does not exist');
+            is(await $storage->hash_keys('some_hash'), ('numeric', 'key'), 'can read our hash keys');
+            is(await $storage->hash_values('some_hash'), (5, 'hash_value'), 'can read our hash values back');
+            is(await $storage->hash_exists('some_hash', 'numeric'), 1, 'can recognize our hash exists');
+            is(await $storage->hash_exists('some_hash', 'newkey'), '', 'can recognize that newkey does not exist');
             is(await $storage->hash_exists('some_hash', 'key'), 1, 'can recognize that key exists');
-            is(await $storage->hash_count('some_hash'), 4, 'can read our hash count');
-            is(await $storage->hash_as_list('some_hash'), ['key', 'hash_value' ,'numeric', 5], 'can read our hash as list');
+            is(await $storage->hash_count('some_hash'), 2, 'can read our hash count');
+            my $list = await $storage->hash_as_list('some_hash');
+            is($list->%*, ('key' => 'hash_value', 'numeric' => 5), 'can read our hash as list');
         })->()->get;
 
         # OrderedSet
