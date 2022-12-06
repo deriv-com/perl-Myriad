@@ -702,15 +702,15 @@ async method hvals($k) {
     await $redis->hvals($k);
 }
 
-async method hash_exists ($k, $hash_key) {
+async method hexists ($k, $hash_key) {
     await $redis->hexists($k, $self->apply_prefix($hash_key));
 }
 
-async method hash_count ($k) {
+async method hlen ($k) {
     await $redis->hlen($k);
 }
 
-async method hash_as_list ($k) {
+async method hgetall ($k) {
     await $redis->hgetall($k);
 }
 
