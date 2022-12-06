@@ -336,7 +336,7 @@ Returns a L<Future> which will resolve to true if the key exists in this hash.
 =cut
 
 async method hash_exists ($k, $hash_key) {
-    await $redis->hexists($k, $hash_key);
+    await $redis->hexists($k, $self->apply_prefix($hash_key));
 }
 
 =head2 hash_count

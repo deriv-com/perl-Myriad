@@ -694,6 +694,26 @@ async method hincrby($k, $hash_key, $v) {
     await $redis->hincrby($k, $self->apply_prefix($hash_key), $v);
 }
 
+async method hkeys($k) {
+    await $redis->hkeys($k);
+}
+
+async method hvals($k) {
+    await $redis->hvals($k);
+}
+
+async method hash_exists ($k, $hash_key) {
+    await $redis->hexists($k, $self->apply_prefix($hash_key));
+}
+
+async method hash_count ($k) {
+    await $redis->hlen($k);
+}
+
+async method hash_as_list ($k) {
+    await $redis->hgetall($k);
+}
+
 async method zadd ($key, @v) {
     await $redis->zadd($self->apply_prefix($key), @v);
 }

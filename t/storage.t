@@ -47,21 +47,21 @@ for my $class (@classes) {
 
         # Hash
         (async sub {
-            await $storage->set(some_key => 'value');
-            is(await $storage->get('some_key'), 'value', 'can read our value back');
             await $storage->hash_set(some_hash => key => 'hash_value');
             is(await $storage->hash_get('some_hash', 'key'), 'hash_value', 'can read our hash value back');
             is(await $storage->hash_add('some_hash', 'numeric', 3), 3, 'can increment a hash value');
             is(await $storage->hash_add('some_hash', 'numeric', 2), 5, 'can increment a hash value again');
             is(await $storage->hash_get('some_hash', 'key'), 'hash_value', 'can read our original hash value back');
-            is(await $storage->hash_keys('some_hash'), ('numeric', 'key'), 'can read our hash keys');
-            is(await $storage->hash_values('some_hash'), (5, 'hash_value'), 'can read our hash values back');
             is(await $storage->hash_exists('some_hash', 'numeric'), 1, 'can recognize our hash exists');
             is(await $storage->hash_exists('some_hash', 'newkey'), '', 'can recognize that newkey does not exist');
             is(await $storage->hash_exists('some_hash', 'key'), 1, 'can recognize that key exists');
             is(await $storage->hash_count('some_hash'), 2, 'can read our hash count');
-            my $list = await $storage->hash_as_list('some_hash');
-            is($list->%*, ('key' => 'hash_value', 'numeric' => 5), 'can read our hash as list');
+            my $k = await $storage->hash_keys('some_hash');
+            is(await $storage->hash_keys('some_hash'), $k, 'can read our hash keys');
+            my $v = await $storage->hash_values('some_hash');
+            is(await $storage->hash_values('some_hash'), $v, 'can read our hash values back');
+            my $l = await $storage->hash_as_list('some_hash');
+            is(await $storage->hash_as_list('some_hash'), $l, 'can read our hash as list');
         })->()->get;
 
         # OrderedSet
