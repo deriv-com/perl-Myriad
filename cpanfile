@@ -55,7 +55,7 @@ requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
 requires 'Metrics::Any::Adapter::Statsd', '>= 0.03';
 # Transport
 requires 'Net::Async::Redis', '>= 3.022';
-recommends 'Net::Async::Redis::XS', '>= 0.004';
+recommends 'Net::Async::Redis::XS', '>= 0.007';
 requires 'Net::Async::HTTP', '>= 0.48';
 requires 'Net::Async::HTTP::Server', '>= 0.13';
 # Introspection
