@@ -5,7 +5,7 @@ requires 'multidimensional';
 requires 'bareword::filehandles';
 requires 'XS::Parse::Keyword', '>= 0.30';
 requires 'Syntax::Keyword::Dynamically', '>= 0.11';
-requires 'Syntax::Keyword::Try', '>= 0.27';
+requires 'Syntax::Keyword::Try', '>= 0.28';
 requires 'Syntax::Keyword::Defer', '>= 0.07';
 requires 'Syntax::Keyword::Match', '>= 0.09';
 requires 'Syntax::Operator::Equ', '>= 0.04';
