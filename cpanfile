@@ -6,15 +6,15 @@ requires 'bareword::filehandles';
 requires 'XS::Parse::Keyword', '>= 0.30';
 requires 'Syntax::Keyword::Dynamically', '>= 0.11';
 requires 'Syntax::Keyword::Try', '>= 0.28';
-requires 'Syntax::Keyword::Defer', '>= 0.07';
+requires 'Syntax::Keyword::Defer', '>= 0.08';
 requires 'Syntax::Keyword::Match', '>= 0.09';
 requires 'Syntax::Operator::Equ', '>= 0.04';
 requires 'Future', '>= 0.49';
 requires 'Future::Queue';
-requires 'Future::AsyncAwait', '>= 0.61';
+requires 'Future::AsyncAwait', '>= 0.62';
 requires 'Future::IO', '>= 0.11';
 requires 'XS::Parse::Sublike', '>= 0.16';
-requires 'Object::Pad', '>= 0.74';
+requires 'Object::Pad', '>= 0.77';
 requires 'Role::Tiny', '>= 2.002004';
 # Streams
 requires 'Ryu', '>= 3.002';
@@ -24,7 +24,7 @@ requires 'Heap', '>= 0.80';
 requires 'IO::Async', '>= 0.802';
 requires 'IO::Async::Notifier', '>= 0.802';
 requires 'IO::Async::Test', '>= 0.802';
-requires 'IO::Async::SSL', '>= 0.23';
+requires 'IO::Async::SSL', '>= 0.24';
 # Functionality
 requires 'curry', '>= 2.000001';
 requires 'Log::Any', '>= 1.710';
