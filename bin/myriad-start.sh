@@ -21,9 +21,9 @@ trap _quit SIGQUIT
 
 if [ ! -z $MYRIAD_DEV ]
 then
-        myriad-dev.pl $@ &
-    else
-        myriad.pl $@ &
+    myriad-dev.pl $@ &
+else
+    myriad.pl $@ &
 fi
 
 myriad=$!
