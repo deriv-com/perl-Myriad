@@ -21,10 +21,10 @@ Myriad::Service::Remote - abstraction to access other services over the network.
 use Myriad::Class;
 use Myriad::Service::Storage::Remote;
 
-has $myriad;
-has $service_name;
-has $local_service_name;
-has $storage;
+field $myriad;
+field $service_name;
+field $local_service_name;
+field $storage;
 
 BUILD(%args) {
     weaken($myriad = delete $args{myriad});

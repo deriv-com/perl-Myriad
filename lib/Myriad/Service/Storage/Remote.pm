@@ -47,9 +47,9 @@ BEGIN {
 }
 
 
-has $prefix;
-has $storage;
-has $local_service_name;
+field $prefix;
+field $storage;
+field $local_service_name;
 method storage { $storage };
 method local_service_name { $local_service_name // 'local' };
 

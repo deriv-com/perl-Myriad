@@ -48,8 +48,8 @@ BEGIN {
     }
 }
 
-has $storage;
-has $prefix;
+field $storage;
+field $prefix;
 
 method storage { $storage }
 method prefix { $prefix }

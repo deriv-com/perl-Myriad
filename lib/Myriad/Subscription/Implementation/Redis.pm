@@ -11,19 +11,19 @@ use Myriad::Util::UUID;
 
 use constant MAX_ALLOWED_STREAM_LENGTH => 10_000;
 
-has $redis;
+field $redis;
 
-has $client_id;
+field $client_id;
 
 # A list of all sources that emits events to Redis
 # will need to keep track of them to block them when
 # the stream size is more than what we think it should be
-has @emitters;
+field @emitters;
 
 # A list of all receivers that we should read items for
-has @receivers;
+field @receivers;
 
-has $should_shutdown;
+field $should_shutdown;
 
 BUILD {
     $client_id = Myriad::Util::UUID::uuid();

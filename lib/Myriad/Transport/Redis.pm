@@ -40,24 +40,42 @@ use Net::Async::Redis::Cluster;
 
 use List::Util qw(pairmap);
 
+my $redis_class;
+my $cluster_class;
+BEGIN {
+    $redis_class = 'Net::Async::Redis';
+    $cluster_class = 'Net::Async::Redis::Cluster';
+    # Only enable XS mode on request
+    if($ENV{PERL_REDIS_XS}) {
+        eval {
+            require Net::Async::Redis::XS;
+            require Net::Async::Redis::Cluster::XS;
+            1;
+        } and do {
+            $redis_class = 'Net::Async::Redis::XS';
+            $cluster_class = 'Net::Async::Redis::Cluster::XS';
+        }
+    }
+}
+
 use Myriad::Exception::Builder category => 'transport_redis';
 
 declare_exception 'NoSuchStream' => (
     message => 'There is no such stream, is the other service running?',
 );
 
-has $use_cluster;
-has $redis_uri;
-has $redis;
-has $redis_pool;
-has $waiting_redis_pool;
-has $pending_redis_count = 0;
-has $wait_time;
-has $batch_count = 50;
-has $max_pool_count;
-has $clientside_cache_size = 0;
-has $prefix;
-has $ryu;
+field $use_cluster;
+field $redis_uri;
+field $redis;
+field $redis_pool;
+field $waiting_redis_pool;
+field $pending_redis_count = 0;
+field $wait_time;
+field $batch_count = 50;
+field $max_pool_count;
+field $clientside_cache_size = 0;
+field $prefix;
+field $ryu;
 
 BUILD {
     $redis_pool = [];
@@ -562,7 +580,7 @@ instance, depending on the setting of C<$use_cluster>.
 async method redis () {
     my $instance;
     if($use_cluster) {
-        $instance = Net::Async::Redis::Cluster->new(
+        $instance = $cluster_class->new(
             client_side_cache_size => $clientside_cache_size,
         );
         $self->add_child(
@@ -573,7 +591,7 @@ async method redis () {
             port => $redis_uri->port,
         );
     } else {
-        $instance = Net::Async::Redis->new(
+        $instance = $redis_class->new(
             host => $redis_uri->host,
             port => $redis_uri->port,
             client_side_cache_size => $clientside_cache_size,

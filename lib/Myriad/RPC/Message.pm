@@ -27,16 +27,16 @@ use Scalar::Util qw(blessed);
 use Syntax::Keyword::Try;
 use JSON::MaybeUTF8 qw(:v1);
 
-has $rpc;
-has $message_id;
-has $transport_id;
-has $who;
-has $deadline;
+field $rpc;
+field $message_id;
+field $transport_id;
+field $who;
+field $deadline;
 
-has $args;
-has $stash;
-has $response;
-has $trace;
+field $args;
+field $stash;
+field $response;
+field $trace;
 
 =head2 message_id
 

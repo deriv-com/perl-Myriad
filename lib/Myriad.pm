@@ -3,7 +3,7 @@ package Myriad;
 
 use Myriad::Class;
 
-our $VERSION = '1.001';
+our $VERSION = '1.002';
 # AUTHORITY
 
 =encoding utf8
@@ -200,53 +200,53 @@ IO::Async::Loop->new->add(
 );
 
 # The IO::Async::Loop instance
-has $loop;
+field $loop;
 # Any coderefs to call when the framework starts
-has $startup_tasks;
+field $startup_tasks;
 # Any coderefs to call when shutdown is requested
-has $shutdown_tasks;
+field $shutdown_tasks;
 # The Myriad::Config instance
-has $config;
+field $config;
 # Registered commands for the management interface
-has $commands;
+field $commands;
 # Our temporary Net::Async::Redis instance that should
 # really be abstracted away by the ::Transport and
 # storage/rpc/subscription abstractions
-has $redis;
+field $redis;
 # The in-memory "transport" instance
-has $memory_transport;
+field $memory_transport;
 # The Myriad::RPC instance to serve RPC requests for
 # the services in this process
-has $rpc;
+field $rpc;
 # The Myriad::RPC::Client instance to send requests
 # to other services.
-has $rpc_client;
+field $rpc_client;
 # The Net::Async::HTTP::Server instance for endpoint
 # requests
-has $http;
+field $http;
 # The Myriad::Subscription instance to emit
 # and listen for events
-has $subscription;
+field $subscription;
 # The Myriad::Storage instance to manage data
 # stored by the service or access other services data.
-has $storage;
+field $storage;
 # Future representing run
-has $run;
+field $run;
 # Future for passing to things that want to react to
 # run, anything outside this file
-has $run_without_cancel;
+field $run_without_cancel;
 # Future representing shutdown
-has $shutdown;
+field $shutdown;
 # Future for passing to things that want to react to
 # shutdown, pretty much everything outside this file
 # should only be able to access this one
-has $shutdown_without_cancel;
+field $shutdown_without_cancel;
 # The Net::Async::OpenTracing instance
-has $tracing;
+field $tracing;
 # Any service definitions which is added by registry
-has $services;
+field $services;
 # Ryu::Source that can be used to recieve commands events
-has $ryu;
+field $ryu;
 
 # Note that we don't use Object::Pad as heavily within the core framework as we
 # would expect in microservices - this is mainly due to complications regarding

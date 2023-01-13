@@ -23,7 +23,7 @@ correctly.
 =cut
 
 # Common datastore
-has %data;
+field %data;
 
 # FIXME Need to update :Defer for Object::Pad
 sub MODIFY_CODE_ATTRIBUTES { }

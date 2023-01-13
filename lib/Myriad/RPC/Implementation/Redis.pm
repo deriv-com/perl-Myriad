@@ -34,20 +34,20 @@ with 'Myriad::Role::RPC';
 
 our @EXPORT_OK = qw(stream_name_from_service);
 
-has $redis;
+field $redis;
 method redis { $redis }
 
-has $group_name;
+field $group_name;
 method group_name { $group_name }
 
-has $whoami;
+field $whoami;
 method whoami { $whoami }
 
-has $rpc_list;
+field $rpc_list;
 method rpc_list { $rpc_list }
 
-has $running;
-has $processing;
+field $running;
+field $processing;
 
 sub stream_name_from_service ($service, $method) {
     return RPC_PREFIX . ".$service.". RPC_SUFFIX . "/$method"
