@@ -57,6 +57,8 @@ The following Perl language features and modules are applied:
 
 =item * L<Future::AsyncAwait>
 
+=item * L<Future::AsyncAwait::Hooks> - added in C< :v2 >
+
 =item * provides L<Scalar::Util/blessed>, L<Scalar::Util/weaken>, L<Scalar::Util/refaddr>
 
 =item * provides L<List::Util/min>, L<List::Util/max>, L<List::Util/sum0>
@@ -107,6 +109,8 @@ version tags:
 
 with the default being C<:v1>.
 
+The latest available version is C<:v2>.
+
 =cut
 
 use Object::Pad;
@@ -118,6 +122,7 @@ use mro;
 use experimental qw(signatures);
 use curry;
 use Future::AsyncAwait;
+use Future::AsyncAwait::Hooks;
 use Syntax::Keyword::Try;
 use Syntax::Keyword::Dynamically;
 use Syntax::Keyword::Defer;
@@ -239,6 +244,8 @@ sub import {
     Syntax::Operator::Equ->import_into($pkg);
     Future::AsyncAwait->import_into($pkg, ':experimental(cancel)');
     Metrics::Any->import_into($pkg, '$metrics');
+
+    Future::AsyncAwait::Hooks->import_into($pkg) if $version >= 2;
 
     # Others use lexical hints
     List::Keywords->import(qw(any all));

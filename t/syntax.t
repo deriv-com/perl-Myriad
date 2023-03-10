@@ -137,5 +137,31 @@ subtest 'attributes' => sub {
     can_ok($obj, 'test');
     is($obj->test, 'ok', 'we find our own methods');
 };
+
+subtest 'Myriad::Class :v2' => sub {
+    is(eval(q{
+        package local::v2;
+        use Myriad::Class qw(:v2);
+        has $suspended;
+        has $resumed;
+        method suspended { $suspended }
+        method resumed { $resumed }
+        async method example ($f) {
+            suspend { ++$suspended }
+            resume { ++$resumed }
+            await $f;
+            return;
+        }
+        __PACKAGE__
+    }), 'local::v2') or diag $@;
+    my $obj = local::v2->new;
+    my $f = $obj->example(my $pending = Future->new);
+    is($obj->suspended // 0, 1, 'have suspended once');
+    is($obj->resumed // 0, 0, 'and not yet resumed');
+    $pending->done;
+    is($obj->suspended // 0, 1, 'have still suspended once');
+    is($obj->resumed // 0, 1, 'and resumed once now');
+    done_testing;
+};
 done_testing;
 
