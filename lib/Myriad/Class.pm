@@ -122,6 +122,7 @@ use mro;
 use experimental qw(signatures);
 use curry;
 use Future::AsyncAwait;
+use Future::AsyncAwait::Hooks;
 use Syntax::Keyword::Try;
 use Syntax::Keyword::Dynamically;
 use Syntax::Keyword::Defer;
