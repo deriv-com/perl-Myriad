@@ -31,7 +31,7 @@ requires 'curry', '>= 2.000001';
 requires 'Log::Any', '>= 1.710';
 requires 'Log::Any::Adapter', '>= 1.710';
 requires 'Config::Any', '>= 0.32';
-requires 'YAML::XS', '>= 0.85';
+requires 'YAML::XS', '>= 0.86';
 requires 'Metrics::Any', '>= 0.09';
 requires 'OpenTracing::Any', '>= 1.006';
 requires 'JSON::MaybeUTF8', '>= 2.000';
@@ -49,7 +49,7 @@ requires 'Math::Random::Secure';
 requires 'Getopt::Long';
 requires 'Pod::Usage';
 requires 'List::Util', '>= 1.63';
-requires 'List::Keywords', '>= 0.08';
+requires 'List::Keywords', '>= 0.10';
 # Integration
 requires 'Net::Async::OpenTracing', '>= 1.001';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
