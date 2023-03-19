@@ -18,7 +18,7 @@ requires 'XS::Parse::Sublike', '>= 0.16';
 requires 'Object::Pad', '>= 0.78';
 requires 'Role::Tiny', '>= 2.002004';
 # Streams
-requires 'Ryu', '>= 3.002';
+requires 'Ryu', '>= 3.004';
 requires 'Ryu::Async', '>= 0.020';
 # IO::Async
 requires 'Heap', '>= 0.80';
