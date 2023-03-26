@@ -359,8 +359,9 @@ async method service_config ($pkg, $service_name) {
     my $available_config = $config->{services}->{$service_name}->{config};
 
     my $instance_overrides = {};
-    $instance_overrides =
-        $config->{services}->{$service_name}->{instance}->{$instance}->{config} if $instance;
+    $instance_overrides = $config->{services}{$service_name}{instance}{$instance}{config}
+        if $instance;
+
     if(my $declared_config = $SERVICES_CONFIG{$pkg}) {
         for my $key (keys $declared_config->%*) {
             my $value;
