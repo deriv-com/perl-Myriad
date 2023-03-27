@@ -11,6 +11,9 @@ Revision history for {{$dist->name}}
     to load and use the XS versions for better performance
     - Future::AsyncAwait::Hooks now available (for suspend/resume blocks) when using `:v2`
 
+    [Bugs fixed]
+    - handle keyspace notifications properly for config changes in Redis
+
 1.001     2022-11-11 09:42:07+08:00 Asia/Singapore
     [Bugs fixed]
     - Latest Future (and Future::XS) were failing tests due to `Future->needs_all`

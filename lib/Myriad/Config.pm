@@ -452,8 +452,8 @@ async method listen_for_updates () {
             })->resolve->completed->retain->on_fail(sub {
                 $log->warnf('Config: config updates listener failed - %s', shift);
             });
-        } catch {
-            $log->trace('Config: transport does not support keyspace notifications');
+        } catch ($e) {
+            $log->tracef('Config: transport does not support keyspace notifications: %s', $e);
         }
     } else {
         $log->warn('Config: Storage is not initiated, cannot listen to config updates');
