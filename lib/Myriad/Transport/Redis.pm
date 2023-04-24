@@ -733,28 +733,22 @@ async method zrange ($k, @v) {
 }
 
 async method watch_keyspace($pattern) {
-    my $sub;
-    if ($clientside_cache_size) {
-        # Net::Async::Redis will handl the connection in this case
-        $sub = $redis->clientside_cache_events->map(sub {
-            $_ =~ s/$prefix\.//;
-            return $_;
-        });
-    } else {
-        # Keyspace notification is a psubscribe
-        my $instance = await $self->borrow_instance_from_pool;
-        $sub = await $instance->watch_keyspace($self->apply_prefix($pattern));
+    # Net::Async::Redis will handl the connection in this case
+    return $redis->clientside_cache_events->map(sub {
+        return s/^$prefix\.//r;
+    }) if $clientside_cache_size;
 
-        $sub = $sub->events->map(sub {
-            $_->{channel} =~ s/__key.*:$prefix\.//;
-            return $_->{channel};
-        });
-
-        $sub->on_ready(sub {
-            $self->return_instance_to_pool($instance);
-        });
-    }
-
+    # Keyspace notification is a psubscribe
+    my $instance = await $self->borrow_instance_from_pool;
+    my $sub = (await $instance->watch_keyspace(
+        $self->apply_prefix($pattern)
+    ))->map(sub {
+        my $chan = $_->{channel} =~ s/__key.*:$prefix\.//r;
+        return $chan;
+    });
+    $sub->on_ready($self->$curry::weak(sub {
+        shift->return_instance_to_pool($instance);
+    }));
     return $sub;
 }
 
@@ -766,5 +760,5 @@ Deriv Group Services Ltd. C<< DERIV@cpan.org >>
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2023. Licensed under the same terms as Perl itself.
 

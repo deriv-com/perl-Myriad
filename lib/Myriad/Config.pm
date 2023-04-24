@@ -359,8 +359,9 @@ async method service_config ($pkg, $service_name) {
     my $available_config = $config->{services}->{$service_name}->{config};
 
     my $instance_overrides = {};
-    $instance_overrides =
-        $config->{services}->{$service_name}->{instance}->{$instance}->{config} if $instance;
+    $instance_overrides = $config->{services}{$service_name}{instance}{$instance}{config}
+        if $instance;
+
     if(my $declared_config = $SERVICES_CONFIG{$pkg}) {
         for my $key (keys $declared_config->%*) {
             my $value;
@@ -451,8 +452,8 @@ async method listen_for_updates () {
             })->resolve->completed->retain->on_fail(sub {
                 $log->warnf('Config: config updates listener failed - %s', shift);
             });
-        } catch {
-            $log->trace('Config: transport does not support keyspace notifications');
+        } catch ($e) {
+            $log->tracef('Config: transport does not support keyspace notifications: %s', $e);
         }
     } else {
         $log->warn('Config: Storage is not initiated, cannot listen to config updates');
@@ -479,5 +480,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2022. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2023. Licensed under the same terms as Perl itself.
 
