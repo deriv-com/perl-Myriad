@@ -701,15 +701,35 @@ async method lpop($key) {
 }
 
 async method hset ($k, $hash_key, $v) {
-    await $redis->hset($k, $self->apply_prefix($hash_key), $v);
+    await $redis->hset($self->apply_prefix($k), $hash_key, $v);
 }
 
 async method hget($k, $hash_key) {
-    await $redis->hget($k, $self->apply_prefix($hash_key));
+    await $redis->hget($self->apply_prefix($k), $hash_key);
+}
+
+async method hgetall($k) {
+    await $redis->hget($self->apply_prefix($k));
+}
+
+async method hkeys($k) {
+    await $redis->hkeys($self->apply_prefix($k));
+}
+
+async method hvals($k) {
+    await $redis->hvals($self->apply_prefix($k));
+}
+
+async method hlen($k) {
+    await $redis->hlen($self->apply_prefix($k));
+}
+
+async method hexists($k, $hash_key) {
+    await $redis->hexists($self->apply_prefix($k), $hash_key);
 }
 
 async method hincrby($k, $hash_key, $v) {
-    await $redis->hincrby($k, $self->apply_prefix($hash_key), $v);
+    await $redis->hincrby($self->apply_prefix($k), $hash_key, $v);
 }
 
 async method zadd ($key, @v) {
