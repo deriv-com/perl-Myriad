@@ -709,7 +709,7 @@ async method hget($k, $hash_key) {
 }
 
 async method hgetall($k) {
-    await $redis->hget($self->apply_prefix($k));
+    await $redis->hgetall($self->apply_prefix($k));
 }
 
 async method hkeys($k) {
