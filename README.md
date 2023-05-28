@@ -1,6 +1,6 @@
 # NAME
 
-Myriad - microservice coördination
+Myriad - microservice coördination test
 
 [![Coverage status](https://coveralls.io/repos/github/binary-com/perl-Myriad/badge.svg?branch=master)](https://coveralls.io/github/binary-com/perl-Myriad?branch=master)
 [![Test status](https://circleci.com/gh/binary-com/perl-Myriad.svg?style=shield&circle-token=55b191c6582ef5932e57b142fb29d8e13ae19598)](https://app.circleci.com/pipelines/github/binary-com/perl-Myriad)
