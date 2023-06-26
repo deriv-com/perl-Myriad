@@ -271,6 +271,7 @@ sub import {
         # ... and then _again_ to disable the experimental warnings
         Object::Pad->import_into($pkg, qw(:experimental));
         my $method = 'begin_' . ($args{type} || 'class');
+        Module::Load::load($args{extends}) if $args{extends};
         my $meta = Object::Pad::MOP::Class->$method(
             $class,
             (
