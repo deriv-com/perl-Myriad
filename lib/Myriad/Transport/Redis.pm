@@ -672,12 +672,16 @@ async method get($key) {
     await $redis->get($self->apply_prefix($key));
 }
 
-async method set ($key, $v) {
-    await $redis->set($self->apply_prefix($key), $v);
+async method set ($key, $v, $ttl) {
+    await $redis->set($self->apply_prefix($key), $v, defined $ttl ? ('EX', $ttl) : ());
 }
 
 async method getset($key, $v) {
-    await $redis->set($self->apply_prefix($key), $v);
+    await $redis->getset($self->apply_prefix($key), $v);
+}
+
+async method getdel($key) {
+    await $redis->getdel($self->apply_prefix($key));
 }
 
 async method incr ($key) {

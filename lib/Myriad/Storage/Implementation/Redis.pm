@@ -65,9 +65,11 @@ Takes the following parameters:
 
 =over 4
 
-=item * C<< $k >> - the relative key in storage
+=item * C<< $k >>   - the relative key in storage
 
-=item * C<< $v >> - the scalar value to set
+=item * C<< $v >>   - the scalar value to set
+
+=item * C<< $ttl >> - the TTL of a key, Set this to C<undef> to mark it as permanent key.
 
 =back
 
@@ -78,9 +80,9 @@ Returns a L<Future> which will resolve on completion.
 
 =cut
 
-async method set ($k, $v) {
+async method set ($k, $v, $ttl = undef) {
     die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
-    await $redis->set($self->apply_prefix($k) => $v);
+    await $redis->set($self->apply_prefix($k) => $v, $ttl);
 }
 
 =head2 getset
@@ -107,6 +109,23 @@ async method getset ($k, $v) {
     return await $redis->getset($self->apply_prefix($k) => $v);
 }
 
+=head2 getdel
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=back
+
+Returns a L<Future> which will resolve to the original value on completion.
+
+=cut
+
+async method getdel ($k) {
+    return await $redis->getdel($self->apply_prefix($k));
+}
 =head2 incr
 
 Takes the following parameters:

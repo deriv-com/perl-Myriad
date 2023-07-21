@@ -45,7 +45,7 @@ a concrete implementation - instead, see classes such as:
 
 =cut
 
-our @WRITE_METHODS = qw(set getset incr push unshift pop shift hash_set hash_add orderedset_add orderedset_remove_member orderedset_remove_byscore );
+our @WRITE_METHODS = qw(set getset getdel incr push unshift pop shift hash_set hash_add orderedset_add orderedset_remove_member orderedset_remove_byscore );
 
 =head2 set
 
@@ -53,9 +53,11 @@ Takes the following parameters:
 
 =over 4
 
-=item * C<< $k >> - the relative key in storage
+=item * C<< $k >>   - the relative key in storage
 
-=item * C<< $v >> - the scalar value to set
+=item * C<< $v >>   - the scalar value to set
+
+=item * C<< $ttl >> - the TTL of a key, Set this to C<undef> to mark it as permanent key.
 
 =back
 
@@ -90,6 +92,24 @@ Returns a L<Future> which will resolve on completion to the original value, or C
 =cut
 
 method getset;
+
+=head2 getdel
+
+Performs the same operation as L</get>, but additionally remove the key from the storage atomically.
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=back
+
+Returns a L<Future> which will resolve on completion to the original value, or C<undef> if none.
+
+=cut
+
+method getdel;
 
 =head2 push
 
