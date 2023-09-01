@@ -40,7 +40,7 @@ For a smaller system with a handful of users, it's _probably_ overkill!
 Each of the three abstractions has various implementations. You'd set one on startup
 and that would provide functionality through the top-level abstraction layer. Service code
 generally shouldn't need to care which implementation is applied. There may however be cases
-where transactional behaviour differs between implementations, so there is some basic
+where transactional behavior differs between implementations, so there is some basic
 functionality planned for checking whether RPC/storage/subscription use the same underlying
 mechanism for transactional safety.
 
