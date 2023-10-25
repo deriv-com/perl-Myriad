@@ -296,42 +296,7 @@ async method cleanup (%args) {
     my $oldest = await $self->oldest_processed_id($stream);
     $log->tracef('Attempting to clean up [%s] Size: %d | Earliest ID to care about: %s', $stream, $info->{length}, $oldest);
     if ($oldest and $oldest ne '0-0' and $self->compare_id($oldest, $info->{first_entry}[0]) > 0) {
-        # At this point we know we have some older items that can go. We'll need to finesse
-        # the direction to search: for now, take the naïve but workable assumption that we
-        # have an even distribution of values. This means we go forwards from the start if
-        # $oldest is closer to the first_delivery_id, or backwards from the end if it's
-        # nearer to the end. We can use the timestamp (first half) rather than the full ID
-        # for this comparison. If we get this wrong, we'll still end up with the right
-        # count - it'll just be a bit less efficient.
-        # This could likely be enhanced by taking a binary search (setting count to 1), although for the common case
-        # of consistent/predictable stream population, having a few points that can be used for a good derivative
-        # estimate means we could apply Newton-Raphson, Runge-Kutta or similar methods to converge faster.
-        my $direction = do {
-            no warnings 'numeric';
-            ($oldest - $info->{first_entry}[0]) > ($info->{last_entry}[0] - $oldest)
-                ? 'xrevrange'
-                : 'xrange'
-        };
-        my $limit = 200;
-
-        my $endpoint = $direction eq 'xrevrange' ? '+' : '-';
-        my $total = 0;
-        while (1) {
-            # XRANGE / XREVRANGE conveniently have switched start/end parameters, so we don't need to swap $endpoint
-            # and $oldest depending on type here.
-            my ($v) = await $redis->$direction($stream, $endpoint, $oldest, COUNT => $limit);
-            $log->tracef('%s returns %d/%d items between %s and %s', uc($direction), 0 + @$v, $limit, $endpoint, $oldest);
-            $total += 0 + @$v;
-            last unless 0 + @$v >= $limit;
-            # Overlapping ranges, so the next ID will be included twice
-            --$total;
-            $endpoint = $v->[-1][0];
-        }
-        $total = $info->{length} - $total if $direction eq 'xrange';
-
-#        my ($before) = await $redis->memory_usage($stream);
-        my ($trim) = await $redis->xtrim($stream, MAXLEN => $total);
-#        my ($after) = await $redis->memory_usage($stream);
+        my ($total) = await $redis->xtrim($stream, MINID => $oldest);
         $log->tracef('Trimmed %d items from stream: %s', $total, $stream);
     }
     else {
