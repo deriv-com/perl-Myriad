@@ -65,6 +65,7 @@ declare_exception 'NoSuchStream' => (
 );
 
 field $use_cluster;
+field $use_exact_trimming
 field $redis_uri;
 field $redis;
 field $redis_pool;
@@ -96,6 +97,7 @@ method configure (%args) {
     $wait_time = exists $args{wait_time} ? delete $args{wait_time} : 15_000;
     # limit minimum wait time to 100ms
     $wait_time = 100 if $wait_time < 100;
+    $use_exact_trimming = delete $args{use_exact_trimming} // 0;
     return $self->next::method(%args);
 }
 
@@ -296,7 +298,7 @@ async method cleanup (%args) {
     my $oldest = await $self->oldest_processed_id($stream);
     $log->tracef('Attempting to clean up [%s] Size: %d | Earliest ID to care about: %s', $stream, $info->{length}, $oldest);
     if ($oldest and $oldest ne '0-0' and $self->compare_id($oldest, $info->{first_entry}[0]) > 0) {
-        my ($total) = await $redis->xtrim($stream, MINID => $oldest);
+        my ($total) = await $redis->xtrim($stream, MINID => ($use_exact_trimming ? () : '~'), $oldest);
         $log->tracef('Trimmed %d items from stream: %s', $total, $stream);
     }
     else {

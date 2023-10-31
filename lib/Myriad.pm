@@ -369,6 +369,7 @@ method redis_transport () {
                     client_side_cache_size => $config->transport_redis_cache->as_number,
                     max_pool_count         => $config->transport_pool_count->as_number,
                     wait_time              => $config->transport_wait_time->as_number,
+                    use_exact_trimming     => $config->transport_redis_exact_trimming->as_number
                 ) : ()
             )
         );
