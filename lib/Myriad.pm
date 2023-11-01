@@ -777,13 +777,15 @@ async method run () {
     }
 
     try {
-        # Run the startup tasks, order is imporatant
+        # Run the startup tasks, order is important
         for my $task ($startup_tasks->@*) {
+            $log->tracef('Startup task %s', $task);
             await $self->$task;
         }
     } catch ($e) {
         die "Startup tasks failed - $e";
     }
+    $log->tracef('Startup tasks done');
 
     # Set shutdown future before starting commands.
     $self->shutdown_future();
