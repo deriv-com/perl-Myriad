@@ -325,7 +325,7 @@ async method configure_from_argv (@args) {
         }
     }
 
-    $self->on_start(async sub {
+    $self->on_start(async method {
         await $config->listen_for_updates;
     });
 }
