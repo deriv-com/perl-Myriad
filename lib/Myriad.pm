@@ -303,6 +303,7 @@ async method configure_from_argv (@args) {
     $self->setup_logging;
     $self->setup_tracing;
     await $self->setup_metrics;
+    $self->storage;
 
     $commands = Myriad::Commands->new(
         myriad => $self
