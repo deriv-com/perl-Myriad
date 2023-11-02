@@ -178,6 +178,7 @@ use Myriad::Transport::HTTP;
 use Myriad::Transport::Memory;
 use Myriad::Transport::Redis;
 
+use Devel::MAT::Dumper;
 use Future::IO;
 use Future::IO::Impl::IOAsync;
 
@@ -773,6 +774,13 @@ async method run () {
         $self->loop->attach_signal($signal => $self->$curry::weak(method {
             $log->infof("%s received, exit", $signal);
             $self->shutdown->await;
+        }))
+    }
+
+    for my $signal (qw(HUP)) {
+        $self->loop->attach_signal($signal => $self->$curry::weak(method {
+            $log->infof("%s received, memory dump", $signal);
+            Devel::MAT::Dumper::dump('myriad.pmat');
         }))
     }
 
