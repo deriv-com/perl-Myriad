@@ -746,10 +746,10 @@ async method watch_keyspace ($pattern) {
 
     # Keyspace notification is a psubscribe
     my $instance = await $self->borrow_instance_from_pool;
-    my $sub = await $instance->watch_keyspace(
+    my $src = await $instance->watch_keyspace(
         $self->apply_prefix($pattern)
     );
-    my $events = $sub->events->map(sub {
+    my $events = $src->map(sub {
         my $chan = $_->{channel} =~ s/__key.*:$prefix\.//r;
         return $chan;
     });
