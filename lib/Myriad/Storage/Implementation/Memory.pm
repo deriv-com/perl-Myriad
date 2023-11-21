@@ -52,9 +52,11 @@ Takes the following parameters:
 
 =over 4
 
-=item * C<< $k >> - the relative key in storage
+=item * C<< $k >>   - the relative key in storage
 
-=item * C<< $v >> - the scalar value to set
+=item * C<< $v >>   - the scalar value to set
+
+=item * C<< $ttl >> - the TTL value for the key. (Ignored)
 
 =back
 
@@ -65,7 +67,7 @@ Returns a L<Future> which will resolve on completion.
 
 =cut
 
-async method set : Defer ($k, $v) {
+async method set : Defer ($k, $v, $ttl = undef) {
     die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
     return $data{$k} = $v;
 }
@@ -94,6 +96,26 @@ async method getset : Defer ($k, $v) {
     my $original = delete $data{$k};
     $data{$k} = $v;
     return $original;
+}
+
+=head2 getdel
+
+Performs the same operation as L</get>, but additionally remove the key from the storage atomically.
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=back
+
+Returns a L<Future> which will resolve on completion to the original value, or C<undef> if none.
+
+=cut
+
+async method getdel : Defer ($k) {
+    return delete $data{$k};
 }
 
 =head2 incr
