@@ -263,7 +263,7 @@ Returns a L<Future> which will resolve to .
 
 async method hash_set ($k, $hash_key, $v) {
     die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
-    await $redis->hset($k, $self->apply_prefix($hash_key), $v);
+    await $redis->hset($self->apply_prefix($k), $hash_key, $v);
 }
 
 =head2 hash_get
@@ -281,7 +281,7 @@ Returns a L<Future> which will resolve to the scalar value for this key.
 =cut
 
 async method hash_get ($k, $hash_key) {
-    await $redis->hget($k, $self->apply_prefix($hash_key));
+    await $redis->hget($self->apply_prefix($k), $hash_key);
 }
 
 =head2 hash_add
@@ -301,7 +301,7 @@ Returns a L<Future> indicating success or failure.
 async method hash_add ($k, $hash_key, $v) {
     $v //= 1;
     die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
-    await $redis->hincrby($k, $self->apply_prefix($hash_key), $v);
+    await $redis->hincrby($self->apply_prefix($k), $hash_key, $v);
 }
 
 =head2 hash_keys
@@ -319,6 +319,7 @@ Returns a L<Future> which will resolve to a list of the keys in no defined order
 =cut
 
 async method hash_keys ($k) {
+    await $redis->hkeys($self->apply_prefix($k));
 }
 
 =head2 hash_values
@@ -336,6 +337,7 @@ Returns a L<Future> which will resolve to a list of the values in no defined ord
 =cut
 
 async method hash_values ($k) {
+    await $redis->hvals($self->apply_prefix($k));
 }
 
 =head2 hash_exists
@@ -353,6 +355,7 @@ Returns a L<Future> which will resolve to true if the key exists in this hash.
 =cut
 
 async method hash_exists ($k, $hash_key) {
+    await $redis->hexists($self->apply_prefix($k), $hash_key);
 }
 
 =head2 hash_count
@@ -370,6 +373,7 @@ Returns a L<Future> which will resolve to the count of the keys in this hash.
 =cut
 
 async method hash_count ($k) {
+    await $redis->hlen($self->apply_prefix($k));
 }
 
 =head2 hash_as_list
@@ -388,6 +392,7 @@ suitable for assigning to a hash.
 =cut
 
 async method hash_as_list ($k) {
+    await $redis->hgetall($self->apply_prefix($k));
 }
 
 
