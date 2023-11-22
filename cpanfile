@@ -34,6 +34,8 @@ requires 'Config::Any', '>= 0.33';
 requires 'YAML::XS', '>= 0.88';
 requires 'Metrics::Any', '>= 0.10';
 requires 'OpenTracing::Any', '>= 1.006';
+requires 'OpenTelemetry', '>= 0.017';
+requires 'OpenTelemetry::SDK', '>= 0.018';
 requires 'JSON::MaybeUTF8', '>= 2.000';
 requires 'Unicode::UTF8';
 requires 'Time::Moment', '>= 0.44';
