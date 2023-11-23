@@ -13,9 +13,9 @@ requires 'Future', '>= 0.50';
 requires 'Future::Queue';
 requires 'Future::AsyncAwait', '>= 0.66';
 requires 'Future::AsyncAwait::Hooks', '>= 0.02';
-requires 'Future::IO', '>= 0.14';
-requires 'XS::Parse::Sublike', '>= 0.20';
-requires 'Object::Pad', '>= 0.803';
+requires 'Future::IO', '>= 0.15';
+requires 'XS::Parse::Sublike', '>= 0.21';
+requires 'Object::Pad', '>= 0.806';
 requires 'Role::Tiny', '>= 2.002004';
 # Streams
 requires 'Ryu', '>= 3.004';
@@ -28,8 +28,8 @@ requires 'IO::Async::Test', '>= 0.802';
 requires 'IO::Async::SSL', '>= 0.25';
 # Functionality
 requires 'curry', '>= 2.000001';
-requires 'Log::Any', '>= 1.710';
-requires 'Log::Any::Adapter', '>= 1.710';
+requires 'Log::Any', '>= 1.717';
+requires 'Log::Any::Adapter', '>= 1.717';
 requires 'Config::Any', '>= 0.33';
 requires 'YAML::XS', '>= 0.88';
 requires 'Metrics::Any', '>= 0.10';
