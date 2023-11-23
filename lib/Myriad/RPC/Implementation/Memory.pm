@@ -53,20 +53,43 @@ Start waiting for new requests to fill in the internal requests queue.
 =cut
 
 async method start () {
-    $should_shutdown //= $self->loop->new_future(label => 'rpc::memory::shutdown_future')->without_cancel;
+    $should_shutdown //= $self->loop->new_future(label => 'rpc::memory::shutdown_future');
 
+    my $host = hostname();
     while (1) {
         await &fmap_void($self->$curry::curry(async method ($rpc) {
             unless ($rpc->{group}) {
-                my $pending_messages = await $transport->pending_stream_by_consumer($rpc->{stream}, $self->group_name, hostname());
-                await $self->process_stream_messages(rpc => $rpc, messages => $pending_messages) if %$pending_messages;
-                await $transport->create_consumer_group($rpc->{stream}, $self->group_name, 0, 1);
+                my $pending_messages = await $transport->pending_stream_by_consumer(
+                    $rpc->{stream},
+                    $self->group_name,
+                    $host,
+                );
+                await $self->process_stream_messages(
+                    rpc      => $rpc,
+                    messages => $pending_messages
+                ) if %$pending_messages;
+                await $transport->create_consumer_group(
+                    $rpc->{stream},
+                    $self->group_name,
+                    0,
+                    1
+                );
                 $rpc->{group} = 1;
             }
-            my $messages = await $transport->read_from_stream_by_consumer($rpc->{stream}, $self->group_name, hostname());
-            await $self->process_stream_messages(rpc => $rpc, messages => $messages) if %$messages;
-        }), foreach => [ $self->rpc_list->@* ], concurrent => scalar $self->rpc_list->@*);
-        await Future->wait_any($should_shutdown, $self->loop->delay_future(after => 0.1));
+            my $messages = await $transport->read_from_stream_by_consumer(
+                $rpc->{stream},
+                $self->group_name,
+                $host,
+            );
+            await $self->process_stream_messages(
+                rpc      => $rpc,
+                messages => $messages
+            ) if %$messages;
+        }), foreach => [ $self->rpc_list->@* ], concurrent => 0 + $self->rpc_list->@*);
+        await Future->wait_any(
+            $should_shutdown->without_cancel,
+            $self->loop->delay_future(after => 0.1)
+        );
     }
 }
 
