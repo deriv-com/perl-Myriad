@@ -5,3 +5,4 @@ libtool-bin
 libc-dev
 git
 make
+libprotoc-dev
