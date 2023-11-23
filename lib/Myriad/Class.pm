@@ -253,23 +253,28 @@ sub import {
 
     {
         no strict 'refs';
-        # Essentially the same as importing Log::Any qw($log) for now,
-        # but we may want to customise this with some additional attributes.
-        # Note that we have to store a ref to the returned value, don't
-        # drop that backslash...
-        *{$pkg . '::log'} = \Log::Any->get_logger(
-            category => $pkg
-        );
-        *{$pkg . '::tracer'}  = \(OpenTracing->global_tracer);
+        if($version >= 2) {
+            my $provider = OpenTelemetry->tracer_provider;
+            *{$pkg . '::log'} = \(OpenTelemetry->logger);
+            *{$pkg . '::tracer'}  = \($provider->tracer(
+                name    => 'myriad',
+                version => $version,
+            ));
+        } else {
+            # Essentially the same as importing Log::Any qw($log) for now,
+            # but we may want to customise this with some additional attributes.
+            # Note that we have to store a ref to the returned value, don't
+            # drop that backslash...
+            *{$pkg . '::log'} = \Log::Any->get_logger(
+                category => $pkg
+            );
+            *{$pkg . '::tracer'}  = \(OpenTracing->global_tracer);
+        }
     }
 
     if(my $class = $args{class} // $pkg) {
-        # For history here, see this:
-        # https://rt.cpan.org/Ticket/Display.html?id=132337
-        # We do this first to get the keywords...
-        Object::Pad->import_into($pkg);
-        # ... and then _again_ to disable the experimental warnings
-        Object::Pad->import_into($pkg, qw(:experimental));
+        Object::Pad->import_into($pkg, ":experimental(init_expr mop custom_field_attr adjust_params)");
+
         my $method = 'begin_' . ($args{type} || 'class');
         Module::Load::load($args{extends}) if $args{extends};
         my $meta = Object::Pad::MOP::Class->$method(
