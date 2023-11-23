@@ -1,6 +1,6 @@
 package Myriad::Service::Implementation;
 
-use Myriad::Class extends => 'IO::Async::Notifier';
+use Myriad::Class ':v2', extends => 'IO::Async::Notifier';
 
 # VERSION
 # AUTHORITY
@@ -22,6 +22,10 @@ use Myriad::Subscription;
 use Myriad::Util::UUID;
 
 use Myriad::Service::Attributes;
+
+use OpenTelemetry::Context;
+use OpenTelemetry::Trace;
+use OpenTelemetry::Constants qw( SPAN_STATUS_ERROR SPAN_STATUS_OK );
 
 # Only defer up to this many seconds between batch iterations
 use constant MAX_EXPONENTIAL_BACKOFF => 2;
@@ -305,7 +309,16 @@ async method load () {
 
             my $code = $spec->{code};
             $spec->{current} = $sink->source->map($self->$curry::weak(async method ($message) {
+                my $span = $tracer->create_span(
+                    parent => OpenTelemetry::Context->current,
+                    name   => $method,
+                    attributes => {
+                        args => $message->args,
+                    },
+                );
                 try {
+                    my $context = OpenTelemetry::Trace->context_with_span($span);
+                    dynamically OpenTelemetry::Context->current = $context;
                     my $response = await $self->$code(
                         $message->args->%*
                     )->on_ready(sub {
@@ -318,9 +331,19 @@ async method load () {
                             }
                         );
                     });
-                    await $self->rpc->reply_success($service_name, $message, $response);
+                    my $res = await $self->rpc->reply_success($service_name, $message, $response);
+                    $span->set_status(
+                        SPAN_STATUS_OK
+                    );
+                    return $res;
                 } catch ($e) {
-                    $e = Myriad::Exception::InternalError->new(reason => $e) unless (blessed $e and $e->does('Myriad::Exception'));
+                    $e = Myriad::Exception::InternalError->new(
+                        reason => $e
+                    ) unless blessed($e) and $e->does('Myriad::Exception');
+                    $span->record_exception($e);
+                    $span->set_status(
+                        SPAN_STATUS_ERROR, $e
+                    );
                     await $self->rpc->reply_error($service_name, $message, $e);
                 }
             }))->resolve->completed;
