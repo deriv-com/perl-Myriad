@@ -232,15 +232,8 @@ field $subscription;
 field $storage;
 # Future representing run
 field $run;
-# Future for passing to things that want to react to
-# run, anything outside this file
-field $run_without_cancel;
 # Future representing shutdown
 field $shutdown;
-# Future for passing to things that want to react to
-# shutdown, pretty much everything outside this file
-# should only be able to access this one
-field $shutdown_without_cancel;
 # The Net::Async::OpenTracing instance
 field $tracing;
 # Any service definitions which is added by registry
@@ -642,7 +635,7 @@ ready to accept requests.
 =cut
 
 method run_future () {
-    return $run_without_cancel //= (
+    return +(
         $run //= $self->loop->new_future->set_label('run'),
     )->without_cancel;
 }
@@ -657,7 +650,7 @@ triggered by a fault or a Unix signal.
 =cut
 
 method shutdown_future () {
-    return $shutdown_without_cancel //= (
+    return +(
         $shutdown //= $self->loop->new_future->set_label('shutdown')
     )->without_cancel;
 }
