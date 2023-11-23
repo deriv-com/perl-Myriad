@@ -1,6 +1,13 @@
 package Myriad::Subscription::Implementation::Memory;
 
-use Myriad::Class extends => 'IO::Async::Notifier', does => [ 'Myriad::Role::Subscription', 'Myriad::Util::Defer' ];
+use Myriad::Class ':v2', extends => qw(IO::Async::Notifier), does => [
+    'Myriad::Role::Subscription',
+    'Myriad::Util::Defer'
+];
+
+use OpenTelemetry::Context;
+use OpenTelemetry::Trace;
+use OpenTelemetry::Constants qw( SPAN_STATUS_ERROR SPAN_STATUS_OK );
 
 # VERSION
 # AUTHORITY
@@ -88,8 +95,37 @@ async method start {
                 'consumer'
             );
             for my $event_id (sort keys $messages->%*) {
-                $subscription->{sink}->emit($messages->{$event_id});
-                await $transport->ack_message($subscription->{channel}, $subscription->{group_name}, $event_id);
+                my $span = $tracer->create_span(
+                    parent => OpenTelemetry::Context->current,
+                    name   => $subscription->{channel},
+                    attributes => {
+                        group => $subscription->{group_name},
+                    },
+                );
+                try {
+                    my $context = OpenTelemetry::Trace->context_with_span($span);
+                    dynamically OpenTelemetry::Context->current = $context;
+
+                    $subscription->{sink}->emit($messages->{$event_id});
+                    await $transport->ack_message(
+                        $subscription->{channel},
+                        $subscription->{group_name},
+                        $event_id
+                    );
+
+                    $span->set_status(
+                        SPAN_STATUS_OK
+                    );
+                } catch ($e) {
+                    $e = Myriad::Exception::InternalError->new(
+                        reason => $e
+                    ) unless blessed($e) and $e->does('Myriad::Exception');
+                    $log->errorf('Failed to process event %s - %s', $event_id, $e);
+                    $span->record_exception($e);
+                    $span->set_status(
+                        SPAN_STATUS_ERROR, $e
+                    );
+                }
             }
 
             if($should_shutdown) {

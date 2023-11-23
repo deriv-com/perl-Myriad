@@ -1,6 +1,6 @@
 package Myriad::Subscription::Implementation::Redis;
 
-use Myriad::Class extends => qw(IO::Async::Notifier), does => [
+use Myriad::Class ':v2', extends => qw(IO::Async::Notifier), does => [
     'Myriad::Role::Subscription'
 ];
 
@@ -8,6 +8,9 @@ use Myriad::Class extends => qw(IO::Async::Notifier), does => [
 # AUTHORITY
 
 use Myriad::Util::UUID;
+use OpenTelemetry::Context;
+use OpenTelemetry::Trace;
+use OpenTelemetry::Constants qw( SPAN_STATUS_ERROR SPAN_STATUS_OK );
 
 use constant MAX_ALLOWED_STREAM_LENGTH => 10_000;
 
@@ -137,26 +140,44 @@ async method receive_items {
             );
 
             for my $event (@events) {
+                my $span = $tracer->create_span(
+                    parent => OpenTelemetry::Context->current,
+                    name   => $stream,
+                    attributes => {
+                        args => $event->{data}[1]
+                    },
+                );
                 try {
+                    my $context = OpenTelemetry::Trace->context_with_span($span);
+                    dynamically OpenTelemetry::Context->current = $context;
                     my $event_data = decode_json_utf8($event->{data}->[1]);
                     $log->tracef('Passing event: %s | from stream: %s to subscription sink: %s', $event_data, $stream, $sink->label);
                     $sink->source->emit({
                         data => $event_data
                     });
+                    await $redis->ack(
+                        $stream,
+                        $group_name,
+                        $event->{id}
+                    );
+                    $span->set_status(
+                        SPAN_STATUS_OK
+                    );
                 } catch($e) {
-                    $log->tracef(
+                    $e = Myriad::Exception::InternalError->new(
+                        reason => $e
+                    ) unless blessed($e) and $e->does('Myriad::Exception');
+                    $log->errorf(
                         'An error happened while decoding event data for stream %s message: %s, error: %s',
                         $stream,
                         $event->{data},
                         $e
                     );
+                    $span->record_exception($e);
+                    $span->set_status(
+                        SPAN_STATUS_ERROR, $e
+                    );
                 }
-
-                await $redis->ack(
-                    $stream,
-                    $group_name,
-                    $event->{id}
-                );
             }
         }
     }), foreach => [@receivers], concurrent => scalar @receivers);
