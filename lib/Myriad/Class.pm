@@ -141,6 +141,7 @@ use Heap;
 use IO::Async::Notifier;
 
 use Log::Any qw($log);
+use OpenTelemetry;
 use OpenTracing::Any qw($tracer);
 use Metrics::Any;
 
