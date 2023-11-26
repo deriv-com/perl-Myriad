@@ -38,7 +38,9 @@ requires 'OpenTelemetry', '>= 0.017';
 requires 'OpenTelemetry::SDK', '>= 0.018';
 requires 'OpenTelemetry::Exporter::OTLP', '>= 0.013';
 # Older versions of the protobuf library get confused by perl 5.38 boolean values in the tests
-requires 'Google::ProtocolBuffers::Dynamic', '== 0.42_04';
+requires 'Alien::ProtoBuf';
+requires 'Alien::uPB::Core';
+requires 'Google::ProtocolBuffers::Dynamic', '== 0.42_05';
 requires 'JSON::MaybeUTF8', '>= 2.000';
 requires 'Unicode::UTF8';
 requires 'Time::Moment', '>= 0.44';
