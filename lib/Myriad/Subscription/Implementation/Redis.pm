@@ -204,7 +204,7 @@ async method receive_items {
 }
 
 async method check_for_overflow () {
-    $log->tracef('Start checking overflow for (%d) subscription sources', scalar(@emitters));
+    $log->tracef('Start checking overflow for (%d) subscription sources', 0 + @emitters);
     while (1) {
         if(@emitters) {
             my $emitter = shift @emitters;
@@ -214,11 +214,11 @@ async method check_for_overflow () {
                 if ($len >= $emitter->{max_len}) {
                     unless ($emitter->{source}->is_paused) {
                         $emitter->{source}->pause;
-                        $log->tracef('Paused subscription source on %s, length is %s, max allowed %s', $emitter->{stream}, $len, $emitter->{max_len});
+                        $log->infof('Paused subscription source on %s, length is %s, max allowed %s', $emitter->{stream}, $len, $emitter->{max_len});
                     }
                     await $redis->cleanup(
                         stream => $emitter->{stream},
-                        limit => $emitter->{max_len}
+                        limit  => $emitter->{max_len}
                     );
                 } else {
                     if($emitter->{source}->is_paused) {
