@@ -30,6 +30,8 @@ use OpenTelemetry::Constants qw( SPAN_STATUS_ERROR SPAN_STATUS_OK );
 # Only defer up to this many seconds between batch iterations
 use constant MAX_EXPONENTIAL_BACKOFF => 2;
 
+use constant USE_OPENTELEMETRY => 0;
+
 sub MODIFY_CODE_ATTRIBUTES {
     my ($class, $code, @attrs) = @_;
     Myriad::Service::Attributes->apply_attributes(
@@ -309,41 +311,62 @@ async method load () {
 
             my $code = $spec->{code};
             $spec->{current} = $sink->source->map($self->$curry::weak(async method ($message) {
-                my $span = $tracer->create_span(
-                    parent => OpenTelemetry::Context->current,
-                    name   => $method,
-                    attributes => {
-                        args => $message->args,
-                    },
-                );
-                try {
-                    my $context = OpenTelemetry::Trace->context_with_span($span);
-                    dynamically OpenTelemetry::Context->current = $context;
-                    my $response = await $self->$code(
-                        $message->args->%*
-                    )->on_ready(sub {
-                        my $f = shift;
-                        $metrics->report_timer(
-                            rpc_timing => $f->elapsed // 0, {
-                                method => $method,
-                                status => $f->state,
-                                service => $service_name
-                            }
-                        );
-                    });
-                    my $res = await $self->rpc->reply_success($service_name, $message, $response);
-                    $span->set_status(
-                        SPAN_STATUS_OK
+                my $span;
+                if(USE_OPENTELEMETRY) {
+                    $span = $tracer->create_span(
+                        parent => OpenTelemetry::Context->current,
+                        name   => $method,
+                        attributes => {
+                            args => $message->args,
+                        },
                     );
-                    return $res;
+                }
+                try {
+                    if(USE_OPENTELEMETRY) {
+                        my $context = OpenTelemetry::Trace->context_with_span($span);
+                        dynamically OpenTelemetry::Context->current = $context;
+                        my $response = await $self->$code(
+                            $message->args->%*
+                        )->on_ready(sub {
+                            my $f = shift;
+                            $metrics->report_timer(
+                                rpc_timing => $f->elapsed // 0, {
+                                    method => $method,
+                                    status => $f->state,
+                                    service => $service_name
+                                }
+                            );
+                        });
+                        my $res = await $self->rpc->reply_success($service_name, $message, $response);
+                        $span->set_status(
+                            SPAN_STATUS_OK
+                        );
+                        return $res;
+                    } else {
+                        my $response = await $self->$code(
+                            $message->args->%*
+                        )->on_ready(sub {
+                            my $f = shift;
+                            $metrics->report_timer(
+                                rpc_timing => $f->elapsed // 0, {
+                                    method => $method,
+                                    status => $f->state,
+                                    service => $service_name
+                                }
+                            );
+                        });
+                        return await $self->rpc->reply_success($service_name, $message, $response);
+                    }
                 } catch ($e) {
                     $e = Myriad::Exception::InternalError->new(
                         reason => $e
                     ) unless blessed($e) and $e->does('Myriad::Exception');
-                    $span->record_exception($e);
-                    $span->set_status(
-                        SPAN_STATUS_ERROR, $e
-                    );
+                    if(USE_OPENTELEMETRY) {
+                        $span->record_exception($e);
+                        $span->set_status(
+                            SPAN_STATUS_ERROR, $e
+                        );
+                    }
                     await $self->rpc->reply_error($service_name, $message, $e);
                 }
             }))->resolve->completed;

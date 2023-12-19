@@ -14,6 +14,8 @@ use OpenTelemetry::Constants qw( SPAN_STATUS_ERROR SPAN_STATUS_OK );
 
 use constant MAX_ALLOWED_STREAM_LENGTH => 10_000;
 
+use constant USE_OPENTELEMETRY => 0;
+
 field $redis;
 
 field $client_id;
@@ -140,29 +142,45 @@ async method receive_items {
             );
 
             for my $event (@events) {
-                my $span = $tracer->create_span(
-                    parent => OpenTelemetry::Context->current,
-                    name   => $stream,
-                    attributes => {
-                        args => $event->{data}[1]
-                    },
-                );
+                my $span;
+                if(USE_OPENTELEMETRY) {
+                    $span = $tracer->create_span(
+                        parent => OpenTelemetry::Context->current,
+                        name   => $stream,
+                        attributes => {
+                            args => $event->{data}[1]
+                        },
+                    );
+                }
                 try {
-                    my $context = OpenTelemetry::Trace->context_with_span($span);
-                    dynamically OpenTelemetry::Context->current = $context;
-                    my $event_data = decode_json_utf8($event->{data}->[1]);
-                    $log->tracef('Passing event: %s | from stream: %s to subscription sink: %s', $event_data, $stream, $sink->label);
-                    $sink->source->emit({
-                        data => $event_data
-                    });
-                    await $redis->ack(
-                        $stream,
-                        $group_name,
-                        $event->{id}
-                    );
-                    $span->set_status(
-                        SPAN_STATUS_OK
-                    );
+                    if(USE_OPENTELEMETRY) {
+                        my $context = OpenTelemetry::Trace->context_with_span($span);
+                        dynamically OpenTelemetry::Context->current = $context;
+                        my $event_data = decode_json_utf8($event->{data}->[1]);
+                        $log->tracef('Passing event: %s | from stream: %s to subscription sink: %s', $event_data, $stream, $sink->label);
+                        $sink->source->emit({
+                            data => $event_data
+                        });
+                        await $redis->ack(
+                            $stream,
+                            $group_name,
+                            $event->{id}
+                        );
+                        $span->set_status(
+                            SPAN_STATUS_OK
+                        );
+                    } else {
+                        my $event_data = decode_json_utf8($event->{data}->[1]);
+                        $log->tracef('Passing event: %s | from stream: %s to subscription sink: %s', $event_data, $stream, $sink->label);
+                        $sink->source->emit({
+                            data => $event_data
+                        });
+                        await $redis->ack(
+                            $stream,
+                            $group_name,
+                            $event->{id}
+                        );
+                    }
                 } catch($e) {
                     $e = Myriad::Exception::InternalError->new(
                         reason => $e
@@ -173,10 +191,12 @@ async method receive_items {
                         $event->{data},
                         $e
                     );
-                    $span->record_exception($e);
-                    $span->set_status(
-                        SPAN_STATUS_ERROR, $e
-                    );
+                    if(USE_OPENTELEMETRY) {
+                        $span->record_exception($e);
+                        $span->set_status(
+                            SPAN_STATUS_ERROR, $e
+                        );
+                    }
                 }
             }
         }
