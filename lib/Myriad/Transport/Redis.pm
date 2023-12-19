@@ -169,7 +169,11 @@ async method oldest_processed_id($stream) {
 
         $log->tracef('Pending check where oldest was %s and last delivered %s', $oldest, $info{last_delivered_id});
         $oldest //= $info{last_delivered_id};
-        $oldest = $info{last_delivered_id} if $info{last_delivered_id} and $self->compare_id($oldest, $info{last_delivered_id}) > 0;
+        $oldest = $info{last_delivered_id}
+            if $info{last_delivered_id}
+            and $self->compare_id(
+                $oldest, $info{last_delivered_id}
+            ) > 0;
 
         # Pending list might have items older than "last_delivered_id"
         # If the get deleted we can't claim them back and they are lost forever.
@@ -358,7 +362,13 @@ async method pending (%args) {
             async method ($item) {
                 my ($id, $consumer, $age, $delivery_count) = $item->@*;
                 $log->tracef('Claiming pending message %s from %s, age %s, %d prior deliveries', $id, $consumer, $age, $delivery_count);
-                my $claim = await $redis->xclaim($stream, $group, $client, 10, $id);
+                my $claim = await $redis->xclaim(
+                    $stream,
+                    $group,
+                    $client,
+                    10,
+                    $id
+                );
                 $log->tracef('Claim is %s', $claim);
                 my $args = $claim->[0]->[1];
 
@@ -367,14 +377,13 @@ async method pending (%args) {
             foreach => $pending,
             concurrent => scalar @$pending
         );
+    } catch ($e) {
+        $log->warnf('Could not read pending messages on stream: %s | error: %s', $stream, $e);
+    }
+    $self->return_instance_to_pool($instance) if $instance;
+    undef $instance;
 
-        } catch ($e) {
-            $log->warnf('Could not read pending messages on stream: %s | error: %s', $stream, $e);
-        }
-        $self->return_instance_to_pool($instance) if $instance;
-        undef $instance;
-
-        return @res;
+    return @res;
 }
 
 =head2 create_stream
