@@ -241,14 +241,25 @@ async method read_from_stream (%args) {
     my $group = $args{group};
     my $client = $args{client};
 
+    my $claimed = await $self->xautoclaim(
+        $stream,
+        $group,
+        $client,
+        30_000,
+        '0-0',
+        COUNT => $self->batch_count,
+        'JUSTID',
+    );
+    my $claim_required = $claimed->[1]->@* ? 1 : 0;
+
     my ($delivery) = await $self->xreadgroup(
         BLOCK   => $self->wait_time,
         GROUP   => $group, $client,
         COUNT   => $self->batch_count,
-        STREAMS => ($stream, '>'),
+        STREAMS => ($stream, ($claim_required ? '0' : '>')),
     );
 
-    $log->tracef('Read group: %s as `%s` from [%s]: %s', $group, $client, $stream, $delivery);
+    $log->tracef('Read group: %s as `%s` from %s in [%s]: %s', $group, $client, ($claim_required ? 'old pending items' : 'latest'), $stream, $delivery);
 
     # We are strictly reading for one stream
     my $batch = $delivery->[0];
