@@ -1,4 +1,4 @@
-package Myriad::Registry;
+package Myriad::Registry {
 
 use Myriad::Class extends => 'IO::Async::Notifier';
 
@@ -235,6 +235,9 @@ method make_service_name ($name, $namespace = '') {
     $name =~ s/^\Q$namespace// if length $namespace;
     return lc($name) =~ s{::}{.}gr
 }
+
+}
+$Myriad::REGISTRY = Myriad::Registry->new;
 
 1;
 

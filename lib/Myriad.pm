@@ -188,9 +188,6 @@ use Log::Any::Adapter;
 use Net::Async::OpenTracing;
 
 our $REGISTRY;
-BEGIN {
-    $REGISTRY = Myriad::Registry->new;
-}
 
 # Enable Future time trace
 $Future::TIMES = 1;
