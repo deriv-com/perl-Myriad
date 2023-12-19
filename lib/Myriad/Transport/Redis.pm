@@ -601,6 +601,14 @@ async method xreadgroup (@args) {
     return ($batch);
 }
 
+async method xautoclaim (@args) {
+    my $instance = await $self->borrow_instance_from_pool;
+    my ($batch) =  await $instance->xautoclaim(@args)->on_ready(sub {
+        $self->return_instance_to_pool($instance);
+    });
+    return ($batch);
+}
+
 async method xadd ($stream, @args) {
     return await $redis->xadd($self->apply_prefix($stream), @args);
 }
