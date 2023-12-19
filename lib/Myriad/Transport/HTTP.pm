@@ -20,9 +20,16 @@ method configure (%args) {
 
 method on_request ($srv, $req) {
     $requests->emit($req);
+    $log->infof('HTTP request - %s', $req->path);
+    my $txt = '';
+    my $response = HTTP::Response->new(200);
+    $response->add_content($txt);
+    $response->content_type("text/plain");
+    $response->content_length(length $txt);
+    $req->respond($response);
 }
 
-method listen_port () { 80 }
+method listen_port () { 2000 }
 
 method _add_to_loop ($) {
     $self->next::method;
