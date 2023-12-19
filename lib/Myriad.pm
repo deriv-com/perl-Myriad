@@ -760,6 +760,9 @@ async method run () {
     # Initiate the run future.
     $self->run_future();
 
+    # Prepare HTTP server for liveness checks
+    $self->http;
+
     for my $signal (qw(TERM INT QUIT)) {
         $self->loop->attach_signal($signal => $self->$curry::weak(method {
             $log->infof("%s received, exit", $signal);
