@@ -420,13 +420,13 @@ It'll also send the MKSTREAM option to create the stream if it doesn't exist.
 =item * C<group> - The group name.
 
 =item * C<start_from> - The id of the message that is going to be considered the start of the stream for this group's point of view
-by default it's C<$> which means the last message.
+by default it's C<0> which means the first available message.
 
 =back
 
 =cut
 
-async method create_group ($stream, $group, $start_from = '$', $make_stream = 0) {
+async method create_group ($stream, $group, $start_from = '0', $make_stream = 0) {
     try {
         my @args = ('CREATE', $self->apply_prefix($stream), $group, $start_from);
         push @args, 'MKSTREAM' if $make_stream;
