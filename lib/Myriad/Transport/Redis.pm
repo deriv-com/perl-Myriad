@@ -308,7 +308,6 @@ async method cleanup (%args) {
     my $stream = $self->apply_prefix($args{stream});
     # Check on our status - can we clean up any old queue items?
     my ($info) = await $self->stream_info($stream);
-    return unless $info->{length} > $args{limit};
 
     # Track how far back our active stream list goes - anything older than this is fair game
     my $oldest = await $self->oldest_processed_id($stream);
