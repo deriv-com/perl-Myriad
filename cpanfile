@@ -1,4 +1,5 @@
 # Syntax
+requires 'meta', '== 0.003_001';
 requires 'mro';
 requires 'indirect';
 requires 'multidimensional';
