@@ -72,7 +72,7 @@ field $redis_pool;
 field $waiting_redis_pool;
 field $pending_redis_count = 0;
 field $wait_time;
-field $batch_count = 50;
+field $batch_count = 500;
 field $max_pool_count;
 field $clientside_cache_size;
 field $prefix;
