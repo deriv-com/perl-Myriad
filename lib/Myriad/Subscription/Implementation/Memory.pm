@@ -43,13 +43,15 @@ async method create_from_source (%args) {
     my $channel_name = $service . '.' . $args{channel};
     await $transport->create_stream($channel_name);
 
-    $src->map(async sub {
-        my $message = shift;
-        await $transport->add_to_stream(
-            $channel_name,
-            $message->%*
-        );
-    })->resolve->completed->retain;
+    $self->adopt_future(
+        $src->map(async sub {
+            my $message = shift;
+            await $transport->add_to_stream(
+                $channel_name,
+                $message->%*
+            );
+        })->resolve->completed
+    );
     return;
 }
 

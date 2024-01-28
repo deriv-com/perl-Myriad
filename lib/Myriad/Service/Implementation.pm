@@ -399,7 +399,7 @@ async method start {
                 $spec->{sink},
             )->on_fail(sub {
                 $log->fatalf('Emitter for %s failed - %s', $method, shift);
-            })->retain;
+            });
             $spec->{src}->resume;
         }
     }
@@ -434,7 +434,7 @@ async method start {
                     my $sink = $sink_copy or return;
                     my $src = $sink->source;
                     $src->fail($error) unless $src->completed->is_ready;
-                })->retain;
+                });
                 $spec->{sink}->resume;
             } catch ($e) {
                 $log->errorf('Failed while starting up receiver: %s', $e);

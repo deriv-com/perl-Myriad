@@ -51,27 +51,29 @@ async method create_from_source (%args) {
         source => $src,
         max_len => $args{max_len} // MAX_ALLOWED_STREAM_LENGTH
     };
-    $src->unblocked->then($self->$curry::weak(async method {
-        # The streams will be checked later by "check_for_overflow" to avoid unblocking the source by mistake
-        # we will make "check_for_overflow" aware about this stream after the service has started
-        await $src->map($self->$curry::weak(method ($event) {
-            $log->tracef('Subscription source %s adding an event: %s',$stream, $event);
-            return $redis->xadd(
-                encode_utf8($stream) => '*',
-                data => encode_json_utf8($event),
-            );
-        }))->ordered_futures(
-            low => 100,
-            high => 5000,
-        )->completed
-         ->on_fail($self->$curry::weak(method {
-            $log->warnf("Redis XADD command failed for stream %s", $stream);
-            $should_shutdown->fail(
-                "Failed to publish subscription data for $stream - " . shift
-            ) unless $should_shutdown->is_ready;
-        }));
-        return;
-    }))->retain;
+    $self->adopt_future(
+        $src->unblocked->then($self->$curry::weak(async method {
+            # The streams will be checked later by "check_for_overflow" to avoid unblocking the source by mistake
+            # we will make "check_for_overflow" aware about this stream after the service has started
+            await $src->map($self->$curry::weak(method ($event) {
+                $log->tracef('Subscription source %s adding an event: %s',$stream, $event);
+                return $redis->xadd(
+                    encode_utf8($stream) => '*',
+                    data => encode_json_utf8($event),
+                );
+            }))->ordered_futures(
+                low => 100,
+                high => 5000,
+            )->completed
+             ->on_fail($self->$curry::weak(method {
+                $log->warnf("Redis XADD command failed for stream %s", $stream);
+                $should_shutdown->fail(
+                    "Failed to publish subscription data for $stream - " . shift
+                ) unless $should_shutdown->is_ready;
+            }));
+            return;
+        }))
+    );
     return;
 }
 

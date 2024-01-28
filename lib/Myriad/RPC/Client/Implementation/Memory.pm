@@ -102,7 +102,7 @@ async method call_rpc ($service, $method, %args) {
 }
 
 method _add_to_loop ($loop) {
-    $self->start->retain();
+    $self->adopt_future($self->start);
     $self->next::method($loop);
 }
 
