@@ -1,5 +1,5 @@
 # Syntax
-requires 'meta', '== 0.003_001';
+requires 'meta', '>= 0.004';
 requires 'mro';
 requires 'indirect';
 requires 'multidimensional';
@@ -9,7 +9,7 @@ requires 'Syntax::Keyword::Dynamically', '>= 0.13';
 requires 'Syntax::Keyword::Try', '>= 0.29';
 requires 'Syntax::Keyword::Defer', '>= 0.10';
 requires 'Syntax::Keyword::Match', '>= 0.13';
-requires 'Syntax::Operator::Equ', '== 0.07';
+requires 'Syntax::Operator::Equ', '>= 0.09';
 requires 'Future', '>= 0.50';
 requires 'Future::Queue', '>= 0.52';
 requires 'Future::AsyncAwait', '>= 0.66';
@@ -19,25 +19,25 @@ requires 'XS::Parse::Sublike', '>= 0.21';
 requires 'Object::Pad', '>= 0.808';
 requires 'Role::Tiny', '>= 2.002004';
 # Streams
-requires 'Ryu', '>= 3.004';
+requires 'Ryu', '>= 3.005';
 requires 'Ryu::Async', '>= 0.020';
 # IO::Async
 requires 'Heap', '>= 0.80';
-requires 'IO::Async', '>= 0.802';
-requires 'IO::Async::Notifier', '>= 0.802';
-requires 'IO::Async::Test', '>= 0.802';
+requires 'IO::Async', '>= 0.803';
+requires 'IO::Async::Notifier', '>= 0.803';
+requires 'IO::Async::Test', '>= 0.803';
 requires 'IO::Async::SSL', '>= 0.25';
 # Functionality
 requires 'curry', '>= 2.000001';
 requires 'Log::Any', '>= 1.717';
 requires 'Log::Any::Adapter', '>= 1.717';
 requires 'Config::Any', '>= 0.33';
-requires 'YAML::XS', '>= 0.88';
+requires 'YAML::XS', '>= 0.89';
 requires 'Metrics::Any', '>= 0.10';
 requires 'OpenTracing::Any', '>= 1.006';
-requires 'OpenTelemetry', '>= 0.017';
-requires 'OpenTelemetry::SDK', '>= 0.018';
-requires 'OpenTelemetry::Exporter::OTLP', '>= 0.013';
+requires 'OpenTelemetry', '>= 0.019';
+requires 'OpenTelemetry::SDK', '>= 0.021';
+requires 'OpenTelemetry::Exporter::OTLP', '>= 0.015';
 # Older versions of the protobuf library get confused by perl 5.38 boolean values in the tests
 requires 'Alien::ProtoBuf';
 requires 'Alien::uPB::Core';
