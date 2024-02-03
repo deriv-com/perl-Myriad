@@ -1,6 +1,23 @@
 package Myriad::Mutex;
 use Myriad::Class qw(:v2);
 
+# VERSION
+# AUTHORITY
+
+=encoding utf8
+
+=head1 NAME
+
+Myriad::Mutex - a basic mutual-exclusion primitive
+
+=head1 SYNOPSIS
+
+ my $mutex = await $api->mutex;
+
+=head1 DESCRIPTION
+
+=cut
+
 use Math::Random::Secure;
 
 field $key;
