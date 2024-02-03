@@ -76,7 +76,15 @@ async method set : Defer ($k, $v, $ttl = undef) {
     return $v;
 }
 
-async method when_key_changed ($k) {
+async method set_unless_exists : Defer ($k, $v, $ttl = undef) {
+    die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
+    return $data{$k} if exists $data{$k};
+    $data{$k} = $v;
+    $key_change->{$k}->done if $key_change->{$k};
+    return $v;
+}
+
+method when_key_changed ($k) {
     return +(
         $key_change->{$k} //= $self->loop->new_future->on_ready($self->$curry::weak(method {
             delete $key_change->{$k}
