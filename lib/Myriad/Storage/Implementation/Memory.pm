@@ -1,6 +1,9 @@
 package Myriad::Storage::Implementation::Memory;
 
-use Myriad::Class extends => 'IO::Async::Notifier', does => [ 'Myriad::Role::Storage', 'Myriad::Util::Defer'];
+use Myriad::Class extends => 'IO::Async::Notifier', does => [
+    'Myriad::Role::Storage',
+    'Myriad::Util::Defer'
+];
 
 # VERSION
 # AUTHORITY
