@@ -2,7 +2,6 @@ package Myriad::Storage::Implementation::Memory;
 
 use Myriad::Class extends => 'IO::Async::Notifier', does => [
     'Myriad::Role::Storage',
-    'Myriad::Util::Defer'
 ];
 
 # VERSION
@@ -25,13 +24,12 @@ correctly.
 
 =cut
 
+use Myriad::Util::Defer;
+
 # Common datastore
 field %data;
 
 field $key_change { +{ } }
-
-# FIXME Need to update :Defer for Object::Pad
-sub MODIFY_CODE_ATTRIBUTES { }
 
 =head2 get
 
