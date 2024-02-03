@@ -8,7 +8,7 @@ use Myriad;
 
 package Example::Sender {
     use Myriad::Service;
-    has $sent = 0;
+    field $sent = 0;
 
     async method simple_emitter : Emitter() ($sink) {
         my $data = {event => 1};

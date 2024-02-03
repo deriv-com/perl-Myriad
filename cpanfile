@@ -4,7 +4,7 @@ requires 'mro';
 requires 'indirect';
 requires 'multidimensional';
 requires 'bareword::filehandles';
-requires 'XS::Parse::Keyword', '>= 0.38';
+requires 'XS::Parse::Keyword', '>= 0.39';
 requires 'Syntax::Keyword::Dynamically', '>= 0.13';
 requires 'Syntax::Keyword::Try', '>= 0.29';
 requires 'Syntax::Keyword::Defer', '>= 0.10';

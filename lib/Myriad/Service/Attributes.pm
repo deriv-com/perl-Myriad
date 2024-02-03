@@ -97,7 +97,7 @@ sub rpc {
 Mark this as an async method which should be called repeatedly to generate
 arrayref batches of data.
 
- has $id = 0;
+ field $id = 0;
  async method example_batch : Batch {
   return [ ++$id ];
  }

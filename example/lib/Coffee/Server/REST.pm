@@ -26,10 +26,10 @@ Provides an HTTP interface to Coffee Manager.
 
 =cut
 
-has $server;
-has $listen_port;
-has $active_requests;
-has $requests_sink;
+field $server;
+field $listen_port;
+field $active_requests;
+field $requests_sink;
 
 method configure (%args) {
 

@@ -40,7 +40,7 @@ field $plugin;
 
 Example:
 
- has $db;
+ field $db;
  register SQL => async method ($code, %args) {
   return sub ($srv, @args) {
    my ($sql, @bind) = $srv->$code(@args);

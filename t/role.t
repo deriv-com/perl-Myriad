@@ -23,7 +23,7 @@ is(exception {
 
     package Example::Class {
         use Myriad::Class does => 'Example::Role';
-        has $something;
+        field $something;
         method example { $self }
     }
     1

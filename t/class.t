@@ -8,7 +8,7 @@ is(exception {
     eval <<'EOS' or die $@;
     package Example::Class;
     use Myriad::Class;
-    has $something;
+    field $something;
     method example { $self }
     1
 EOS

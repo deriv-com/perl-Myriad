@@ -142,8 +142,8 @@ subtest 'Myriad::Class :v2' => sub {
     is(eval(q{
         package local::v2;
         use Myriad::Class qw(:v2);
-        has $suspended;
-        has $resumed;
+        field $suspended;
+        field $resumed;
         method suspended { $suspended }
         method resumed { $resumed }
         async method example ($f) {

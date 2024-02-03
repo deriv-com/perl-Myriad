@@ -11,7 +11,7 @@ use Myriad;
 
     use microservice;
 
-    has $count = 0;
+    field $count = 0;
 
     async method current :RPC {
         return $count++;

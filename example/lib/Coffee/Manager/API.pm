@@ -3,9 +3,9 @@ package Coffee::Manager::API;
 use Myriad::Service;
 use Coffee::Server::REST;
 
-has $http_server;
-has $ryu;
-has $running_sink;
+field $http_server;
+field $ryu;
+field $running_sink;
 
 async method startup () {
     $self->add_child(

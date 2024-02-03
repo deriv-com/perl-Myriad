@@ -4,11 +4,11 @@ use Myriad::Service;
 use Ryu::Source;
 use Future::Utils qw( fmap_void );
 
-has $secret = $ENV{'SECRET'};
-has $check_event_handler = Ryu::Source->new;
+field $secret = $ENV{'SECRET'};
+field $check_event_handler = Ryu::Source->new;
 
 # temporarily until we add more operations to storage.
-has $ids = {};
+field $ids = {};
 
 async method diagnostics ($level) {
     return 'ok';

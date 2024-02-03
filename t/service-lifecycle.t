@@ -63,7 +63,7 @@ subtest 'diagnostics should be called after startup' => sub {
         use Myriad::Service;
         use Test::More;
 
-        has $called = 0;
+        field $called = 0;
 
         async method startup {
             $called++;

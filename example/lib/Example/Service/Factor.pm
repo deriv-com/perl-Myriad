@@ -2,8 +2,8 @@ package Example::Service::Factor;
 
 use Myriad::Service;
 
-has $factor = 0;
-has $players_id;
+field $factor = 0;
+field $players_id;
 
 async method diagnostics ($level) {
     return 'ok';

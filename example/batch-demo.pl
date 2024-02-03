@@ -11,7 +11,7 @@ package Example::Service::Batch;
 
 use Myriad::Service;
 
-has $count = 0;
+field $count = 0;
 
 async method current : RPC {
     return $count;
