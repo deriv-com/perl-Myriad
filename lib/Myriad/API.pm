@@ -21,6 +21,7 @@ storage, subscription and RPC behaviour.
 =cut
 
 use Myriad::Config;
+use Myriad::Mutex;
 use Myriad::Service::Remote;
 use Myriad::Service::Storage;
 
@@ -80,6 +81,19 @@ method config ($key) {
         return $config->{$key};
     }
     Myriad::Exception::Config::UnregisteredConfig->throw(reason => "$key is not registred by service $service_name");
+}
+
+=head2 mutex
+
+=cut
+
+async method mutex (%args) {
+    $args{key} = delete($args{name}) // $service_name;
+    my $mutex = Myriad::Mutex->new(
+        %args,
+        redis => $storage->redis,
+    );
+    return await $mutex->acquire;
 }
 
 1;

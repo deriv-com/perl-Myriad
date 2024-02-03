@@ -27,8 +27,17 @@ use constant STORAGE_PREFIX => 'storage';
 # L<Myriad::Transport::Redis> instance to manage the connections.
 field $redis;
 
+# L<Future>s which complete when there's a change notification for the given key
+field $key_change { +{ } }
+
 BUILD (%args) {
     $redis = delete $args{redis} // die 'need a Transport instance';
+    $redis->clientside_cache_events
+        ->each($self->$curry::weak(method {
+            $log->debugf('Key change detected for %s', $_);
+            $key_change->{$_}->done if $key_change->{$_};
+            return;
+        }));
 }
 
 =head2 apply_prefix
@@ -85,6 +94,15 @@ async method set ($k, $v, $ttl = undef) {
     await $redis->set($self->apply_prefix($k) => $v, $ttl);
 }
 
+async method set_unless_exists ($k, $v, $ttl = undef) {
+    die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
+    await $redis->set(
+        $self->apply_prefix($k) => $v,
+        qw(NX GET), 
+        ($ttl ? (PX => $ttl * 1000.0) : ())
+    );
+}
+
 =head2 getset
 
 Takes the following parameters:
@@ -107,6 +125,12 @@ Returns a L<Future> which will resolve to the original value on completion.
 async method getset ($k, $v) {
     die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
     return await $redis->getset($self->apply_prefix($k) => $v);
+}
+
+async method when_key_changed ($k) {
+    return +(
+        $key_change->{$k} //= $self->loop->new_future->on_ready(sub { delete $key_change->{$k} })
+    )->without_cancel;
 }
 
 =head2 getdel
@@ -471,6 +495,16 @@ Returns a L<Future> which will resolve on completion.
 
 async method orderedset_remove_byscore ($k, $min, $max) {
     await $redis->zremrangebyscore($self->apply_prefix($k), $min => $max);
+}
+
+async method unlink (@keys) {
+    await $redis->unlink(@keys);
+    return $self;
+}
+
+async method del (@keys) {
+    await $redis->del(@keys);
+    return $self;
 }
 
 =head2 orderedset_member_count

@@ -45,7 +45,7 @@ a concrete implementation - instead, see classes such as:
 
 =cut
 
-our @WRITE_METHODS = qw(set getset getdel incr push unshift pop shift hash_set hash_add orderedset_add orderedset_remove_member orderedset_remove_byscore );
+our @WRITE_METHODS = qw(set getset getdel incr push unshift pop shift hash_set hash_add orderedset_add orderedset_remove_member orderedset_remove_byscore del unlink);
 
 =head2 set
 
@@ -255,6 +255,9 @@ Returns a L<Future>.
 =cut
 
 method orderedset_remove_byscore;
+
+method del;
+method unlink;
 
 =head1 METHODS - Read
 
