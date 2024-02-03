@@ -42,12 +42,12 @@ Example:
 
  field $db;
  register SQL => async method ($code, %args) {
-  return sub ($srv, @args) {
+  return $self->$curry::weak(method ($srv, @args) {
    my ($sql, @bind) = $srv->$code(@args);
    return $db->query(
     $sql => @bind
    )->row_hashrefs
-  }
+  })
  };
 
 =cut
