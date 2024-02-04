@@ -56,7 +56,7 @@ async method create_from_source (%args) {
             # The streams will be checked later by "check_for_overflow" to avoid unblocking the source by mistake
             # we will make "check_for_overflow" aware about this stream after the service has started
             await $src->map($self->$curry::weak(method ($event) {
-                $log->tracef('Subscription source %s adding an event: %s',$stream, $event);
+                $log->tracef('Subscription source %s adding an event: %s', $stream, $event);
                 return $redis->xadd(
                     encode_utf8($stream) => '*',
                     data => encode_json_utf8($event),

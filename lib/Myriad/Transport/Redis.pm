@@ -268,7 +268,7 @@ async method read_from_stream (%args) {
     # We are strictly reading for one stream
     my $batch = $delivery->[0];
     if ($batch) {
-        my  ($stream, $data) = $batch->@*;
+        my ($stream, $data) = $batch->@*;
         return map {
             my ($id, $args) = $_->@*;
             +{
