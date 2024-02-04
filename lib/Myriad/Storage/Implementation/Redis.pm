@@ -519,12 +519,12 @@ async method orderedset_remove_byscore ($k, $min, $max) {
 }
 
 async method unlink (@keys) {
-    await $redis->unlink(@keys);
+    await $redis->unlink(map { $self->apply_prefix($_) } @keys);
     return $self;
 }
 
 async method del (@keys) {
-    await $redis->del(@keys);
+    await $redis->del(map { $self->apply_prefix($_) } @keys);
     return $self;
 }
 
