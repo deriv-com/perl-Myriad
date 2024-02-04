@@ -140,8 +140,7 @@ method apply_prefix($key) {
 =cut
 
 method remove_prefix($key) {
-    $key =~ s/^\Q$prefix\E\.//;
-    return $key;
+    return $key =~ s/^\Q$prefix\E\.//r;
 }
 
 =head2 oldest_processed_id
