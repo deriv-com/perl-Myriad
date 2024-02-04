@@ -20,6 +20,7 @@ storage, subscription and RPC behaviour.
 
 =cut
 
+use List::UtilsBy qw(extract_by);
 use Myriad::Config;
 use Myriad::Mutex;
 use Myriad::Service::Remote;
@@ -89,13 +90,31 @@ method config ($key) {
 
 =cut
 
-async method mutex (%args) {
-    $args{key} = delete($args{name}) // $service_name;
+async method mutex (@args) {
+    my ($code) = extract_by { ref($_) eq 'CODE' } @args;
+    my ($name) = @args;
+    $name //= $service_name;
+    $log->infof('Service = %s', "$service");
     my $mutex = Myriad::Mutex->new(
-        %args,
-        redis => $storage->redis,
+        key     => $name,
+        storage => $storage,
+        id      => $service->uuid,
     );
-    return await $mutex->acquire;
+    if($code) {
+        try {
+            await $mutex->acquire;
+            my $f = $code->();
+            await $f if blessed($f) and $f->isa('Future');
+            await $mutex->release;
+        } catch($e) {
+            $log->errorf('Failed while processing mutex-protected code: %s', $e);
+            await $mutex->release;
+            die $e;
+        }
+        return undef;
+    } else {
+        return await $mutex->acquire;
+    }
 }
 
 1;
