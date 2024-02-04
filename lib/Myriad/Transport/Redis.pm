@@ -749,9 +749,10 @@ method clientside_cache_events {
 
 async method watch_keyspace ($pattern) {
     # Net::Async::Redis will handle the connection in this case
-    return $redis->clientside_cache_events->map(sub {
-        return s/^$prefix\.//r;
-    }) if $clientside_cache_size;
+    return $redis->clientside_cache_events->map($self->$curry::weak(method {
+        $log->tracef('Have clientside cache event with [%s] and will remove prefix [%s.]', $_, $prefix);
+        return $self->remove_prefix($_);
+    })) if $clientside_cache_size;
 
     $log->tracef(
         'Falling back to keyspace notifications for %s due to client cache size = %d or unsupported',
