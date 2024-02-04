@@ -78,10 +78,11 @@ async method set : Defer ($k, $v, $ttl = undef) {
 
 async method set_unless_exists : Defer ($k, $v, $ttl = undef) {
     die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
+    my $old = $data{$k};
     return $data{$k} if exists $data{$k};
     $data{$k} = $v;
     $key_change->{$k}->done if $key_change->{$k};
-    return $v;
+    return $old;
 }
 
 method when_key_changed ($k) {
