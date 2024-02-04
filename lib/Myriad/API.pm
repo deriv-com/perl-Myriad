@@ -26,6 +26,7 @@ use Myriad::Service::Remote;
 use Myriad::Service::Storage;
 
 field $myriad;
+field $service;
 field $service_name;
 field $storage;
 field $config;
@@ -36,6 +37,7 @@ field $config;
 
 BUILD (%args) {
     weaken($myriad = delete $args{myriad});
+    weaken($service = delete $args{service});
     $service_name = delete $args{service_name} // die 'need a service name';
     $config = delete $args{config} // {};
     $storage = Myriad::Service::Storage->new(
