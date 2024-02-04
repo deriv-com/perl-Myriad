@@ -30,11 +30,16 @@ field $redis;
 # L<Future>s which complete when there's a change notification for the given key
 field $key_change { +{ } }
 
+field $key_watcher;
+
 BUILD (%args) {
     $redis = delete $args{redis} // die 'need a Transport instance';
-    $redis->clientside_cache_events
+}
+
+method key_watcher {
+    $key_watcher ||= $redis->clientside_cache_events
         ->each($self->$curry::weak(method {
-            $log->debugf('Key change detected for %s', $_);
+            $log->infof('Key change detected for %s', $_);
             $key_change->{$_}->done if $key_change->{$_};
             return;
         }));
