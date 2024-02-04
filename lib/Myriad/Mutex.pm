@@ -56,9 +56,11 @@ async method acquire {
 }
 
 async method release {
-    return unless $acquired;
+    return undef unless $acquired;
     $log->debugf('Release mutex [%s]', $key);
     await $storage->del($key);
+    $acquired = 0;
+    return undef;
 }
 
 method DESTROY {
