@@ -132,7 +132,7 @@ async method start {
 =cut
 
 method apply_prefix($key) {
-    $key =~ /^$prefix\./ ? $key : "$prefix.$key";
+    return "$prefix.$key";
 }
 
 =head2 remove_prefix
