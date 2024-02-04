@@ -44,7 +44,7 @@ async method acquire {
                 3.0,
             )
         ) {
-            $log->debug('Mutex [%s] lost to [%s]', $key, $res);
+            $log->debugf('Mutex [%s] lost to [%s]', $key, $res);
             my $removed = $storage->when_key_changed($key);
             await $removed if await $storage->get($key);
         } else {
