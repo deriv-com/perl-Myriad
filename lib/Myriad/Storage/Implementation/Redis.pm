@@ -55,6 +55,16 @@ method apply_prefix($key) {
     return STORAGE_PREFIX . '.' . $key;
 }
 
+=head2 remove_prefix
+
+Remove the storage prefix to the key when reading from Redis
+
+=cut
+
+method remove_prefix($key) {
+    return $key =~ s{^\Q@{[ STORAGE_PREFIX ]}.}{}r;
+}
+
 =head2 get
 
 Takes the following parameters:
@@ -132,9 +142,15 @@ async method getset ($k, $v) {
     return await $redis->getset($self->apply_prefix($k) => $v);
 }
 
-async method when_key_changed ($k) {
+method when_key_changed ($k) {
+    $self->key_watcher;
+    my $key = $self->remove_prefix($k);
     return +(
-        $key_change->{$k} //= $self->loop->new_future->on_ready(sub { delete $key_change->{$k} })
+        $key_change->{$key} //= $redis->loop->new_future->on_ready(
+            $self->$curry::weak(method {
+                delete $key_change->{$key}
+            })
+        )
     )->without_cancel;
 }
 
