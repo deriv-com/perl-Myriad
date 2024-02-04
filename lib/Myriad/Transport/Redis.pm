@@ -305,19 +305,24 @@ Clear up old entries from a stream when it grows too large.
 =cut
 
 async method cleanup (%args) {
-    my $stream = $self->apply_prefix($args{stream});
-    # Check on our status - can we clean up any old queue items?
-    my ($info) = await $self->stream_info($stream);
+    my $stream = $args{stream} // die 'no stream passed';
+    try {
+        # Check on our status - can we clean up any old queue items?
+        my ($info) = await $self->stream_info($stream);
 
-    # Track how far back our active stream list goes - anything older than this is fair game
-    my $oldest = await $self->oldest_processed_id($stream);
-    $log->tracef('Attempting to clean up [%s] Size: %d | Earliest ID to care about: %s', $stream, $info->{length}, $oldest);
-    if ($oldest and $oldest ne '0-0' and $self->compare_id($oldest, $info->{first_entry}[0]) > 0) {
-        my ($total) = await $redis->xtrim($stream, MINID => ($use_trim_exact ? () : '~'), $oldest);
-        $log->tracef('Trimmed %d items from stream: %s', $total, $stream);
-    }
-    else {
-        $log->tracef('No point in trimming (%s) where: oldest is %s and this compares to %s', $stream, $oldest, $info->{first_entry}[0]);
+        # Track how far back our active stream list goes - anything older than this is fair game
+        my $oldest = await $self->oldest_processed_id($stream);
+        $log->tracef('Attempting to clean up [%s] Size: %d | Earliest ID to care about: %s', $stream, $info->{length}, $oldest);
+        if ($oldest and $oldest ne '0-0' and $self->compare_id($oldest, $info->{first_entry}[0]) > 0) {
+            my ($total) = await $redis->xtrim($stream, MINID => ($use_trim_exact ? () : '~'), $oldest);
+            $log->tracef('Trimmed %d items from stream: %s', $total, $stream);
+        }
+        else {
+            $log->tracef('No point in trimming (%s) where: oldest is %s and this compares to %s', $stream, $oldest, $info->{first_entry}[0]);
+        }
+    } catch ($e) {
+        return if $e =~ /no such key/; # can ignore these
+        die $e;
     }
 }
 
