@@ -644,6 +644,24 @@ async method set ($key, $v, $ttl) {
     await $redis->set($self->apply_prefix($key), $v, defined $ttl ? ('EX', $ttl) : ());
 }
 
+async method unlink (@keys) {
+    await $redis->unlink(map { $self->apply_prefix($_) } @keys);
+}
+
+async method del (@keys) {
+    await $redis->del(map { $self->apply_prefix($_) } @keys);
+}
+
+async method set_unless_exists ($key, $v, $ttl) {
+    $log->infof('Set [%s] to %s with TTL %s', $key, $v, $ttl);
+    await $redis->set(
+        $self->apply_prefix($key),
+        $v,
+        qw(NX GET), 
+        defined $ttl ? ('PX', $ttl * 1000.0) : ()
+    );
+}
+
 async method getset($key, $v) {
     await $redis->getset($self->apply_prefix($key), $v);
 }
