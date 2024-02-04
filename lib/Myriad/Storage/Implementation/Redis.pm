@@ -111,10 +111,9 @@ async method set ($k, $v, $ttl = undef) {
 
 async method set_unless_exists ($k, $v, $ttl = undef) {
     die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
-    await $redis->set(
+    await $redis->set_unless_exists(
         $self->apply_prefix($k) => $v,
-        qw(NX GET), 
-        ($ttl ? (PX => $ttl * 1000.0) : ())
+        $ttl,
     );
 }
 
