@@ -78,6 +78,8 @@ field $clientside_cache_size;
 field $prefix;
 field $ryu;
 
+field $cache_events;
+
 BUILD {
     $redis_pool = [];
     $waiting_redis_pool = [];
@@ -721,6 +723,11 @@ async method zcount ($k, $min, $max) {
 
 async method zrange ($k, @v) {
     await $redis->zrange($self->apply_prefix($k), @v);
+}
+
+method clientside_cache_events {
+    $cache_events ||= $redis->clientside_cache_events
+        ->map($self->curry::weak::remove_prefix)
 }
 
 async method watch_keyspace ($pattern) {
