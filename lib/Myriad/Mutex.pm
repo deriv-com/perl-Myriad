@@ -23,6 +23,7 @@ use Math::Random::Secure;
 field $key;
 field $id;
 field $storage;
+field $ttl;
 
 field $acquired;
 
@@ -30,6 +31,7 @@ BUILD (%args) {
     $id = delete $args{id};
     $key = delete $args{key};
     $storage = delete $args{storage};
+    $ttl = delete $args{ttl} // 60;
     die 'invalid remaining keys in %args - '. join ',', sort keys %args if %args;
 }
 
@@ -41,7 +43,7 @@ async method acquire {
         if(
             my $res = await $storage->set_unless_exists(
                 $key => $id,
-                3.0,
+                $ttl,
             )
         ) {
             $log->debugf('Mutex [%s] lost to [%s]', $key, $res);
