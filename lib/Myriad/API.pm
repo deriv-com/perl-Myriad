@@ -92,10 +92,11 @@ method config ($key) {
 
 async method mutex (@args) {
     my ($code) = extract_by { ref($_) eq 'CODE' } @args;
-    my ($name) = @args;
-    $name //= $service_name;
+    my $name = @args % 2 ? shift(@args) : $service_name;
+    my %args = @args;
     $log->infof('Service = %s', "$service");
     my $mutex = Myriad::Mutex->new(
+        %args,
         key     => $name,
         storage => $storage,
         id      => $service->uuid,
