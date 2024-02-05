@@ -708,7 +708,11 @@ async method setup_metrics () {
     my $port = $config->metrics_port;
 
     try {
-        await $loop->resolver->getaddrinfo(host => $host->as_string, timeout => 10);
+        my $f = $loop->resolver->getaddrinfo(
+            host => $host->as_string,
+            timeout => 10
+        );
+        await $f;
     } catch ($e) {
         $log->errorf('metrics: unable to resolve host %s - %s', $host->as_string, $e);
         $host->set_string('127.0.0.1');
