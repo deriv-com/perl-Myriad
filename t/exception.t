@@ -18,6 +18,9 @@ subtest 'can declare exceptions' => sub {
     is($ex->message, 'this is a message (category=some_category)', 'message is correct');
     is($ex->category, 'some_category', 'category is correct');
     is("$ex", 'this is a message (category=some_category)', 'stringifies too');
+    # Some of the Myriad RPC code expect the does method is present but it doesn't in old version
+    # This would enforce it
+    ok($ex->does('Myriad::Exception'), 'It inherits from Myriad::Exception role');
 };
 
 done_testing;
