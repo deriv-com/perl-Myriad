@@ -5,9 +5,9 @@ use Myriad::Service;
 use JSON::MaybeUTF8 qw(:v1);
 use Ryu::Source;
 
-has $fields;
-has $last_id;
-has $new_user_handler = Ryu::Source->new;
+field $fields;
+field $last_id;
+field $new_user_handler = Ryu::Source->new;
 
 BUILD (%args) {
     $fields = {

@@ -40,14 +40,14 @@ field $plugin;
 
 Example:
 
- has $db;
+ field $db;
  register SQL => async method ($code, %args) {
-  return sub ($srv, @args) {
+  return $self->$curry::weak(method ($srv, @args) {
    my ($sql, @bind) = $srv->$code(@args);
    return $db->query(
     $sql => @bind
    )->row_hashrefs
-  }
+  })
  };
 
 =cut
@@ -83,5 +83,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2023. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2024. Licensed under the same terms as Perl itself.
 

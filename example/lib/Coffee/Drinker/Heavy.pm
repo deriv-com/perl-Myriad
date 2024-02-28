@@ -6,9 +6,9 @@ use JSON::MaybeUTF8 qw(:v1);
 use String::Random;
 use Future::Utils qw( fmap_concat fmap_void );
 
-has $rng = String::Random->new;
-has $latest_user_id;
-has $latest_machine_id;
+field $rng = String::Random->new;
+field $latest_user_id;
+field $latest_machine_id;
 
 async method startup () {
     my $user_storage    = $api->service_by_name('coffee.manager.user')->storage;

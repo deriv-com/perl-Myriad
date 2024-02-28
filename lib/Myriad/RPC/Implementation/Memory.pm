@@ -113,12 +113,19 @@ async method process_stream_messages (%args) {
             $rpc->{sink}->emit($message);
         } catch ($e) {
             if (blessed $e && $e->isa('Myriad::Exception::RPC::BadEncoding')) {
-                $log->warnf('Recived a dead message that we cannot parse, going to drop it.');
+                $log->warnf('Received a dead message that we cannot parse, going to drop it.');
                 $log->tracef("message was: %s", $messages->{$id});
-                await $self->drop($rpc->{stream}, $id);
+                await $self->drop(
+                    $rpc->{stream},
+                    $id
+                );
             } else {
                 my ($service) = $rpc->{stream} =~ /service.(.*).rpc\//;
-                await $self->reply_error($service, $message, $e);
+                await $self->reply_error(
+                    $service,
+                    $message,
+                    $e
+                );
             }
         }
     }
@@ -132,7 +139,7 @@ async method process_stream_messages (%args) {
 
 =head2 create_from_sink
 
-Register and RPC call and save a reference to its L<Ryu::Sink>.
+Register an RPC call and save a reference to its L<Ryu::Sink>.
 
 =cut
 
@@ -142,9 +149,9 @@ method create_from_sink (%args) {
     my $service = $args{service} // die 'need a service';
 
     push $rpc_list->@*, {
-        sink => $sink,
+        sink   => $sink,
         stream => $self->stream_name($service, $method),
-        group => 0
+        group  => 0
     };
 }
 
@@ -155,7 +162,7 @@ Gracefully stop the RPC processing.
 =cut
 
 async method stop () {
-    $should_shutdown->done() unless $should_shutdown->is_ready;
+    $should_shutdown->done unless $should_shutdown->is_ready;
 }
 
 =head2 reply_success
@@ -203,17 +210,19 @@ async method drop ($stream, $id) {
 
 =head2 stream_name
 
-Get the stream name of the service the current template is
+Get the stream name of the service.
+
+Te current template is:
 
 service.$service_name.rpc/$method
 
-it takes:
+Takes the following parameters:
 
 =over 4
 
-=item * L<service> - the name of service
+=item * C<$service> - the name of service
 
-=item * L<method> - the name of the method
+=item * C<$method> - the name of the method
 
 =back
 
@@ -233,5 +242,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2023. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2024. Licensed under the same terms as Perl itself.
 

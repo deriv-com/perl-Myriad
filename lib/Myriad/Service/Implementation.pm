@@ -1,6 +1,6 @@
 package Myriad::Service::Implementation;
 
-use Myriad::Class extends => 'IO::Async::Notifier';
+use Myriad::Class ':v2', extends => 'IO::Async::Notifier';
 
 # VERSION
 # AUTHORITY
@@ -23,8 +23,14 @@ use Myriad::Util::UUID;
 
 use Myriad::Service::Attributes;
 
+use OpenTelemetry::Context;
+use OpenTelemetry::Trace;
+use OpenTelemetry::Constants qw( SPAN_STATUS_ERROR SPAN_STATUS_OK );
+
 # Only defer up to this many seconds between batch iterations
 use constant MAX_EXPONENTIAL_BACKOFF => 2;
+
+use constant USE_OPENTELEMETRY => 0;
 
 sub MODIFY_CODE_ATTRIBUTES {
     my ($class, $code, @attrs) = @_;
@@ -305,22 +311,62 @@ async method load () {
 
             my $code = $spec->{code};
             $spec->{current} = $sink->source->map($self->$curry::weak(async method ($message) {
+                my $span;
+                if(USE_OPENTELEMETRY) {
+                    $span = $tracer->create_span(
+                        parent => OpenTelemetry::Context->current,
+                        name   => $method,
+                        attributes => {
+                            args => $message->args,
+                        },
+                    );
+                }
                 try {
-                    my $response = await $self->$code(
-                        $message->args->%*
-                    )->on_ready(sub {
-                        my $f = shift;
-                        $metrics->report_timer(
-                            rpc_timing => $f->elapsed // 0, {
-                                method => $method,
-                                status => $f->state,
-                                service => $service_name
-                            }
+                    if(USE_OPENTELEMETRY) {
+                        my $context = OpenTelemetry::Trace->context_with_span($span);
+                        dynamically OpenTelemetry::Context->current = $context;
+                        my $response = await $self->$code(
+                            $message->args->%*
+                        )->on_ready(sub {
+                            my $f = shift;
+                            $metrics->report_timer(
+                                rpc_timing => $f->elapsed // 0, {
+                                    method => $method,
+                                    status => $f->state,
+                                    service => $service_name
+                                }
+                            );
+                        });
+                        my $res = await $self->rpc->reply_success($service_name, $message, $response);
+                        $span->set_status(
+                            SPAN_STATUS_OK
                         );
-                    });
-                    await $self->rpc->reply_success($service_name, $message, $response);
+                        return $res;
+                    } else {
+                        my $response = await $self->$code(
+                            $message->args->%*
+                        )->on_ready(sub {
+                            my $f = shift;
+                            $metrics->report_timer(
+                                rpc_timing => $f->elapsed // 0, {
+                                    method => $method,
+                                    status => $f->state,
+                                    service => $service_name
+                                }
+                            );
+                        });
+                        return await $self->rpc->reply_success($service_name, $message, $response);
+                    }
                 } catch ($e) {
-                    $e = Myriad::Exception::InternalError->new(reason => $e) unless (blessed $e and $e->does('Myriad::Exception'));
+                    $e = Myriad::Exception::InternalError->new(
+                        reason => $e
+                    ) unless blessed($e) and $e->does('Myriad::Exception');
+                    if(USE_OPENTELEMETRY) {
+                        $span->record_exception($e);
+                        $span->set_status(
+                            SPAN_STATUS_ERROR, $e
+                        );
+                    }
                     await $self->rpc->reply_error($service_name, $message, $e);
                 }
             }))->resolve->completed;
@@ -353,7 +399,7 @@ async method start {
                 $spec->{sink},
             )->on_fail(sub {
                 $log->fatalf('Emitter for %s failed - %s', $method, shift);
-            })->retain;
+            });
             $spec->{src}->resume;
         }
     }
@@ -388,7 +434,7 @@ async method start {
                     my $sink = $sink_copy or return;
                     my $src = $sink->source;
                     $src->fail($error) unless $src->completed->is_ready;
-                })->retain;
+                });
                 $spec->{sink}->resume;
             } catch ($e) {
                 $log->errorf('Failed while starting up receiver: %s', $e);
@@ -477,5 +523,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2023. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2024. Licensed under the same terms as Perl itself.
 

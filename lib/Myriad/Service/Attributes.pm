@@ -97,7 +97,7 @@ sub rpc {
 Mark this as an async method which should be called repeatedly to generate
 arrayref batches of data.
 
- has $id = 0;
+ field $id = 0;
  async method example_batch : Batch {
   return [ ++$id ];
  }
@@ -158,5 +158,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2023. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2024. Licensed under the same terms as Perl itself.
 

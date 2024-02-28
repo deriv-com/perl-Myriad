@@ -1,4 +1,4 @@
-package Myriad::Registry;
+package Myriad::Registry {
 
 use Myriad::Class extends => 'IO::Async::Notifier';
 
@@ -236,6 +236,9 @@ method make_service_name ($name, $namespace = '') {
     return lc($name) =~ s{::}{.}gr
 }
 
+}
+$Myriad::REGISTRY = Myriad::Registry->new;
+
 1;
 
 =head1 AUTHOR
@@ -246,5 +249,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2023. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2024. Licensed under the same terms as Perl itself.
 

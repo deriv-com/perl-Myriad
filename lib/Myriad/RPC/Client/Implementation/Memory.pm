@@ -102,7 +102,7 @@ async method call_rpc ($service, $method, %args) {
 }
 
 method _add_to_loop ($loop) {
-    $self->start->retain();
+    $self->adopt_future($self->start);
     $self->next::method($loop);
 }
 
@@ -116,5 +116,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2023. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2024. Licensed under the same terms as Perl itself.
 

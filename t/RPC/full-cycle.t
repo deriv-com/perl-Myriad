@@ -4,6 +4,7 @@ use warnings;
 use Test::More;
 use Test::Deep;
 use Test::Myriad;
+use Log::Any::Adapter qw(TAP);
 
 use Future;
 use Future::AsyncAwait;

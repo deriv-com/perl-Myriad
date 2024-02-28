@@ -20,7 +20,7 @@ my $processed = 0;
 
 package Service::RPC {
     use Myriad::Service;
-    has $count;
+    field $count;
 
     async method startup () {
         # Zero our counter on startup

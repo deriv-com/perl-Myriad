@@ -27,7 +27,7 @@ package Test::Receiver {
     }
 }
 
-BEGIN () {
+BEGIN {
     Test::Myriad->add_service(service => 'Test::Emitter');
     Test::Myriad->add_service(service => 'Test::Receiver');
 }

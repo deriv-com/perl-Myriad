@@ -188,9 +188,6 @@ use Log::Any::Adapter;
 use Net::Async::OpenTracing;
 
 our $REGISTRY;
-BEGIN {
-    $REGISTRY = Myriad::Registry->new;
-}
 
 # Enable Future time trace
 $Future::TIMES = 1;
@@ -711,7 +708,11 @@ async method setup_metrics () {
     my $port = $config->metrics_port;
 
     try {
-        await $loop->resolver->getaddrinfo(host => $host->as_string, timeout => 10);
+        my $f = $loop->resolver->getaddrinfo(
+            host => $host->as_string,
+            timeout => 10
+        );
+        await $f;
     } catch ($e) {
         $log->errorf('metrics: unable to resolve host %s - %s', $host->as_string, $e);
         $host->set_string('127.0.0.1');
@@ -762,6 +763,9 @@ Applies signal handlers for TERM and QUIT, then starts the loop.
 async method run () {
     # Initiate the run future.
     $self->run_future();
+
+    # Prepare HTTP server for liveness checks
+    $self->http;
 
     for my $signal (qw(TERM INT QUIT)) {
         $self->loop->attach_signal($signal => $self->$curry::weak(method {
@@ -942,4 +946,4 @@ Deriv Group Services Ltd. C<< DERIV@cpan.org >>
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2023. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2024. Licensed under the same terms as Perl itself.

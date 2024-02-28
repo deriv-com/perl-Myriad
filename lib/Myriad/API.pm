@@ -74,7 +74,8 @@ method service_by_name ($name) {
 
 =head2 config
 
-Returns a L<Ryu::Observable> that hold the value of the configuration.
+Returns a L<Ryu::Observable> that holds the value of the given
+configuration key.
 
 =cut
 
@@ -83,7 +84,9 @@ method config ($key) {
     if($Myriad::Config::SERVICES_CONFIG{$pkg}->{$key}) {
         return $config->{$key};
     }
-    Myriad::Exception::Config::UnregisteredConfig->throw(reason => "$key is not registred by service $service_name");
+    Myriad::Exception::Config::UnregisteredConfig->throw(
+        reason => "$key is not registered by service $service_name"
+    );
 }
 
 =head2 mutex
@@ -130,5 +133,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2023. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2024. Licensed under the same terms as Perl itself.
 

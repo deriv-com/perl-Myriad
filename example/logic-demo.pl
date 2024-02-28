@@ -12,9 +12,9 @@ package Example::Service::Trigger;
 use Myriad::Service;
 use Ryu::Source;
 
-has $count = 0;
-has $value;
-has $call_event_handler = Ryu::Source->new;
+field $count = 0;
+field $value;
+field $call_event_handler = Ryu::Source->new;
 
 async method current : RPC {
     return { value => $value, count => $count};
@@ -49,8 +49,8 @@ package Example::Service::Holder;
 use Myriad::Service;
 use JSON::MaybeUTF8 qw(:v1);
 
-has $sum = 0;
-has $count = 0;
+field $sum = 0;
+field $count = 0;
 
 async method value_updated :Receiver(service => 'example.service.trigger') ($sink, $api, %args) {
     $log->warnf('Receiver Called | %s | %s | %s');

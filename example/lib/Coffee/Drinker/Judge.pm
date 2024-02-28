@@ -5,11 +5,11 @@ use Myriad::Service;
 use Time::Moment;
 use IO::Async::Timer::Periodic;
 
-has $current_users;
-has $current_machines;
-has $current_coffee;
-has $start_time;
-has $timer;
+field $current_users;
+field $current_machines;
+field $current_coffee;
+field $start_time;
+field $timer;
 
 async method startup () {
     $current_users = [];

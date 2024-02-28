@@ -1,6 +1,6 @@
 package Myriad::Subscription::Implementation::Redis;
 
-use Myriad::Class extends => qw(IO::Async::Notifier), does => [
+use Myriad::Class ':v2', extends => qw(IO::Async::Notifier), does => [
     'Myriad::Role::Subscription'
 ];
 
@@ -8,8 +8,13 @@ use Myriad::Class extends => qw(IO::Async::Notifier), does => [
 # AUTHORITY
 
 use Myriad::Util::UUID;
+use OpenTelemetry::Context;
+use OpenTelemetry::Trace;
+use OpenTelemetry::Constants qw( SPAN_STATUS_ERROR SPAN_STATUS_OK );
 
 use constant MAX_ALLOWED_STREAM_LENGTH => 10_000;
+
+use constant USE_OPENTELEMETRY => 0;
 
 field $redis;
 
@@ -46,27 +51,29 @@ async method create_from_source (%args) {
         source => $src,
         max_len => $args{max_len} // MAX_ALLOWED_STREAM_LENGTH
     };
-    $src->unblocked->then($self->$curry::weak(async method {
-        # The streams will be checked later by "check_for_overflow" to avoid unblocking the source by mistake
-        # we will make "check_for_overflow" aware about this stream after the service has started
-        await $src->map($self->$curry::weak(method ($event) {
-            $log->tracef('Subscription source %s adding an event: %s',$stream, $event);
-            return $redis->xadd(
-                encode_utf8($stream) => '*',
-                data => encode_json_utf8($event),
-            );
-        }))->ordered_futures(
-            low => 100,
-            high => 5000,
-        )->completed
-         ->on_fail($self->$curry::weak(method {
-            $log->warnf("Redis XADD command failed for stream %s", $stream);
-            $should_shutdown->fail(
-                "Failed to publish subscription data for $stream - " . shift
-            ) unless $should_shutdown->is_ready;
-        }));
-        return;
-    }))->retain;
+    $self->adopt_future(
+        $src->unblocked->then($self->$curry::weak(async method {
+            # The streams will be checked later by "check_for_overflow" to avoid unblocking the source by mistake
+            # we will make "check_for_overflow" aware about this stream after the service has started
+            await $src->map($self->$curry::weak(method ($event) {
+                $log->tracef('Subscription source %s adding an event: %s', $stream, $event);
+                return $redis->xadd(
+                    encode_utf8($stream) => '*',
+                    data => encode_json_utf8($event),
+                );
+            }))->ordered_futures(
+                low => 100,
+                high => 5000,
+            )->completed
+             ->on_fail($self->$curry::weak(method {
+                $log->warnf("Redis XADD command failed for stream %s", $stream);
+                $should_shutdown->fail(
+                    "Failed to publish subscription data for $stream - " . shift
+                ) unless $should_shutdown->is_ready;
+            }));
+            return;
+        }))
+    );
     return;
 }
 
@@ -137,33 +144,69 @@ async method receive_items {
             );
 
             for my $event (@events) {
+                my $span;
+                if(USE_OPENTELEMETRY) {
+                    $span = $tracer->create_span(
+                        parent => OpenTelemetry::Context->current,
+                        name   => $stream,
+                        attributes => {
+                            args => $event->{data}[1]
+                        },
+                    );
+                }
                 try {
-                    my $event_data = decode_json_utf8($event->{data}->[1]);
-                    $log->tracef('Passing event: %s | from stream: %s to subscription sink: %s', $event_data, $stream, $sink->label);
-                    $sink->source->emit({
-                        data => $event_data
-                    });
+                    if(USE_OPENTELEMETRY) {
+                        my $context = OpenTelemetry::Trace->context_with_span($span);
+                        dynamically OpenTelemetry::Context->current = $context;
+                        my $event_data = decode_json_utf8($event->{data}->[1]);
+                        $log->tracef('Passing event: %s | from stream: %s to subscription sink: %s', $event_data, $stream, $sink->label);
+                        $sink->source->emit({
+                            data => $event_data
+                        });
+                        await $redis->ack(
+                            $stream,
+                            $group_name,
+                            $event->{id}
+                        );
+                        $span->set_status(
+                            SPAN_STATUS_OK
+                        );
+                    } else {
+                        my $event_data = decode_json_utf8($event->{data}->[1]);
+                        $log->tracef('Passing event: %s | from stream: %s to subscription sink: %s', $event_data, $stream, $sink->label);
+                        $sink->source->emit({
+                            data => $event_data
+                        });
+                        await $redis->ack(
+                            $stream,
+                            $group_name,
+                            $event->{id}
+                        );
+                    }
                 } catch($e) {
-                    $log->tracef(
+                    $e = Myriad::Exception::InternalError->new(
+                        reason => $e
+                    ) unless blessed($e) and $e->does('Myriad::Exception');
+                    $log->errorf(
                         'An error happened while decoding event data for stream %s message: %s, error: %s',
                         $stream,
                         $event->{data},
                         $e
                     );
+                    if(USE_OPENTELEMETRY) {
+                        $span->record_exception($e);
+                        $span->set_status(
+                            SPAN_STATUS_ERROR, $e
+                        );
+                    }
                 }
-
-                await $redis->ack(
-                    $stream,
-                    $group_name,
-                    $event->{id}
-                );
             }
         }
     }), foreach => [@receivers], concurrent => scalar @receivers);
 }
 
 async method check_for_overflow () {
-    $log->tracef('Start checking overflow for (%d) subscription sources', scalar(@emitters));
+    $log->tracef('Start checking overflow for (%d) subscription sources', 0 + @emitters);
     while (1) {
         if(@emitters) {
             my $emitter = shift @emitters;
@@ -173,11 +216,11 @@ async method check_for_overflow () {
                 if ($len >= $emitter->{max_len}) {
                     unless ($emitter->{source}->is_paused) {
                         $emitter->{source}->pause;
-                        $log->tracef('Paused subscription source on %s, length is %s, max allowed %s', $emitter->{stream}, $len, $emitter->{max_len});
+                        $log->infof('Paused subscription source on %s, length is %s, max allowed %s', $emitter->{stream}, $len, $emitter->{max_len});
                     }
                     await $redis->cleanup(
                         stream => $emitter->{stream},
-                        limit => $emitter->{max_len}
+                        limit  => $emitter->{max_len}
                     );
                 } else {
                     if($emitter->{source}->is_paused) {

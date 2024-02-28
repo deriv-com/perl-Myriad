@@ -1,6 +1,8 @@
 package Myriad::Storage::Implementation::Memory;
 
-use Myriad::Class extends => 'IO::Async::Notifier', does => [ 'Myriad::Role::Storage', 'Myriad::Util::Defer'];
+use Myriad::Class extends => 'IO::Async::Notifier', does => [
+    'Myriad::Role::Storage',
+];
 
 # VERSION
 # AUTHORITY
@@ -22,13 +24,12 @@ correctly.
 
 =cut
 
+use Myriad::Util::Defer;
+
 # Common datastore
 field %data;
 
 field $key_change { +{ } }
-
-# FIXME Need to update :Defer for Object::Pad
-sub MODIFY_CODE_ATTRIBUTES { }
 
 =head2 get
 
@@ -557,5 +558,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2023. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2024. Licensed under the same terms as Perl itself.
 

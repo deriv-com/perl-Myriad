@@ -20,23 +20,28 @@ and defaults to no delay.
 
 =cut
 
-use Attribute::Handlers;
-use Class::Method::Modifiers;
-
 use constant RANDOM_DELAY => $ENV{MYRIAD_RANDOM_DELAY} || 0;
 
 use Sub::Util;
+
 sub MODIFY_CODE_ATTRIBUTES ($class, $code, @attrs) {
     my $name = Sub::Util::subname($code);
     my ($method_name) = $name =~ m{::([^:]+)$};
+    my $defer = __PACKAGE__->can('defer_method');
     for my $attr (@attrs) {
         if($attr eq 'Defer') {
-            $class->defer_method($method_name, $name);
+            $defer->($class, $method_name, $name);
         } else {
             die 'unknown attribute ' . $attr;
         }
     }
     return;
+}
+
+sub import ($class, @) {
+    my $pkg = caller;
+    no strict;
+    *{$pkg . '::MODIFY_CODE_ATTRIBUTES'} = $class->can('MODIFY_CODE_ATTRIBUTES');
 }
 
 # Helper method that allows us to return a not-quite-immediate
@@ -76,5 +81,5 @@ See L<Myriad/CONTRIBUTORS> for full details.
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2023. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2024. Licensed under the same terms as Perl itself.
 

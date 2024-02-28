@@ -72,7 +72,7 @@ field $redis_pool;
 field $waiting_redis_pool;
 field $pending_redis_count = 0;
 field $wait_time;
-field $batch_count = 50;
+field $batch_count = 500;
 field $max_pool_count;
 field $clientside_cache_size;
 field $prefix;
@@ -169,7 +169,11 @@ async method oldest_processed_id($stream) {
 
         $log->tracef('Pending check where oldest was %s and last delivered %s', $oldest, $info{last_delivered_id});
         $oldest //= $info{last_delivered_id};
-        $oldest = $info{last_delivered_id} if $info{last_delivered_id} and $self->compare_id($oldest, $info{last_delivered_id}) > 0;
+        $oldest = $info{last_delivered_id}
+            if $info{last_delivered_id}
+            and $self->compare_id(
+                $oldest, $info{last_delivered_id}
+            ) > 0;
 
         # Pending list might have items older than "last_delivered_id"
         # If the get deleted we can't claim them back and they are lost forever.
@@ -241,19 +245,30 @@ async method read_from_stream (%args) {
     my $group = $args{group};
     my $client = $args{client};
 
+    my $claimed = await $self->xautoclaim(
+        $stream,
+        $group,
+        $client,
+        30_000,
+        '0-0',
+        COUNT => $self->batch_count,
+        'JUSTID',
+    );
+    my $claim_required = $claimed->[1]->@* ? 1 : 0;
+
     my ($delivery) = await $self->xreadgroup(
         BLOCK   => $self->wait_time,
         GROUP   => $group, $client,
         COUNT   => $self->batch_count,
-        STREAMS => ($stream, '>'),
+        STREAMS => ($stream, ($claim_required ? '0' : '>')),
     );
 
-    $log->tracef('Read group: %s as `%s` from [%s]: %s', $group, $client, $stream, $delivery);
+    $log->tracef('Read group: %s as `%s` from %s in [%s]: %s', $group, $client, ($claim_required ? 'old pending items' : 'latest'), $stream, $delivery);
 
     # We are strictly reading for one stream
     my $batch = $delivery->[0];
     if ($batch) {
-        my  ($stream, $data) = $batch->@*;
+        my ($stream, $data) = $batch->@*;
         return map {
             my ($id, $args) = $_->@*;
             +{
@@ -290,20 +305,24 @@ Clear up old entries from a stream when it grows too large.
 =cut
 
 async method cleanup (%args) {
-    my $stream = $self->apply_prefix($args{stream});
-    # Check on our status - can we clean up any old queue items?
-    my ($info) = await $self->stream_info($stream);
-    return unless $info->{length} > $args{limit};
+    my $stream = $args{stream} // die 'no stream passed';
+    try {
+        # Check on our status - can we clean up any old queue items?
+        my ($info) = await $self->stream_info($stream);
 
-    # Track how far back our active stream list goes - anything older than this is fair game
-    my $oldest = await $self->oldest_processed_id($stream);
-    $log->tracef('Attempting to clean up [%s] Size: %d | Earliest ID to care about: %s', $stream, $info->{length}, $oldest);
-    if ($oldest and $oldest ne '0-0' and $self->compare_id($oldest, $info->{first_entry}[0]) > 0) {
-        my ($total) = await $redis->xtrim($stream, MINID => ($use_trim_exact ? () : '~'), $oldest);
-        $log->tracef('Trimmed %d items from stream: %s', $total, $stream);
-    }
-    else {
-        $log->tracef('No point in trimming (%s) where: oldest is %s and this compares to %s', $stream, $oldest, $info->{first_entry}[0]);
+        # Track how far back our active stream list goes - anything older than this is fair game
+        my $oldest = await $self->oldest_processed_id($stream);
+        $log->tracef('Attempting to clean up [%s] Size: %d | Earliest ID to care about: %s', $stream, $info->{length}, $oldest);
+        if ($oldest and $oldest ne '0-0' and $self->compare_id($oldest, $info->{first_entry}[0]) > 0) {
+            my ($total) = await $redis->xtrim($stream, MINID => ($use_trim_exact ? () : '~'), $oldest);
+            $log->tracef('Trimmed %d items from stream: %s', $total, $stream);
+        }
+        else {
+            $log->tracef('No point in trimming (%s) where: oldest is %s and this compares to %s', $stream, $oldest, $info->{first_entry}[0]);
+        }
+    } catch ($e) {
+        return if $e =~ /no such key/; # can ignore these
+        die $e;
     }
 }
 
@@ -347,7 +366,13 @@ async method pending (%args) {
             async method ($item) {
                 my ($id, $consumer, $age, $delivery_count) = $item->@*;
                 $log->tracef('Claiming pending message %s from %s, age %s, %d prior deliveries', $id, $consumer, $age, $delivery_count);
-                my $claim = await $redis->xclaim($stream, $group, $client, 10, $id);
+                my $claim = await $redis->xclaim(
+                    $stream,
+                    $group,
+                    $client,
+                    10,
+                    $id
+                );
                 $log->tracef('Claim is %s', $claim);
                 my $args = $claim->[0]->[1];
 
@@ -356,14 +381,13 @@ async method pending (%args) {
             foreach => $pending,
             concurrent => scalar @$pending
         );
+    } catch ($e) {
+        $log->warnf('Could not read pending messages on stream: %s | error: %s', $stream, $e);
+    }
+    $self->return_instance_to_pool($instance) if $instance;
+    undef $instance;
 
-        } catch ($e) {
-            $log->warnf('Could not read pending messages on stream: %s | error: %s', $stream, $e);
-        }
-        $self->return_instance_to_pool($instance) if $instance;
-        undef $instance;
-
-        return @res;
+    return @res;
 }
 
 =head2 create_stream
@@ -401,13 +425,13 @@ It'll also send the MKSTREAM option to create the stream if it doesn't exist.
 =item * C<group> - The group name.
 
 =item * C<start_from> - The id of the message that is going to be considered the start of the stream for this group's point of view
-by default it's C<$> which means the last message.
+by default it's C<0> which means the first available message.
 
 =back
 
 =cut
 
-async method create_group ($stream, $group, $start_from = '$', $make_stream = 0) {
+async method create_group ($stream, $group, $start_from = '0', $make_stream = 0) {
     try {
         my @args = ('CREATE', $self->apply_prefix($stream), $group, $start_from);
         push @args, 'MKSTREAM' if $make_stream;
@@ -576,6 +600,14 @@ async method redis () {
 async method xreadgroup (@args) {
     my $instance = await $self->borrow_instance_from_pool;
     my ($batch) =  await $instance->xreadgroup(@args)->on_ready(sub {
+        $self->return_instance_to_pool($instance);
+    });
+    return ($batch);
+}
+
+async method xautoclaim (@args) {
+    my $instance = await $self->borrow_instance_from_pool;
+    my ($batch) =  await $instance->xautoclaim(@args)->on_ready(sub {
         $self->return_instance_to_pool($instance);
     });
     return ($batch);
@@ -783,5 +815,5 @@ Deriv Group Services Ltd. C<< DERIV@cpan.org >>
 
 =head1 LICENSE
 
-Copyright Deriv Group Services Ltd 2020-2023. Licensed under the same terms as Perl itself.
+Copyright Deriv Group Services Ltd 2020-2024. Licensed under the same terms as Perl itself.
 
