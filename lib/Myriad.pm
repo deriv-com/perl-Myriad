@@ -177,6 +177,7 @@ use Myriad::Transport::HTTP;
 use Myriad::Transport::Memory;
 use Myriad::Transport::Redis;
 
+use Devel::MAT::Dumper;
 use Future::IO;
 use Future::IO::Impl::IOAsync;
 
@@ -302,6 +303,7 @@ async method configure_from_argv (@args) {
     $self->setup_logging;
     $self->setup_tracing;
     await $self->setup_metrics;
+    $self->storage;
 
     $commands = Myriad::Commands->new(
         myriad => $self
@@ -323,7 +325,7 @@ async method configure_from_argv (@args) {
         }
     }
 
-    $self->on_start(async sub {
+    $self->on_start(async method {
         await $config->listen_for_updates;
     });
 }
@@ -775,14 +777,23 @@ async method run () {
         }))
     }
 
+    for my $signal (qw(HUP)) {
+        $self->loop->attach_signal($signal => $self->$curry::weak(method {
+            $log->infof("%s received, memory dump", $signal);
+            Devel::MAT::Dumper::dump('myriad.pmat');
+        }))
+    }
+
     try {
-        # Run the startup tasks, order is imporatant
+        # Run the startup tasks, order is important
         for my $task ($startup_tasks->@*) {
+            $log->tracef('Startup task %s', $task);
             await $self->$task;
         }
     } catch ($e) {
         die "Startup tasks failed - $e";
     }
+    $log->tracef('Startup tasks done');
 
     # Set shutdown future before starting commands.
     $self->shutdown_future();

@@ -393,7 +393,7 @@ L<Myriad::Registry> assigned name
 
 =cut
 
-method service_name($name_from_registry) {
+method service_name ($name_from_registry) {
     $config->{services}->{$name_from_registry}->{config}->{name};
 }
 

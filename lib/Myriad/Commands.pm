@@ -62,8 +62,10 @@ async method service (@args) {
 
     # Load modules to compile
     my @services_modules;
+    $log->tracef('Attempt to load identified modules %s', join ',', @modules);
     for my $module (@modules) {
         try {
+            $log->tracef('Attempting to load module [%s]', $module);
             require_module($module);
             next unless $module->isa('Myriad::Service');
             die 'loaded ' . $module . ' but it cannot ->new?' unless $module->can('new');
@@ -76,8 +78,8 @@ async method service (@args) {
 
     # Load services into Myriad but don't start them yet
 
-    await fmap0(async sub {
-        my ($module) = @_;
+    $log->tracef('Attempt to add services for %s', join ',', @services_modules);
+    await fmap0(async sub ($module) {
         try {
             # No need to pass namespaces here
             my $default_service_name = $myriad->registry->make_service_name($module,'');
@@ -93,6 +95,7 @@ async method service (@args) {
         }
     }, foreach => \@services_modules, concurrent => 4);
 
+    $log->tracef('Setting command with services %s', join ',', map { $_->service_name } values $myriad->services->%*);
     $cmd = {
         code => async sub {
             try {
@@ -103,7 +106,6 @@ async method service (@args) {
                         return $service->service_name . ' : ' . shift;
                     });
                 } foreach => [values $myriad->services->%*], concurrent => 4;
-
             } catch($e) {
                 $log->warnf('Failed to start services, error: %s', $e);
                 await $myriad->shutdown;
