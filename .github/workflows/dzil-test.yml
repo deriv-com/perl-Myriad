@@ -1,0 +1,38 @@
+name: Docker Compose Test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    # SETUP
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        ssh-key: ${{ secrets.DERIV_PAYOPS_IT_SSH_KEY }}
+    # INITIALIZATION
+    - name: Prepare environment
+      run: |
+        sudo cpan -T YAML::XS Test::More;
+    - name: Create .env file
+      run: |
+        cat > .env <<EOF
+        ENV=development
+        types=support,aggregation,control,integration
+        system=doughflow,postgresql,datadog,perfectmoney,slack
+        EOF
+    - name: Generate docker-compose.yml
+      run: make generate
+    - name: Pull the images
+      run: docker compose pull --ignore-buildable
+    - name: Run tests
+      run: perl t/test_docker-compose.pl
