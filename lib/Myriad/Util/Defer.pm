@@ -49,9 +49,9 @@ sub defer_method ($package, $name, $fqdn) {
         # either zero (default behaviour) or if we have a random
         # delay assigned, use that to drive a uniform rand() call
         $log->tracef('call to %s::%s, deferring start', $package, $name);
-        await $self->loop->delay_future(
+        await RANDOM_DELAY ? $self->loop->delay_future(
             after => rand(RANDOM_DELAY)
-        );
+        ) : $self->loop->later;
 
         $log->tracef('deferred call to %s::%s runs now', $package, $name);
 

@@ -78,6 +78,8 @@ field $clientside_cache_size;
 field $prefix;
 field $ryu;
 
+field $cache_events;
+
 BUILD {
     $redis_pool = [];
     $waiting_redis_pool = [];
@@ -130,7 +132,7 @@ async method start {
 =cut
 
 method apply_prefix($key) {
-    $key =~ /^$prefix\./ ? $key : "$prefix.$key";
+    return "$prefix.$key";
 }
 
 =head2 remove_prefix
@@ -138,8 +140,7 @@ method apply_prefix($key) {
 =cut
 
 method remove_prefix($key) {
-    $key =~ s/^\Q$prefix\E\.//;
-    return $key;
+    return $key =~ s/^\Q$prefix\E\.//r;
 }
 
 =head2 oldest_processed_id
@@ -643,6 +644,24 @@ async method set ($key, $v, $ttl) {
     await $redis->set($self->apply_prefix($key), $v, defined $ttl ? ('EX', $ttl) : ());
 }
 
+async method unlink (@keys) {
+    await $redis->unlink(map { $self->apply_prefix($_) } @keys);
+}
+
+async method del (@keys) {
+    await $redis->del(map { $self->apply_prefix($_) } @keys);
+}
+
+async method set_unless_exists ($key, $v, $ttl) {
+    $log->infof('Set [%s] to %s with TTL %s', $key, $v, $ttl);
+    await $redis->set(
+        $self->apply_prefix($key),
+        $v,
+        qw(NX GET), 
+        defined $ttl ? ('PX', $ttl * 1000.0) : ()
+    );
+}
+
 async method getset($key, $v) {
     await $redis->getset($self->apply_prefix($key), $v);
 }
@@ -723,11 +742,17 @@ async method zrange ($k, @v) {
     await $redis->zrange($self->apply_prefix($k), @v);
 }
 
+method clientside_cache_events {
+    $cache_events ||= $redis->clientside_cache_events
+        ->map($self->curry::weak::remove_prefix)
+}
+
 async method watch_keyspace ($pattern) {
     # Net::Async::Redis will handle the connection in this case
-    return $redis->clientside_cache_events->map(sub {
-        return s/^$prefix\.//r;
-    }) if $clientside_cache_size;
+    return $redis->clientside_cache_events->map($self->$curry::weak(method {
+        $log->tracef('Have clientside cache event with [%s] and will remove prefix [%s.]', $_, $prefix);
+        return $self->remove_prefix($_);
+    })) if $clientside_cache_size;
 
     $log->tracef(
         'Falling back to keyspace notifications for %s due to client cache size = %d or unsupported',

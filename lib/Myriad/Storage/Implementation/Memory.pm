@@ -25,6 +25,8 @@ correctly.
 # Common datastore
 field %data;
 
+field $key_change { +{ } }
+
 # FIXME Need to update :Defer for Object::Pad
 sub MODIFY_CODE_ATTRIBUTES { }
 
@@ -69,7 +71,26 @@ Returns a L<Future> which will resolve on completion.
 
 async method set : Defer ($k, $v, $ttl = undef) {
     die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
-    return $data{$k} = $v;
+    $data{$k} = $v;
+    $key_change->{$k}->done if $key_change->{$k};
+    return $v;
+}
+
+async method set_unless_exists : Defer ($k, $v, $ttl = undef) {
+    die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
+    my $old = $data{$k};
+    return $data{$k} if exists $data{$k};
+    $data{$k} = $v;
+    $key_change->{$k}->done if $key_change->{$k};
+    return $old;
+}
+
+method when_key_changed ($k) {
+    return +(
+        $key_change->{$k} //= $self->loop->new_future->on_ready($self->$curry::weak(method {
+            delete $key_change->{$k}
+        }))
+    )->without_cancel;
 }
 
 =head2 getset
@@ -464,7 +485,18 @@ async method orderedset_remove_byscore : Defer ($k, $min, $max) {
     $data{$k} = { map { ($_ >= $min and $_ <= $max ) ? () : ($_ => $data{$k}->{$_})  } keys $data{$k}->%* };
     my @keys_after = keys $data{$k}->%*;
     return 0 + @keys_before - @keys_after;
+}
 
+async method unlink : Defer (@keys) {
+    delete @data{@keys};
+    $key_change->{$_}->done for grep { $key_change->{$_} } @keys;
+    return $self;
+}
+
+async method del : Defer (@keys) {
+    delete @data{@keys};
+    $key_change->{$_}->done for grep { $key_change->{$_} } @keys;
+    return $self;
 }
 
 =head2 orderedset_member_count

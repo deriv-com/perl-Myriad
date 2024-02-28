@@ -27,8 +27,22 @@ use constant STORAGE_PREFIX => 'storage';
 # L<Myriad::Transport::Redis> instance to manage the connections.
 field $redis;
 
+# L<Future>s which complete when there's a change notification for the given key
+field $key_change { +{ } }
+
+field $key_watcher;
+
 BUILD (%args) {
     $redis = delete $args{redis} // die 'need a Transport instance';
+}
+
+method key_watcher {
+    $key_watcher ||= $redis->clientside_cache_events
+        ->each($self->$curry::weak(method {
+            $log->infof('Key change detected for %s', $_);
+            $key_change->{$_}->done if $key_change->{$_};
+            return;
+        }));
 }
 
 =head2 apply_prefix
@@ -39,6 +53,16 @@ Add the storage prefix to the key before sending it to Redis
 
 method apply_prefix($key) {
     return STORAGE_PREFIX . '.' . $key;
+}
+
+=head2 remove_prefix
+
+Remove the storage prefix to the key when reading from Redis
+
+=cut
+
+method remove_prefix($key) {
+    return $key =~ s{^\Q@{[ STORAGE_PREFIX ]}.}{}r;
 }
 
 =head2 get
@@ -85,6 +109,14 @@ async method set ($k, $v, $ttl = undef) {
     await $redis->set($self->apply_prefix($k) => $v, $ttl);
 }
 
+async method set_unless_exists ($k, $v, $ttl = undef) {
+    die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
+    await $redis->set_unless_exists(
+        $self->apply_prefix($k) => $v,
+        $ttl,
+    );
+}
+
 =head2 getset
 
 Takes the following parameters:
@@ -107,6 +139,18 @@ Returns a L<Future> which will resolve to the original value on completion.
 async method getset ($k, $v) {
     die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
     return await $redis->getset($self->apply_prefix($k) => $v);
+}
+
+method when_key_changed ($k) {
+    $self->key_watcher;
+    my $key = $self->remove_prefix($k);
+    return +(
+        $key_change->{$key} //= $redis->loop->new_future->on_ready(
+            $self->$curry::weak(method {
+                delete $key_change->{$key}
+            })
+        )
+    )->without_cancel;
 }
 
 =head2 getdel
@@ -471,6 +515,16 @@ Returns a L<Future> which will resolve on completion.
 
 async method orderedset_remove_byscore ($k, $min, $max) {
     await $redis->zremrangebyscore($self->apply_prefix($k), $min => $max);
+}
+
+async method unlink (@keys) {
+    await $redis->unlink(map { $self->apply_prefix($_) } @keys);
+    return $self;
+}
+
+async method del (@keys) {
+    await $redis->del(map { $self->apply_prefix($_) } @keys);
+    return $self;
 }
 
 =head2 orderedset_member_count

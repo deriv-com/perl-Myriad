@@ -20,11 +20,14 @@ storage, subscription and RPC behaviour.
 
 =cut
 
+use List::UtilsBy qw(extract_by);
 use Myriad::Config;
+use Myriad::Mutex;
 use Myriad::Service::Remote;
 use Myriad::Service::Storage;
 
 field $myriad;
+field $service;
 field $service_name;
 field $storage;
 field $config;
@@ -35,6 +38,7 @@ field $config;
 
 BUILD (%args) {
     weaken($myriad = delete $args{myriad});
+    weaken($service = delete $args{service});
     $service_name = delete $args{service_name} // die 'need a service name';
     $config = delete $args{config} // {};
     $storage = Myriad::Service::Storage->new(
@@ -80,6 +84,38 @@ method config ($key) {
         return $config->{$key};
     }
     Myriad::Exception::Config::UnregisteredConfig->throw(reason => "$key is not registred by service $service_name");
+}
+
+=head2 mutex
+
+=cut
+
+async method mutex (@args) {
+    my ($code) = extract_by { ref($_) eq 'CODE' } @args;
+    my $name = @args % 2 ? shift(@args) : $service_name;
+    my %args = @args;
+    $log->infof('Service = %s', "$service");
+    my $mutex = Myriad::Mutex->new(
+        %args,
+        key     => $name,
+        storage => $storage,
+        id      => $service->uuid,
+    );
+    if($code) {
+        try {
+            await $mutex->acquire;
+            my $f = $code->();
+            await $f if blessed($f) and $f->isa('Future');
+            await $mutex->release;
+        } catch($e) {
+            $log->errorf('Failed while processing mutex-protected code: %s', $e);
+            await $mutex->release;
+            die $e;
+        }
+        return undef;
+    } else {
+        return await $mutex->acquire;
+    }
 }
 
 1;

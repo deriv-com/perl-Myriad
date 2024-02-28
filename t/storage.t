@@ -9,6 +9,9 @@ use Future;
 use Future::AsyncAwait;
 use Test::More;
 use Test::MemoryGrowth;
+use Log::Any qw($log);
+use Log::Any::Adapter qw(TAP);
+
 use Myriad::Storage::Implementation::Memory;
 
 use IO::Async::Test;
@@ -28,13 +31,12 @@ if ($ENV{MYRIAD_TRANSPORT} and $ENV{MYRIAD_TRANSPORT} ne 'memory') {
     );
     $redis->start()->get();
     push @classes, ['Myriad::Storage::Implementation::Redis', [redis => $redis]];
-
 }
 
 for my $class (@classes) {
     subtest $class->[0] => sub {
         my $storage = new_ok($class->[0], $class->[1]);
-        # Implementation::Memory is a Net::Async::Notifier
+        # Implementation::Memory is a IO::Async::Notifier
         # while Implementation::Redis is not
         # worth checking an unifyig that. but for now
         $loop->add($storage) if $class->[0] eq 'Myriad::Storage::Implementation::Memory';
@@ -62,6 +64,19 @@ for my $class (@classes) {
             is(await $storage->orderedset_remove_byscore('sortedset_key', 0, 2), 2, 'able to remove byscore for a sortedset');
             is(await $storage->orderedset_member_count('sortedset_key', '-inf', '+inf'), 1, 'correct unbounded scored orderedset count');
             is_deeply(await $storage->orderedset_members('sortedset_key', '-inf', '+inf'), ['four'], 'able to retrieve members without scores');
+        })->()->get;
+
+        (async sub {
+            my $f = $storage->when_key_changed('mutex_key');
+            isa_ok($f, 'Future');
+            is($f->state, 'pending', 'start with a valid pending Future');
+            await $storage->get(mutex_key => );
+            is($f->state, 'pending', 'still pending after a get');
+            await $storage->set(mutex_key => 123);
+            is($f->state, 'done', 'no longer pending after set');
+            await $storage->set(missing_key => 123);
+            await $storage->set_unless_exists(missing_key => 456);
+            is(await $storage->get(missing_key => ), 123, '->set_unless_exists does not override existing key');
         })->()->get;
 
         done_testing;

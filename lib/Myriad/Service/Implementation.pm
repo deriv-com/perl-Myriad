@@ -19,6 +19,7 @@ Myriad::Service::Implementation - microservice coördination
 
 use Myriad::Storage::Implementation::Redis;
 use Myriad::Subscription;
+use Myriad::Util::UUID;
 
 use Myriad::Service::Attributes;
 
@@ -39,6 +40,8 @@ field $storage;
 field $myriad;
 field $service_name;
 field %active_batch;
+
+field $uuid : reader { Myriad::Util::UUID::uuid() }
 
 =head1 ATTRIBUTES
 
