@@ -54,28 +54,6 @@ Returns the exception message as a string.
 
 sub as_string { shift->message }
 
-=head2 does
-
-Check the role ownership of the objects, added here to maintain compatibility with Object::Pad exports.
-This is needed as some part of Myriad code assume that the objects created by Myriad exceptions do exports does,
-which in turn to be absent.
-
-=cut
-
-sub does {
-    use Object::Pad::MOP::Class qw(:experimental);
-    my ($self, $role) = @_;
-
-    return 0 unless $role and ref $self;
-
-    my $klass = ref $self;
-    my $klass_ptr = Object::Pad::MOP::Class->try_for_class($klass);
-    return 0 unless defined $klass_ptr;
-
-    my %roles = map {($_->name) => 1} $klass_ptr->all_roles;
-    return $roles{$role} // 0;
-}
-
 1;
 
 =head1 AUTHOR
