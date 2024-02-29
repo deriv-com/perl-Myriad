@@ -18,6 +18,7 @@ subtest 'can declare exceptions' => sub {
     is($ex->message, 'this is a message (category=some_category)', 'message is correct');
     is($ex->category, 'some_category', 'category is correct');
     is("$ex", 'this is a message (category=some_category)', 'stringifies too');
+    ok($ex->DOES('Myriad::Exception'), 'It inherits from Myriad::Exception role');
 };
 
 done_testing;

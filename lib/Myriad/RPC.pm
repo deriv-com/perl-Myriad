@@ -81,6 +81,16 @@ declare_exception UnknownTransport => (
     message => 'Unknown transport'
 );
 
+=head2 RemoteException
+
+An exception has been thrown from remote service
+
+=cut
+
+declare_exception RemoteException => (
+    message => 'The RPC method failed at server side'
+);
+
 =head1 METHODS
 
 =cut
