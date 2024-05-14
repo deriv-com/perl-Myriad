@@ -128,6 +128,7 @@ async method receive_items {
         my $sink       = $rcv->{sink};
         my $group_name = $rcv->{group_name};
 
+        my @pending;
         while (1) {
             try {
                 await $self->create_group($rcv);
@@ -142,6 +143,10 @@ async method receive_items {
                 group  => $group_name,
                 client => $client_id
             );
+            # Let any pending ACK requests finish off before we start processing new ones - we do this check
+            # here after the xreadgroup, rather than after the event loop, because that gives us a better
+            # chance that all the ACKs have already been received, thus minimising wait time
+            await Future->wait_all(splice @pending) if @pending;
 
             for my $event (@events) {
                 my $span;
@@ -177,7 +182,7 @@ async method receive_items {
                         $sink->source->emit({
                             data => $event_data
                         });
-                        await $redis->ack(
+                        push @pending, $redis->ack(
                             $stream,
                             $group_name,
                             $event->{id}
