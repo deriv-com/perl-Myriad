@@ -93,6 +93,11 @@ async method create_group ($rpc) {
             '0',
             1
         );
+        await $redis->hset(
+            'rpc.group',
+            $rpc->{stream},
+            $self->group_name,
+        );
         $rpc->{group} = 1;
     }
 }
