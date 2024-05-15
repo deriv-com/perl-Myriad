@@ -314,12 +314,33 @@ async method cleanup (%args) {
         my $oldest = await $self->oldest_processed_id($stream);
         $log->tracef('Attempting to clean up [%s] Size: %d | Earliest ID to care about: %s', $stream, $info->{length}, $oldest);
         if ($oldest and $oldest ne '0-0' and $self->compare_id($oldest, $info->{first_entry}[0]) > 0) {
-            my ($total) = await $redis->xtrim(
-                $self->apply_prefix($stream),
-                MINID => ($use_trim_exact ? () : '~'),
-                $oldest
-            );
-            $log->tracef('Trimmed %d items from stream: %s', $total, $stream);
+            my $total = 0;
+            my $count;
+            do {
+                ($count) = await $redis->xtrim(
+                    $self->apply_prefix($stream),
+                    MINID => ($use_trim_exact ? '=' : '~'),
+                    $oldest,
+                );
+                $total += $count if $count;
+                $log->tracef('Trimmed %d items from stream: %s', $count, $stream) if $count;
+            } while $count;
+            $log->tracef('Trimmed %d total items from stream: %s', $total, $stream);
+
+            unless($total) {
+                # At this point, we know we _can_ remove things, but the approximate attempt earlier didn't
+                # make any progress - so we fall back to a full removal instead
+                ($count) = await $redis->xtrim(
+                    $self->apply_prefix($stream),
+                    MINID => '=',
+                    $oldest,
+                );
+                $log->warnf(
+                    'Approximate trimming failed to remove any items, resorting to slower exact trim method for stream %s, removed %d items total',
+                    $stream,
+                    $count
+                );
+            }
         }
         else {
             $log->tracef('No point in trimming (%s) where: oldest is %s and this compares to %s', $stream, $oldest, $info->{first_entry}[0]);
