@@ -182,11 +182,7 @@ async method receive_items {
                         $sink->source->emit({
                             data => $event_data
                         });
-                        await $redis->ack(
-                            $stream,
-                            $group_name,
-                            $event->{id}
-                        );
+                        push @pending, $event->{id};
                         $span->set_status(
                             SPAN_STATUS_OK
                         );
