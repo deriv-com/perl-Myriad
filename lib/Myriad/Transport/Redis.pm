@@ -315,7 +315,7 @@ async method cleanup (%args) {
         $log->tracef('Attempting to clean up [%s] Size: %d | Earliest ID to care about: %s', $stream, $info->{length}, $oldest);
         if ($oldest and $oldest ne '0-0' and $self->compare_id($oldest, $info->{first_entry}[0]) > 0) {
             my ($total) = await $redis->xtrim(
-                $stream,
+                $self->apply_prefix($stream),
                 MINID => ($use_trim_exact ? () : '~'),
                 $oldest
             );
