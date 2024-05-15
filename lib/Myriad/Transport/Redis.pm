@@ -637,8 +637,8 @@ Acknowledge a message from a Redis stream.
 
 =cut
 
-async method ack ($stream, $group, $message_id) {
-    await $redis->xack($self->apply_prefix($stream), $group, $message_id);
+async method ack ($stream, $group, @message_ids) {
+    await $redis->xack($self->apply_prefix($stream), $group, @message_ids);
 }
 
 =head2 publish
