@@ -138,15 +138,27 @@ async method receive_items {
                 next;
             }
             await $sink->unblocked;
+            my @ack;
+            while(@pending) {
+                # IDs are quite short, so we can stuff a fair few into each command - there's a bit of
+                # overhead so the more we combine here the better
+                my @ids = splice @pending, min(0+@pending, 200);
+                push @ack, $redis->ack(
+                    $stream,
+                    $group_name,
+                    @ids
+                );
+            }
             my @events = await $redis->read_from_stream(
                 stream => $stream,
                 group  => $group_name,
                 client => $client_id
             );
+
             # Let any pending ACK requests finish off before we start processing new ones - we do this check
             # here after the xreadgroup, rather than after the event loop, because that gives us a better
             # chance that all the ACKs have already been received, thus minimising wait time
-            await Future->wait_all(splice @pending) if @pending;
+            await Future->wait_all(@ack) if @ack;
 
             for my $event (@events) {
                 my $span;
@@ -182,11 +194,7 @@ async method receive_items {
                         $sink->source->emit({
                             data => $event_data
                         });
-                        push @pending, $redis->ack(
-                            $stream,
-                            $group_name,
-                            $event->{id}
-                        );
+                        push @pending, $event->{id};
                     }
                 } catch($e) {
                     $e = Myriad::Exception::InternalError->new(
