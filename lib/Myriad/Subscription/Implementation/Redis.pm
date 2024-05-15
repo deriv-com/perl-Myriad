@@ -142,11 +142,10 @@ async method receive_items {
             while(@pending) {
                 # IDs are quite short, so we can stuff a fair few into each command - there's a bit of
                 # overhead so the more we combine here the better
-                my @ids = splice @pending, 0, min(0+@pending, 200);
                 push @ack, $redis->ack(
                     $stream,
                     $group_name,
-                    @ids
+                    splice(@pending, 0, min(0+@pending, 200))
                 );
             }
             my @events = await $redis->read_from_stream(
