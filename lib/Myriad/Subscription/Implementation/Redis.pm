@@ -137,7 +137,6 @@ async method receive_items {
                 await $self->loop->delay_future(after => 5);
                 next;
             }
-            await $sink->unblocked;
             my @ack;
             while(@pending) {
                 # IDs are quite short, so we can stuff a fair few into each command - there's a bit of
@@ -145,9 +144,13 @@ async method receive_items {
                 push @ack, $redis->ack(
                     $stream,
                     $group_name,
-                    splice(@pending, 0, min(0+@pending, 200))
+                    splice(
+                        @pending, 0, min(0+@pending, 200)
+                    )
                 );
             }
+
+            await $sink->unblocked;
             my @events = await $redis->read_from_stream(
                 stream => $stream,
                 group  => $group_name,
