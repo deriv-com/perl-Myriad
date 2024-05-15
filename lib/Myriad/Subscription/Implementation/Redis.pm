@@ -245,7 +245,7 @@ async method check_for_overflow () {
         }
 
         # No need to run vigorously
-        await $self->loop->delay_future(after => 5)
+        await $self->loop->delay_future(after => 5 + rand)
     }
 }
 
