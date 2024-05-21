@@ -258,6 +258,7 @@ async method load () {
                 source  => $spec->{src}->pause,
                 channel => $chan,
                 service => $service_name,
+                max_len => $spec->{args}{max_len},
             );
         }
     }
