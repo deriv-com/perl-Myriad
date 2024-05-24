@@ -732,7 +732,7 @@ async method set_unless_exists ($key, $v, $ttl) {
     await $redis->set(
         $self->apply_prefix($key),
         $v,
-        qw(NX GET), 
+        qw(NX GET),
         defined $ttl ? ('PX', $ttl * 1000.0) : ()
     );
 }
