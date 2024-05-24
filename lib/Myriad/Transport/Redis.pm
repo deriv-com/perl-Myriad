@@ -78,6 +78,7 @@ field $max_pool_count;
 field $clientside_cache_size;
 field $prefix;
 field $ryu;
+field $starting;
 
 field $cache_events;
 
@@ -123,7 +124,11 @@ Number of items to allow per batch (pending / readgroup calls).
 method batch_count () { $batch_count }
 
 async method start {
-    $redis ||= await $self->redis;
+    return if $starting or $redis;
+
+    defer { $starting = 0 }
+    $starting = 1;
+    $redis = await $self->redis;
     return;
 }
 
