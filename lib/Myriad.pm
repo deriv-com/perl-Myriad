@@ -304,15 +304,11 @@ async method configure_from_argv (@args) {
     # method.
     my $method = 'service';
     while(@args) {
-        my $arg = shift @args;
-        if($commands->can($arg)) {
-            $method = $arg;
-            await $commands->$method(shift @args, @args);
-            last;
-        } else {
-            await $commands->$method($arg, @args);
-            last;
+        if($commands->can($args[0])) {
+            $method = shift @args;
         }
+        await $commands->$method(@args);
+        last;
     }
 
     $self->on_start(async method {
