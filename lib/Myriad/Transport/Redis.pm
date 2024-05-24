@@ -124,11 +124,10 @@ Number of items to allow per batch (pending / readgroup calls).
 method batch_count () { $batch_count }
 
 async method start {
+    await $starting if $starting;
     return if $starting or $redis;
 
-    defer { $starting = 0 }
-    $starting = 1;
-    $redis = await $self->redis;
+    $redis = await $starting = $self->redis->on_ready(sub { undef $starting });
     return;
 }
 
