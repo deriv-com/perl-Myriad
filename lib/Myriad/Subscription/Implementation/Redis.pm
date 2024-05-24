@@ -8,6 +8,7 @@ use Myriad::Class ':v2', extends => qw(IO::Async::Notifier), does => [
 # AUTHORITY
 
 use Myriad::Util::UUID;
+use Compress::Zstd ();
 use OpenTelemetry::Context;
 use OpenTelemetry::Trace;
 use OpenTelemetry::Constants qw( SPAN_STATUS_ERROR SPAN_STATUS_OK );
@@ -57,9 +58,12 @@ async method create_from_source (%args) {
             # we will make "check_for_overflow" aware about this stream after the service has started
             await $src->map($self->$curry::weak(method ($event) {
                 $log->tracef('Subscription source %s adding an event: %s', $stream, $event);
+                my $data = encode_json_utf8($event);
                 return $redis->xadd(
                     encode_utf8($stream) => '*',
-                    data => encode_json_utf8($event),
+                    ($args{compress} || (defined $args{compress_threshold} and length($data) > $args{compress_threshold}))
+                    ? (zstd => Compress::Zstd::compress($data))
+                    : (data => $data)
                 );
             }))->ordered_futures(
                 low => 100,

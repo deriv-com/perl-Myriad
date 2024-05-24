@@ -31,6 +31,7 @@ It should also cover retry for stateless calls.
 =cut
 
 use Class::Method::Modifiers qw(:all);
+use Compress::Zstd ();
 use Sub::Util qw(subname);
 
 use Myriad::Redis::Pending;
@@ -271,6 +272,7 @@ async method read_from_stream (%args) {
         my ($stream, $data) = $batch->@*;
         return map {
             my ($id, $args) = $_->@*;
+            $args->{data} = Compress::Zstd::decompress($args->{zstd}) if exists $args->{zstd};
             +{
                 stream => $self->remove_prefix($stream),
                 id     => $id,

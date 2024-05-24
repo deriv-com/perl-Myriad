@@ -255,10 +255,12 @@ async method load () {
             });
 
             await $self->subscription->create_from_source(
-                source  => $spec->{src}->pause,
-                channel => $chan,
-                service => $service_name,
-                max_len => $spec->{args}{max_len},
+                source             => $spec->{src}->pause,
+                channel            => $chan,
+                service            => $service_name,
+                max_len            => $spec->{args}{max_len},
+                compress           => $spec->{args}{compress},
+                compress_threshold => $spec->{args}{compress_threshold},
             );
         }
     }
@@ -288,12 +290,16 @@ async method load () {
     if (my $batches = $registry->batches_for(ref($self))) {
         for my $method (sort keys $batches->%*) {
             $log->tracef('Adding Batch %s for %s', $method, $service_name);
-            my $sink = $batches->{$method}{sink} = $ryu->sink(label => 'batch:' . $method);
+            my $spec = $batches->{$method};
+            my $sink = $spec->{sink} = $ryu->sink(label => 'batch:' . $method);
             $sink->pause;
             await $self->subscription->create_from_source(
-                source  => $sink->source,
-                channel => $method,
-                service => $service_name,
+                source             => $sink->source,
+                channel            => $method,
+                service            => $service_name,
+                max_len            => $spec->{args}{max_len},
+                compress           => $spec->{args}{compress},
+                compress_threshold => $spec->{args}{compress_threshold},
             );
         }
     }
