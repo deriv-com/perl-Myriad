@@ -58,6 +58,7 @@ requires 'Getopt::Long';
 requires 'Pod::Usage';
 requires 'List::Util', '>= 1.63';
 requires 'List::Keywords', '>= 0.11';
+requires 'Compress::Zstd', '>= 0.20';
 # Integration
 requires 'Net::Async::OpenTracing', '>= 1.001';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
