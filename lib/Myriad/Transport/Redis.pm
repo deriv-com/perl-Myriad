@@ -123,7 +123,7 @@ Number of items to allow per batch (pending / readgroup calls).
 method batch_count () { $batch_count }
 
 async method start {
-    $redis = await $self->redis;
+    $redis ||= await $self->redis;
     return;
 }
 
