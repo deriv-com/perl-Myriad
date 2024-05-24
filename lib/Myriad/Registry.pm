@@ -142,7 +142,7 @@ Registers a new batch method for the given class.
 method add_batch ($pkg, $method, $code, $args) {
     $batch{$pkg}{$method} = {
         code => $code,
-        args => $args,
+        args => $args || {},
     };
 }
 
