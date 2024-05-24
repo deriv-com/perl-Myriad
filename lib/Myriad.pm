@@ -376,7 +376,7 @@ The L<Myriad::Transport::Memory> instance.
 
 method memory_transport () {
     unless ($memory_transport) {
-        $loop->add(
+        $self->loop->add(
             $memory_transport = Myriad::Transport::Memory->new
         );
     }
@@ -704,7 +704,7 @@ async method setup_metrics () {
     my $port = $config->metrics_port;
 
     try {
-        my $f = $loop->resolver->getaddrinfo(
+        my $f = $self->loop->resolver->getaddrinfo(
             host => $host->as_string,
             timeout => 10
         );
@@ -730,7 +730,8 @@ async method setup_metrics () {
         };
     }
 
-    my $code = sub {
+    my $loop = $self->loop;
+    my $code = $loop->$curry::weak(sub ($loop, @) {
         # Try to resolve the host first
         $loop->resolver->getaddrinfo(host => $host->as_string, timeout => 10)
         ->on_done(sub {
@@ -739,7 +740,7 @@ async method setup_metrics () {
             $log->errorf('metrics: unable to resolve host %s - %s', $host->as_string, shift);
             $host->set_string('127.0.0.1');
         })->retain();
-    };
+    });
 
     $adapter->subscribe($code);
     $host->subscribe($code);
