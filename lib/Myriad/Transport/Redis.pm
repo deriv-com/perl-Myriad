@@ -271,12 +271,14 @@ async method read_from_stream (%args) {
     if ($batch) {
         my ($stream, $data) = $batch->@*;
         return map {
-            my ($id, $args) = $_->@*;
-            $args->{data} = Compress::Zstd::decompress($args->{zstd}) if exists $args->{zstd};
+            my ($id, $kv_pairs) = $_->@*;
+            my $args = { $kv_pairs->@* };
+            my $data = exists $args->{zstd} ? Compress::Zstd::decompress(delete $args->{zstd}) : delete($args->{data});
             +{
                 stream => $self->remove_prefix($stream),
                 id     => $id,
-                data   => $args,
+                data   => $data,
+                extra  => $args,
             }
         } $data->@*;
     }
@@ -401,9 +403,16 @@ async method pending (%args) {
                     $id
                 );
                 $log->tracef('Claim is %s', $claim);
-                my $args = $claim->[0]->[1];
+                my $kv_pairs = $claim->[0]->[1] || [];
 
-                return {stream => $self->remove_prefix($stream), id => $id, data => $args ? $args : []};
+                my $args = { $kv_pairs->@* };
+                my $data = exists $args->{zstd} ? Compress::Zstd::decompress(delete $args->{zstd}) : delete($args->{data});
+                return {
+                    stream => $self->remove_prefix($stream),
+                    id     => $id,
+                    data   => $data,
+                    extra  => $args,
+                };
             }),
             foreach => $pending,
             concurrent => scalar @$pending

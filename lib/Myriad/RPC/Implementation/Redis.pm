@@ -95,8 +95,12 @@ async method create_group ($rpc) {
 async method check_pending ($rpc) {
     my $done = 0;
     while ( !$done && !$rpc->{group}) {
-        my @items = await $self->redis->pending(stream => $rpc->{stream}, group => $self->group_name, client => $self->whoami);
-        $done = 1 if @items < 1;
+        my @items = await $self->redis->pending(
+            stream => $rpc->{stream},
+            group  => $self->group_name,
+            client => $self->whoami
+        );
+        $done = 1 unless @items;
         $log->tracef('Pending messages in stream: %s | Done: %s', \@items, $done);
 
         await $self->stream_items_messages($rpc, @items);
@@ -104,13 +108,16 @@ async method check_pending ($rpc) {
 }
 
 async method stream_items_messages ($rpc, @items) {
-
     for my $item (@items) {
-        next unless $item->{data}->@* || exists $processing->{$item->{id}};
-        push $item->{data}->@*, ('transport_id', $item->{id});
+        next unless $item->{data} || exists $processing->{$item->{id}};
+        my $data = {
+            $item->{extra}->%*,
+            data         => $item->{data},
+            transport_id => $item->{id},
+        };
         $processing->{$rpc->{stream}}->{$item->{id}} = $self->loop->new_future(label => "rpc::response::$rpc->{stream}::$item->{id}");
         try {
-            my $message = Myriad::RPC::Message::from_hash($item->{data}->@*);
+            my $message = Myriad::RPC::Message::from_hash($data->%*);
             $log->tracef('Passing message: %s to: %s', $message, $rpc->{sink}->label);
             if ($message->passed_deadline) {
                 $log->tracef('Skipping message %s because deadline is due - deadline: %s now: %s',
@@ -137,13 +144,13 @@ async method listen () {
             while (1) {
                 my @items = await $self->redis->read_from_stream(
                     stream => $rpc->{stream},
-                    group => $self->group_name,
+                    group  => $self->group_name,
                     client => $self->whoami
                 );
                 await $self->stream_items_messages($rpc, @items);
                 await $self->redis->cleanup(
                     stream => $rpc->{stream},
-                    limit => MAX_ALLOWED_STREAM_LENGTH,
+                    limit  => MAX_ALLOWED_STREAM_LENGTH,
                 );
             }
         }), foreach => [$self->rpc_list->@*], concurrent => scalar $self->rpc_list->@*);
