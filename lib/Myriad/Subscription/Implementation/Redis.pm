@@ -132,90 +132,100 @@ async method receive_items {
         my $sink       = $rcv->{sink};
         my $group_name = $rcv->{group_name};
 
-        my @pending;
-        while (1) {
-            try {
-                await $self->create_group($rcv);
-            } catch ($e) {
-                $log->warnf('skipped subscription on stream %s because: %s will try again', $stream, $e);
-                await $self->loop->delay_future(after => 5);
-                next;
-            }
-            my @ack;
-            while(@pending) {
-                # IDs are quite short, so we can stuff a fair few into each command - there's a bit of
-                # overhead so the more we combine here the better
-                push @ack, $redis->ack(
-                    $stream,
-                    $group_name,
-                    splice(
-                        @pending, 0, min(0+@pending, 200)
-                    )
-                );
-            }
-
-            await $sink->unblocked;
-            my @events = await $redis->read_from_stream(
-                stream => $stream,
-                group  => $group_name,
-                client => $client_id
-            );
-
-            # Let any pending ACK requests finish off before we start processing new ones - we do this check
-            # here after the xreadgroup, rather than after the event loop, because that gives us a better
-            # chance that all the ACKs have already been received, thus minimising wait time
-            await Future->wait_all(@ack) if @ack;
-
-            for my $event (@events) {
-                my $span;
-                if(USE_OPENTELEMETRY) {
-                    $span = $tracer->create_span(
-                        parent => OpenTelemetry::Context->current,
-                        name   => $stream,
-                        attributes => {
-                            args => $event->{data}[1]
-                        },
-                    );
-                }
+        try {
+            my @pending;
+            while (1) {
                 try {
-                    if(USE_OPENTELEMETRY) {
-                        my $context = OpenTelemetry::Trace->context_with_span($span);
-                        dynamically OpenTelemetry::Context->current = $context;
-                        my $event_data = decode_json_utf8($event->{data}->[1]);
-                        $log->tracef('Passing event: %s | from stream: %s to subscription sink: %s', $event_data, $stream, $sink->label);
-                        $sink->source->emit({
-                            data => $event_data
-                        });
-                        push @pending, $event->{id};
-                        $span->set_status(
-                            SPAN_STATUS_OK
-                        );
-                    } else {
-                        my $event_data = decode_json_utf8($event->{data}->[1]);
-                        $log->tracef('Passing event: %s | from stream: %s to subscription sink: %s', $event_data, $stream, $sink->label);
-                        $sink->source->emit({
-                            data => $event_data
-                        });
-                        push @pending, $event->{id};
-                    }
-                } catch($e) {
-                    $e = Myriad::Exception::InternalError->new(
-                        reason => $e
-                    ) unless blessed($e) and $e->does('Myriad::Exception');
-                    $log->errorf(
-                        'An error happened while decoding event data for stream %s message: %s, error: %s',
+                    await $self->create_group($rcv);
+                } catch ($e) {
+                    $log->warnf('skipped subscription on stream %s because: %s will try again', $stream, $e);
+                    await $self->loop->delay_future(after => 5);
+                    next;
+                }
+                my @ack;
+                while(@pending) {
+                    # IDs are quite short, so we can stuff a fair few into each command - there's a bit of
+                    # overhead so the more we combine here the better
+                    push @ack, $redis->ack(
                         $stream,
-                        $event->{data},
-                        $e
+                        $group_name,
+                        splice(
+                            @pending, 0, min(0+@pending, 200)
+                        )
                     );
+                }
+
+                await $sink->unblocked;
+                my @events = await $redis->read_from_stream(
+                    stream => $stream,
+                    group  => $group_name,
+                    client => $client_id
+                );
+
+                # Let any pending ACK requests finish off before we start processing new ones - we do this check
+                # here after the xreadgroup, rather than after the event loop, because that gives us a better
+                # chance that all the ACKs have already been received, thus minimising wait time
+                await Future->wait_all(@ack) if @ack;
+
+                for my $event (@events) {
+                    my $span;
                     if(USE_OPENTELEMETRY) {
-                        $span->record_exception($e);
-                        $span->set_status(
-                            SPAN_STATUS_ERROR, $e
+                        $span = $tracer->create_span(
+                            parent => OpenTelemetry::Context->current,
+                            name   => $stream,
+                            attributes => {
+                                args => $event->{data}[1]
+                            },
                         );
+                    }
+                    try {
+                        if(USE_OPENTELEMETRY) {
+                            my $context = OpenTelemetry::Trace->context_with_span($span);
+                            dynamically OpenTelemetry::Context->current = $context;
+                            my $event_data = decode_json_utf8($event->{data}->[1]);
+                            $log->tracef('Passing event: %s | from stream: %s to subscription sink: %s', $event_data, $stream, $sink->label);
+                            $sink->source->emit({
+                                data => $event_data
+                            });
+                            push @pending, $event->{id};
+                            $span->set_status(
+                                SPAN_STATUS_OK
+                            );
+                        } else {
+                            my $event_data = decode_json_utf8($event->{data}->[1]);
+                            $log->tracef('Passing event: %s | from stream: %s to subscription sink: %s', $event_data, $stream, $sink->label);
+                            $sink->source->emit({
+                                data => $event_data
+                            });
+                            push @pending, $event->{id};
+                        }
+                    } catch($e) {
+                        $e = Myriad::Exception::InternalError->new(
+                            reason => $e
+                        ) unless blessed($e) and $e->does('Myriad::Exception');
+                        $log->errorf(
+                            'An error happened while decoding event data for stream %s message: %s, error: %s',
+                            $stream,
+                            $event->{data},
+                            $e
+                        );
+                        if(USE_OPENTELEMETRY) {
+                            $span->record_exception($e);
+                            $span->set_status(
+                                SPAN_STATUS_ERROR, $e
+                            );
+                        }
                     }
                 }
             }
+        } catch ($e) {
+            $log->errorf(
+                'Unable to read items from stream [%s] group [%s], unexpected error: %s',
+                $stream,
+                $group_name,
+                $e
+            );
+            die $e;
         }
     }), foreach => [@receivers], concurrent => scalar @receivers);
 }
