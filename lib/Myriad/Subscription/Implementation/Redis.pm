@@ -174,7 +174,7 @@ async method receive_items {
                             parent => OpenTelemetry::Context->current,
                             name   => $stream,
                             attributes => {
-                                args => $event->{data}[1]
+                                args => $event->{data}
                             },
                         );
                     }
@@ -182,7 +182,7 @@ async method receive_items {
                         if(USE_OPENTELEMETRY) {
                             my $context = OpenTelemetry::Trace->context_with_span($span);
                             dynamically OpenTelemetry::Context->current = $context;
-                            my $event_data = decode_json_utf8($event->{data}->[1]);
+                            my $event_data = decode_json_utf8($event->{data});
                             $log->tracef('Passing event: %s | from stream: %s to subscription sink: %s', $event_data, $stream, $sink->label);
                             $sink->source->emit({
                                 data => $event_data
@@ -192,7 +192,7 @@ async method receive_items {
                                 SPAN_STATUS_OK
                             );
                         } else {
-                            my $event_data = decode_json_utf8($event->{data}->[1]);
+                            my $event_data = decode_json_utf8($event->{data});
                             $log->tracef('Passing event: %s | from stream: %s to subscription sink: %s', $event_data, $stream, $sink->label);
                             $sink->source->emit({
                                 data => $event_data
