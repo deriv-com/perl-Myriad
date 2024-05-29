@@ -139,19 +139,24 @@ async method listen () {
     return $running //= (async sub {
         $log->tracef('Start listening to (%d) RPC streams', scalar($self->rpc_list->@*));
         await &fmap_void($self->$curry::curry(async method ($rpc) {
-            await $self->create_group($rpc);
+            try {
+                await $self->create_group($rpc);
 
-            while (1) {
-                my @items = await $self->redis->read_from_stream(
-                    stream => $rpc->{stream},
-                    group  => $self->group_name,
-                    client => $self->whoami
-                );
-                await $self->stream_items_messages($rpc, @items);
-                await $self->redis->cleanup(
-                    stream => $rpc->{stream},
-                    limit  => MAX_ALLOWED_STREAM_LENGTH,
-                );
+                while (1) {
+                    my @items = await $self->redis->read_from_stream(
+                        stream => $rpc->{stream},
+                        group  => $self->group_name,
+                        client => $self->whoami
+                    );
+                    await $self->stream_items_messages($rpc, @items);
+                    await $self->redis->cleanup(
+                        stream => $rpc->{stream},
+                        limit  => MAX_ALLOWED_STREAM_LENGTH,
+                    );
+                }
+            } catch ($e) {
+                $log->errorf('Failed on RPC listen - %s', $e);
+                die $e;
             }
         }), foreach => [$self->rpc_list->@*], concurrent => scalar $self->rpc_list->@*);
     })->();
