@@ -172,6 +172,7 @@ method listen () {
 async method reply ($service, $message) {
     my $stream = stream_name_from_service($service, $message->rpc);
     try {
+        $log->tracef('Reply to [%s] with %s', $message->who, $message->as_json);
         await $self->redis->publish($message->who, $message->as_json);
         await $self->redis->ack($stream, $self->group_name, $message->transport_id);
         $processing->{$stream}->{$message->transport_id}->done('published');

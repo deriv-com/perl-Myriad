@@ -340,7 +340,7 @@ async method cleanup (%args) {
                     MINID => '=',
                     $oldest,
                 );
-                $log->warnf(
+                $log->debugf(
                     'Approximate trimming failed to remove any items, resorting to slower exact trim method for stream %s, removed %d items total',
                     $stream,
                     $count
