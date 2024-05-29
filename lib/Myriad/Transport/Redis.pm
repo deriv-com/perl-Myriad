@@ -820,10 +820,13 @@ method clientside_cache_events {
 
 async method watch_keyspace ($pattern) {
     # Net::Async::Redis will handle the connection in this case
-    return $redis->clientside_cache_events->map($self->$curry::weak(method {
-        $log->tracef('Have clientside cache event with [%s] and will remove prefix [%s.]', $_, $prefix);
-        return $self->remove_prefix($_);
-    })) if $clientside_cache_size;
+    if($clientside_cache_size) {
+        return $redis->clientside_cache_events
+            ->map($self->$curry::weak(method {
+                $log->tracef('Have clientside cache event with [%s] and will remove prefix [%s.]', $_, $prefix);
+                return $self->remove_prefix($_);
+            }));
+    }
 
     $log->tracef(
         'Falling back to keyspace notifications for %s due to client cache size = %d or unsupported',
@@ -833,9 +836,10 @@ async method watch_keyspace ($pattern) {
 
     # Keyspace notification is a psubscribe
     my $instance = await $self->borrow_instance_from_pool;
-    my $src = await $instance->watch_keyspace(
+    my $sub = await $instance->watch_keyspace(
         $self->apply_prefix($pattern)
     );
+    my $src = $sub->events;
     my $events = $src->map(sub {
         my $chan = $_->{channel} =~ s/__key.*:$prefix\.//r;
         return $chan;
