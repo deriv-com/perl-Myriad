@@ -113,8 +113,9 @@ async method check_pending ($rpc) {
 }
 
 async method stream_items_messages ($rpc, @items) {
+    ITEM:
     for my $item (@items) {
-        next unless $item->{data} || exists $processing->{$item->{id}};
+        next unless $item->{args} || exists $processing->{$item->{id}};
         my $data = {
             $item->{extra}->%*,
             data         => $item->{data},
@@ -128,7 +129,7 @@ async method stream_items_messages ($rpc, @items) {
                 $log->tracef('Skipping message %s because deadline is due - deadline: %s now: %s',
                     $message->transport_id, $message->deadline, time);
                 await $self->drop($rpc->{stream}, $item->{id});
-                next;
+                next ITEM;
             }
             $rpc->{sink}->emit($message);
         } catch ($error) {
