@@ -65,8 +65,7 @@ async method start() {
 
     $started->done('started');
     $log->tracef('Started RPC client subscription on %s', $whoami);
-
-    await $subscription;
+    return;
 }
 
 async method call_rpc($service, $method, %args) {
