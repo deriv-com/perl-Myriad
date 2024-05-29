@@ -143,8 +143,8 @@ async method stream_items_messages ($rpc, @items) {
 
 method listen () {
     return $running //= (async sub {
-        $log->tracef('Start listening to (%d) RPC streams', scalar($self->rpc_list->@*));
-        await &fmap_void($self->$curry::curry(async method ($rpc) {
+        $log->tracef('Start listening to (%d) RPC stream(s)', scalar($self->rpc_list->@*));
+        await &fmap_void($self->$curry::weak(async method ($rpc) {
             try {
                 await $self->create_group($rpc);
 
