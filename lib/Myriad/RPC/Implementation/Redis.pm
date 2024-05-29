@@ -141,7 +141,7 @@ async method stream_items_messages ($rpc, @items) {
     $processing->{$rpc->{stream}} = {};
 }
 
-async method listen () {
+method listen () {
     return $running //= (async sub {
         $log->tracef('Start listening to (%d) RPC streams', scalar($self->rpc_list->@*));
         await &fmap_void($self->$curry::curry(async method ($rpc) {
