@@ -87,7 +87,12 @@ async method stop () {
 async method create_group ($rpc) {
     unless ($rpc->{group}) {
         await $self->check_pending($rpc);
-        await $self->redis->create_group($rpc->{stream}, $self->group_name, '$', 1);
+        await $self->redis->create_group(
+            $rpc->{stream},
+            $self->group_name,
+            '0',
+            1
+        );
         $rpc->{group} = 1;
     }
 }
@@ -108,8 +113,9 @@ async method check_pending ($rpc) {
 }
 
 async method stream_items_messages ($rpc, @items) {
+    ITEM:
     for my $item (@items) {
-        next unless $item->{data} || exists $processing->{$item->{id}};
+        next unless $item->{args} || exists $processing->{$item->{id}};
         my $data = {
             $item->{extra}->%*,
             data         => $item->{data},
@@ -123,7 +129,7 @@ async method stream_items_messages ($rpc, @items) {
                 $log->tracef('Skipping message %s because deadline is due - deadline: %s now: %s',
                     $message->transport_id, $message->deadline, time);
                 await $self->drop($rpc->{stream}, $item->{id});
-                next;
+                next ITEM;
             }
             $rpc->{sink}->emit($message);
         } catch ($error) {
@@ -135,31 +141,38 @@ async method stream_items_messages ($rpc, @items) {
     $processing->{$rpc->{stream}} = {};
 }
 
-async method listen () {
+method listen () {
     return $running //= (async sub {
-        $log->tracef('Start listening to (%d) RPC streams', scalar($self->rpc_list->@*));
-        await &fmap_void($self->$curry::curry(async method ($rpc) {
-            await $self->create_group($rpc);
+        $log->tracef('Start listening to (%d) RPC stream(s)', scalar($self->rpc_list->@*));
+        await &fmap_void($self->$curry::weak(async method ($rpc) {
+            try {
+                await $self->create_group($rpc);
 
-            while (1) {
-                my @items = await $self->redis->read_from_stream(
-                    stream => $rpc->{stream},
-                    group  => $self->group_name,
-                    client => $self->whoami
-                );
-                await $self->stream_items_messages($rpc, @items);
-                await $self->redis->cleanup(
-                    stream => $rpc->{stream},
-                    limit  => MAX_ALLOWED_STREAM_LENGTH,
-                );
+                while (1) {
+                    if(my @items = await $self->redis->read_from_stream(
+                        stream => $rpc->{stream},
+                        group  => $self->group_name,
+                        client => $self->whoami
+                    )) {
+                        await $self->stream_items_messages($rpc, @items);
+                        await $self->redis->cleanup(
+                            stream => $rpc->{stream},
+                            limit  => MAX_ALLOWED_STREAM_LENGTH,
+                        );
+                    }
+                }
+            } catch ($e) {
+                $log->errorf('Failed on RPC listen - %s', $e);
+                die $e;
             }
-        }), foreach => [$self->rpc_list->@*], concurrent => scalar $self->rpc_list->@*);
+        }), foreach => [$self->rpc_list->@*], concurrent => 0 + $self->rpc_list->@*);
     })->();
 }
 
 async method reply ($service, $message) {
     my $stream = stream_name_from_service($service, $message->rpc);
     try {
+        $log->tracef('Reply to [%s] with %s', $message->who, $message->as_json);
         await $self->redis->publish($message->who, $message->as_json);
         await $self->redis->ack($stream, $self->group_name, $message->transport_id);
         $processing->{$stream}->{$message->transport_id}->done('published');
