@@ -20,6 +20,7 @@ Myriad::Service::Remote - abstraction to access other services over the network.
 
 use Myriad::Class;
 use Myriad::Service::Storage::Remote;
+use Myriad::Service::Remote::RPC;
 
 field $myriad;
 field $service_name;
@@ -66,6 +67,13 @@ it takes
 
 async method call_rpc ($rpc, %args) {
     await $myriad->rpc_client->call_rpc($service_name, $rpc, %args);
+}
+
+method rpc () {
+    return Myriad::Service::Remote::RPC->new(
+        myriad  => $myriad,
+        service => $service_name,
+    );
 }
 
 =head2 subscribe
