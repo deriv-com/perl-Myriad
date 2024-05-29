@@ -149,16 +149,17 @@ method listen () {
                 await $self->create_group($rpc);
 
                 while (1) {
-                    my @items = await $self->redis->read_from_stream(
+                    if(my @items = await $self->redis->read_from_stream(
                         stream => $rpc->{stream},
                         group  => $self->group_name,
                         client => $self->whoami
-                    );
-                    await $self->stream_items_messages($rpc, @items);
-                    await $self->redis->cleanup(
-                        stream => $rpc->{stream},
-                        limit  => MAX_ALLOWED_STREAM_LENGTH,
-                    );
+                    )) {
+                        await $self->stream_items_messages($rpc, @items);
+                        await $self->redis->cleanup(
+                            stream => $rpc->{stream},
+                            limit  => MAX_ALLOWED_STREAM_LENGTH,
+                        );
+                    }
                 }
             } catch ($e) {
                 $log->errorf('Failed on RPC listen - %s', $e);
