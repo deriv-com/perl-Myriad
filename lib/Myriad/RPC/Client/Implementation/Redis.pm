@@ -92,10 +92,14 @@ async method call_rpc($service, $method, %args) {
         await $redis->xadd($stream_name => '*', $request->as_hash->%*);
 
         # The subscription loop will parse the message for us
-        my $message = await Future->wait_any($self->loop->timeout_future(after => $timeout), $pending);
+        my $message = await Future->wait_any(
+            $self->loop->timeout_future(after => $timeout),
+            $pending
+        );
 
         return $message->response->{response};
     } catch ($e) {
+        $log->warnf('Failed on RPC call - %s', $e);
         if ($e =~ /Timeout/) {
             $e  = Myriad::Exception::RPC::Timeout->new(reason => 'deadline is due');
         } else {
