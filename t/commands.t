@@ -27,6 +27,7 @@ BEGIN {
     Test::Myriad->add_service(name => "Test::Service::Mocked")->add_rpc('test_cmd', success => 1);
 }
 
+$ENV{MYRIAD_TRANSPORT} ||= 'memory';
 my $loop = IO::Async::Loop->new;
 testing_loop($loop);
 

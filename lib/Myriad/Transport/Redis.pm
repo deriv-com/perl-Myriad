@@ -78,6 +78,7 @@ field $max_pool_count;
 field $clientside_cache_size;
 field $prefix;
 field $ryu;
+field $starting;
 
 field $cache_events;
 
@@ -123,7 +124,10 @@ Number of items to allow per batch (pending / readgroup calls).
 method batch_count () { $batch_count }
 
 async method start {
-    $redis = await $self->redis;
+    await $starting if $starting;
+    return if $starting or $redis;
+
+    $redis = await $starting = $self->redis->on_ready(sub { undef $starting });
     return;
 }
 
@@ -728,7 +732,7 @@ async method set_unless_exists ($key, $v, $ttl) {
     await $redis->set(
         $self->apply_prefix($key),
         $v,
-        qw(NX GET), 
+        qw(NX GET),
         defined $ttl ? ('PX', $ttl * 1000.0) : ()
     );
 }
