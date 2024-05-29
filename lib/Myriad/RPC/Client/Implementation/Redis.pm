@@ -61,7 +61,7 @@ async method start() {
         } catch ($e) {
             $log->warnf('failed to parse rpc response due %s', $e);
         }
-    })->completed;
+    });
 
     $started->done('started');
     $log->tracef('Started RPC client subscription on %s', $whoami);
@@ -109,7 +109,7 @@ async method call_rpc($service, $method, %args) {
 }
 
 async method stop {
-    $subscription->done();
+    $subscription->finish
 }
 
 method next_id {
