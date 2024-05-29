@@ -278,6 +278,7 @@ async method read_from_stream (%args) {
                 stream => $self->remove_prefix($stream),
                 id     => $id,
                 data   => $data,
+                args   => $args->{args},
                 extra  => $args,
             }
         } $data->@*;
@@ -402,6 +403,7 @@ async method pending (%args) {
                     10,
                     $id
                 );
+                return unless $claim and $claim->@*;
                 $log->tracef('Claim is %s', $claim);
                 my $kv_pairs = $claim->[0]->[1] || [];
 
@@ -411,11 +413,12 @@ async method pending (%args) {
                     stream => $self->remove_prefix($stream),
                     id     => $id,
                     data   => $data,
+                    args   => $args->{args},
                     extra  => $args,
                 };
             }),
             foreach => $pending,
-            concurrent => scalar @$pending
+            concurrent => 0 + @$pending
         );
     } catch ($e) {
         $log->warnf('Could not read pending messages on stream: %s | error: %s', $stream, $e);
