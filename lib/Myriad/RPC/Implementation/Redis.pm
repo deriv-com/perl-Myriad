@@ -164,7 +164,7 @@ method listen () {
                 $log->errorf('Failed on RPC listen - %s', $e);
                 die $e;
             }
-        }), foreach => [$self->rpc_list->@*], concurrent => scalar $self->rpc_list->@*);
+        }), foreach => [$self->rpc_list->@*], concurrent => 0 + $self->rpc_list->@*);
     })->();
 }
 
