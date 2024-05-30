@@ -137,6 +137,8 @@ Takes the following parameters as a hashref:
 
 =item * C<compress_threshold> - compress any data which would be larger than the given size after encoding, in bytes
 
+=item * C<subchannel_key> - emit to zero or more separate streams defined by this key in the emitted items
+
 =back
 
 =cut

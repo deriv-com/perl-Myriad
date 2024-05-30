@@ -261,6 +261,7 @@ async method load () {
                 max_len            => $spec->{args}{max_len},
                 compress           => $spec->{args}{compress},
                 compress_threshold => $spec->{args}{compress_threshold},
+                subchannel_key     => $spec->{args}{subchannel_key},
             );
         }
     }
@@ -271,6 +272,10 @@ async method load () {
                 $log->tracef('Adding Receiver %s as %s for %s', $method, $receivers->{$method}, $service_name);
                 my $spec = $receivers->{$method};
                 my $chan = $spec->{args}{channel} // die 'expected a channel, but there was none to be found';
+                if(defined($spec->{args}{subchannel})) {
+                    my $k = $spec->{args}{subchannel};
+                    $chan .= "{$k}";
+                }
                 my $sink = $spec->{sink} = $ryu->sink(
                     label => "receiver:$chan",
                 );
