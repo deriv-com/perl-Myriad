@@ -48,19 +48,33 @@ async method create_from_source (%args) {
 
     $log->tracef('Adding subscription source %s to handler', $stream);
     push @emitters, {
-        stream => $stream,
-        source => $src,
+        stream  => $stream,
+        source  => $src,
         max_len => $args{max_len} // MAX_ALLOWED_STREAM_LENGTH
-    };
+    } unless exists $args{subchannel_key};
+    my %seen_channel;
     $self->adopt_future(
         $src->unblocked->then($self->$curry::weak(async method {
             # The streams will be checked later by "check_for_overflow" to avoid unblocking the source by mistake
             # we will make "check_for_overflow" aware about this stream after the service has started
             await $src->map($self->$curry::weak(method ($event) {
-                $log->tracef('Subscription source %s adding an event: %s', $stream, $event);
+                my $target_stream = $stream;
+                if(defined($args{subchannel_key})) {
+                    my $k = delete($event->{$args{subchannel_key}});
+                    $target_stream .= "{$k}";
+                    if(!exists $seen_channel{$k}) {
+                        push @emitters, {
+                            stream  => $target_stream,
+                            source  => $src,
+                            max_len => $args{max_len} // MAX_ALLOWED_STREAM_LENGTH
+                        };
+                        $seen_channel{$k} = 1;
+                    }
+                }
+                $log->tracef('Subscription source %s adding an event: %s', $target_stream, $event);
                 my $data = encode_json_utf8($event);
                 return $redis->xadd(
-                    encode_utf8($stream) => '*',
+                    encode_utf8($target_stream) => '*',
                     ($args{compress} || (defined $args{compress_threshold} and length($data) > $args{compress_threshold}))
                     ? (zstd => Compress::Zstd::compress($data))
                     : (data => $data)
