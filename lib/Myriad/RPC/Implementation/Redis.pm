@@ -98,9 +98,10 @@ async method create_group ($rpc) {
             '0',
             1
         );
-        await $redis->hset(
-            'rpc.group',
-            $rpc->{stream},
+        my ($service, $method) = service_from_stream_name($rpc->{stream});
+        await $self->redis->hset(
+            "rpc.group.{$service}",
+            $method,
             $self->group_name,
         );
         $rpc->{group} = 1;
