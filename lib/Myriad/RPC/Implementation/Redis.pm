@@ -53,6 +53,11 @@ sub stream_name_from_service ($service, $method) {
     return RPC_PREFIX . ".$service.". RPC_SUFFIX . "/$method"
 }
 
+sub service_from_stream_name ($stream_name) {
+    my ($service, $method) = $stream_name =~ m{\Q@{[RPC_PREFIX()]}\E\.([^/]+)\.\Q@{[RPC_SUFFIX]}\E/(.*)};
+    return ($service, $method);
+}
+
 method configure (%args) {
     $redis = delete $args{redis} if exists $args{redis};
     $whoami = hostname();
