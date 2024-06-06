@@ -57,7 +57,7 @@ async method create_from_source (%args) {
         $src->unblocked->then($self->$curry::weak(async method {
             # The streams will be checked later by "check_for_overflow" to avoid unblocking the source by mistake
             # we will make "check_for_overflow" aware about this stream after the service has started
-            await $src->map($self->$curry::weak(method ($event) {
+            await $src->map($self->$curry::weak(async method ($event) {
                 my $target_stream = $stream;
                 if(defined($args{subchannel_key})) {
                     my $k = delete($event->{$args{subchannel_key}});
@@ -73,7 +73,7 @@ async method create_from_source (%args) {
                 }
                 $log->tracef('Subscription source %s adding an event: %s', $target_stream, $event);
                 my $data = encode_json_utf8($event);
-                return $redis->xadd(
+                return await $redis->xadd(
                     encode_utf8($target_stream) => '*',
                     ($args{compress} || (defined $args{compress_threshold} and length($data) > $args{compress_threshold}))
                     ? (zstd => Compress::Zstd::compress($data))
