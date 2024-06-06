@@ -370,9 +370,7 @@ async method load () {
                         return await $self->rpc->reply_success($service_name, $message, $response);
                     }
                 } catch ($e) {
-                    $e = Myriad::Exception::InternalError->new(
-                        reason => $e
-                    ) unless blessed($e) and $e->does('Myriad::Exception');
+                    $e = Myriad::Exception::InternalError->new(reason => $e) unless blessed $e and $e->DOES('Myriad::Exception');
                     if(USE_OPENTELEMETRY) {
                         $span->record_exception($e);
                         $span->set_status(

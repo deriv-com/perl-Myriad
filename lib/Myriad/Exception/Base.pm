@@ -27,7 +27,15 @@ use overload '""' => sub { shift->as_string }, bool => sub { 1 }, fallback => 1;
 
 sub new {
     my ($class, %args) = @_;
-    bless \%args, $class
+    # Force the reason to be a valid string
+    # or it would cause issue with strongly typed clients.
+    # Moreover, attempt to use blessed object here would crash the listener
+    if ($args{reason}) {
+        my $reason = "$args{reason}";
+        $reason =~ s/(\s+)$//;
+        $args{reason} = $reason;
+    }
+    bless \%args, $class;
 }
 
 =head2 reason
