@@ -45,7 +45,24 @@ a concrete implementation - instead, see classes such as:
 
 =cut
 
-our @WRITE_METHODS = qw(set getset getdel incr push unshift pop shift hash_set hash_add orderedset_add orderedset_remove_member orderedset_remove_byscore del unlink set_unless_exists);
+our @WRITE_METHODS = qw(
+    set
+    getset
+    getdel
+    incr
+    push
+    unshift
+    pop
+    shift
+    hash_set
+    hash_add
+    orderedset_add
+    orderedset_remove_member
+    orderedset_remove_byscore
+    del
+    unlink
+    set_unless_exists
+);
 
 =head2 set
 
@@ -264,7 +281,20 @@ method set_unless_exists;
 
 =cut
 
-our @READ_METHODS = qw(get observe watch_keyspace hash_get hash_keys hash_values hash_exists hash_count hash_as_list orderedset_member_count orderedset_members when_key_changed);
+our @READ_METHODS = qw(
+    get
+    observe
+    watch_keyspace
+    hash_get
+    hash_keys
+    hash_values
+    hash_exists
+    hash_count
+    hash_as_list
+    orderedset_member_count
+    orderedset_members
+    when_key_changed
+);
 
 =head2 get
 
