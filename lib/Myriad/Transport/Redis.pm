@@ -769,6 +769,10 @@ async method hset ($k, $hash_key, $v) {
     await $redis->hset($self->apply_prefix($k), $hash_key, $v);
 }
 
+async method hmset ($k, @kvs) {
+    await $redis->hmset($self->apply_prefix($k), @kvs);
+}
+
 async method hget($k, $hash_key) {
     await $redis->hget($self->apply_prefix($k), $hash_key);
 }
@@ -795,6 +799,18 @@ async method hexists($k, $hash_key) {
 
 async method hincrby($k, $hash_key, $v) {
     await $redis->hincrby($self->apply_prefix($k), $hash_key, $v);
+}
+
+async method sadd ($key, @v) {
+    await $redis->sadd($self->apply_prefix($key), @v);
+}
+
+async method sismember ($key, @v) {
+    await $redis->sismember($self->apply_prefix($key), @v);
+}
+
+async method srem ($key, @v) {
+    await $redis->srem($self->apply_prefix($key), @v);
 }
 
 async method zadd ($key, @v) {
