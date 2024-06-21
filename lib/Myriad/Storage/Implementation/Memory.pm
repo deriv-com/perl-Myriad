@@ -273,13 +273,15 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-async method hash_set : Defer ($k, %args) {
-    for my $hash_key (sort keys %args) {
-        my $v = $args{$hash_key};
+async method hash_set : Defer ($k, $hash_key, $v //= undef) {
+    if(ref $hash_key eq 'HASH') {
+        @{$data{$k}}{keys $hash_key->%*} = values $hash_key->%*;
+        return 0 + keys $hash_key->%*;
+    } else {
         die 'value cannot be a reference for ' . $k . ' hash key ' . $hash_key . ' - ' . ref($v) if ref $v;
+        $data{$k}{$hash_key} = $v;
+        return 1;
     }
-    @{$data{$k}}{keys %args} = values %args;
-    return 0 + keys %args;
 }
 
 =head2 hash_get

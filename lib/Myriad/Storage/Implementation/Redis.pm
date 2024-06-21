@@ -305,9 +305,13 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-async method hash_set ($k, $hash_key, $v) {
-    die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
-    await $redis->hset($self->apply_prefix($k), $hash_key, $v);
+async method hash_set ($k, $hash_key, $v //= undef) {
+    if(ref $hash_key eq 'HASH') {
+        await $redis->hmset($self->apply_prefix($k), $hash_key->%*);
+    } else {
+        die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
+        await $redis->hset($self->apply_prefix($k), $hash_key, $v);
+    }
 }
 
 =head2 hash_get
