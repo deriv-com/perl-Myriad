@@ -413,6 +413,10 @@ async method hash_as_list : Defer ($k) {
     return $data{$k}->%*;
 }
 
+async method list_count : Defer ($k) {
+    return 0 + $data{$k}->@*;
+}
+
 async method list_range : Defer ($k, $start = 0, $end = -1) {
     my $len = 0 + $data{$k}->@*
         or return [ ];
