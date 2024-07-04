@@ -51,7 +51,7 @@ async method create_from_source (%args) {
         stream  => $stream,
         source  => $src,
         max_len => $args{max_len} // MAX_ALLOWED_STREAM_LENGTH
-    } unless exists $args{subchannel_key};
+    } unless defined $args{subchannel_key};
     await $redis->hset(
         "subscription.channel",
         map { encode_utf8($_) } $service, $args{channel}
