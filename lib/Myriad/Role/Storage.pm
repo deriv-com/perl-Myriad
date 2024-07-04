@@ -351,6 +351,7 @@ our @READ_METHODS = qw(
     hash_exists
     hash_count
     hash_as_list
+    list_range
     orderedset_member_count
     orderedset_members
     unorderedset_is_member
@@ -481,6 +482,26 @@ suitable for assigning to a hash.
 =cut
 
 method hash_as_list;
+
+=head2 list_range
+
+Takes the following parameters:
+
+=over 4
+
+=item * key
+
+=item * start index (from 0), use negative values to indicate distance from end of list (-1 being the last element)
+
+=item * end index (from 0), as above
+
+=back
+
+Returns a L<Future> which will resolve to a list of values from the list.
+
+=cut
+
+method list_range;
 
 =head2 orderedset_member_count
 
