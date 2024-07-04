@@ -423,7 +423,7 @@ async method list_range : Defer ($k, $start = 0, $end = -1) {
     # Handle negative values as offset from end (-1 being last element)
     $start = $len - $start if $start < 0;
     $end = $len - $end if $end < 0;
-    return [ $data{$k}->@*[$start .. $end] ];
+    return [ $data{$k}->@[$start .. $end] ];
 }
 
 =head2 orderedset_add
