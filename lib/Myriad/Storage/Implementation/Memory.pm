@@ -413,6 +413,15 @@ async method hash_as_list : Defer ($k) {
     return $data{$k}->%*;
 }
 
+async method list_range : Defer ($k, $start = 0, $end = -1) {
+    my $len = 0 + $data{$k}->@*
+        or return [ ];
+    # Handle negative values as offset from end (-1 being last element)
+    $start = $len - $start if $start < 0;
+    $end = $len - $end if $end < 0;
+    return [ $data{$k}->@*[$start .. $end] ];
+}
+
 =head2 orderedset_add
 
 Takes the following parameters:
