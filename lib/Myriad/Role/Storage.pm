@@ -351,6 +351,7 @@ our @READ_METHODS = qw(
     hash_exists
     hash_count
     hash_as_list
+    list_count
     list_range
     orderedset_member_count
     orderedset_members
@@ -482,6 +483,22 @@ suitable for assigning to a hash.
 =cut
 
 method hash_as_list;
+
+=head2 list_count
+
+Takes the following parameters:
+
+=over 4
+
+=item * key
+
+=back
+
+Returns a L<Future> which will resolve to the integer count of values currently in the list.
+
+=cut
+
+method list_count;
 
 =head2 list_range
 

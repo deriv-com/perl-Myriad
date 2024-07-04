@@ -215,6 +215,10 @@ async method watch_keyspace ($keyspace) {
     });
 }
 
+async method list_count ($k) {
+    await $redis->llen($self->apply_prefix($k));
+}
+
 async method list_range ($k, $start = 0, $end = -1) {
     await $redis->lrange($self->apply_prefix($k), $start, $end);
 }
