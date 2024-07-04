@@ -809,6 +809,14 @@ async method sismember ($key, @v) {
     await $redis->sismember($self->apply_prefix($key), @v);
 }
 
+async method smembers ($key) {
+    await $redis->smembers($self->apply_prefix($key));
+}
+
+async method scard ($key) {
+    await $redis->scard($self->apply_prefix($key));
+}
+
 async method srem ($key, @v) {
     await $redis->srem($self->apply_prefix($key), @v);
 }
@@ -831,6 +839,14 @@ async method zcount ($k, $min, $max) {
 
 async method zrange ($k, @v) {
     await $redis->zrange($self->apply_prefix($k), @v);
+}
+
+async method lrange ($k, @v) {
+    await $redis->lrange($self->apply_prefix($k), @v);
+}
+
+async method llen ($k, @v) {
+    await $redis->llen($self->apply_prefix($k), @v);
 }
 
 method clientside_cache_events {
