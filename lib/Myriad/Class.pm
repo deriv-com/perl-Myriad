@@ -53,7 +53,9 @@ The following Perl language features and modules are applied:
 
 =item * L<Syntax::Keyword::Dynamically>
 
-=item * L<Syntax::Keyword::Defer>
+=item * L<Syntax::Keyword::Defer> - or the standard Perl built-in defer since C< :v2 >
+
+=item * L<Syntax::Operator::Equ> - added in C< :v2 >
 
 =item * L<Future::AsyncAwait>
 
@@ -62,6 +64,8 @@ The following Perl language features and modules are applied:
 =item * provides L<Scalar::Util/blessed>, L<Scalar::Util/weaken>, L<Scalar::Util/refaddr>
 
 =item * provides L<List::Util/min>, L<List::Util/max>, L<List::Util/sum0>
+
+=item * provides L<List::Util/uniqstr> - added in C< :v2 >
 
 =item * provides L<List::Keywords/any>, L<List::Keywords/all>
 
@@ -94,6 +98,72 @@ In addition, the following core L<feature>s are enabled:
 
 =back
 
+=head2 Constraints and checks
+
+From C<:v2> onwards, L<Data::Checks> is imported with the following constraints available: 
+
+=over 4
+
+=item * Defined
+
+=item * Object
+
+=item * Str
+
+=item * Num
+
+=item * StrEq
+
+=item * NumGT
+
+=item * NumGE
+
+=item * NumLE
+
+=item * NumLT
+
+=item * NumRange
+
+=item * NumEq
+
+=item * Isa
+
+=item * ArrayRef
+
+=item * HashRef
+
+=item * Callable
+
+=item * Maybe
+
+=item * Any
+
+=item * All
+
+=back
+
+Note that L<Data::Checks> provides the underlying support for constraints, but
+actual usage involves a combination of other modules:
+
+=head3 Field constraints
+
+These are supported through L<Object::Pad::FieldAttr::Checked>:
+
+ package Example;
+ use Myriad::Class qw(:v2);
+ field $checked :Checked(Str);
+
+=head3 Method parameter constraints
+
+These use L<Signature::Attribute::Checked> to provide method parameter checks.
+Note that the C<extended> keyword is required, see L<Sublike::Extended> for more information.
+
+ package Example;
+ use Myriad::Class qw(:v2);
+ extended method example ($v :Checked(Num)) { }
+
+=head2 Class features
+
 The calling package will be marked as an L<Object::Pad> class, providing the
 L<Object::Pad/method>, L<Object::Pad/has> and C<async method> keywords.
 
@@ -121,6 +191,10 @@ no bareword::filehandles;
 use mro;
 use experimental qw(signatures);
 use curry;
+use Data::Checks;
+use Object::Pad::FieldAttr::Checked;
+use Sublike::Extended;
+use Signature::Attribute::Checked;
 use Future::AsyncAwait;
 use Future::AsyncAwait::Hooks;
 use Syntax::Keyword::Try;
@@ -164,13 +238,14 @@ sub import {
     warnings->import;
     utf8->import;
 
-    # We want mostly the 5.26 featureset, but since that includes `say` and `switch`
+    # We want mostly the 5.36 featureset, but since that includes `say` and `switch`
     # we need to customise the list somewhat
     feature->import(qw(
         bitwise
         current_sub
         evalbytes
         fc
+        module_true
         postderef_qq
         state
         unicode_eval
@@ -199,6 +274,36 @@ sub import {
     # Helper functions which are used often enough to be valuable as a default
     Scalar::Util->export($pkg => qw(refaddr blessed weaken));
     List::Util->export($pkg => qw(min max sum0));
+
+    # Additional features in :v2 onwards
+    if($version >= 2) {
+        List::Util->export($pkg => qw(uniqstr));
+        # eval "package $pkg; use Object::Pad::FieldAttr::Checked; use Data::Checks qw(NumGE); 1" or die $@;
+        Object::Pad::FieldAttr::Checked->import($pkg);
+        Sublike::Extended->import($pkg);
+        Signature::Attribute::Checked->import($pkg);
+        Data::Checks->import(qw(
+            Defined
+            Object
+            Str
+            Num
+            StrEq
+            NumGT
+            NumGE
+            NumLE
+            NumLT
+            NumRange
+            NumEq
+            Isa
+            ArrayRef
+            HashRef
+            Callable
+            Maybe
+            Any
+            All
+        ));
+    }
+
     {
         no strict 'refs';
         *{$pkg . '::' . $_} = JSON::MaybeUTF8->can($_) for qw(
