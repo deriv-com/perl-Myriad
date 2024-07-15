@@ -263,7 +263,14 @@ sub import {
     bareword::filehandles->unimport;
 
     # This one's needed for nested scope, e.g. { package XX; use Myriad::Service; method xxx (%args) ... }
-    experimental->import('signatures');
+    experimental->import(qw(
+        signatures
+    ), ($version >= 2 ? qw(
+        defer
+        extra_paired_delimiters
+        isa
+        refaliasing
+    ) : ()));
 
     # We don't really care about diamond inheritance, since microservices are expected
     # to have minimal inheritance in the first place, but might as well have a standard
@@ -345,7 +352,7 @@ sub import {
     # Some well-designed modules provide direct support for import target
     Syntax::Keyword::Try->import_into($pkg, try => ':experimental(typed)');
     Syntax::Keyword::Dynamically->import_into($pkg);
-    Syntax::Keyword::Defer->import_into($pkg);
+    Syntax::Keyword::Defer->import_into($pkg) unless $version >= 2;
     Syntax::Operator::Equ->import_into($pkg);
     Future::AsyncAwait->import_into($pkg, ':experimental(cancel)');
     Metrics::Any->import_into($pkg, '$metrics');
