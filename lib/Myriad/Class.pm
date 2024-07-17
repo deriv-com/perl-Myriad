@@ -245,7 +245,6 @@ sub import {
         current_sub
         evalbytes
         fc
-        module_true
         postderef_qq
         state
         unicode_eval
