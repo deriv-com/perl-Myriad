@@ -273,7 +273,7 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-async method hash_set : Defer ($k, $hash_key, $v //= undef) {
+async method hash_set : Defer ($k, $hash_key, $v = undef) {
     if(ref $hash_key eq 'HASH') {
         @{$data{$k}}{keys $hash_key->%*} = values $hash_key->%*;
         return 0 + keys $hash_key->%*;

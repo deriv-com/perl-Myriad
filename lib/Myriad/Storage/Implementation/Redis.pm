@@ -313,7 +313,7 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-async method hash_set ($k, $hash_key, $v //= undef) {
+async method hash_set ($k, $hash_key, $v = undef) {
     if(ref $hash_key eq 'HASH') {
         await $redis->hmset($self->apply_prefix($k), $hash_key->%*);
     } else {
