@@ -23,14 +23,19 @@ use Myriad::Util::UUID;
 
 use Myriad::Service::Attributes;
 
-use OpenTelemetry::Context;
-use OpenTelemetry::Trace;
-use OpenTelemetry::Constants qw( SPAN_STATUS_ERROR SPAN_STATUS_OK );
-
 # Only defer up to this many seconds between batch iterations
 use constant MAX_EXPONENTIAL_BACKOFF => 2;
 
-use constant USE_OPENTELEMETRY => 0;
+use constant USE_OPENTELEMETRY => $ENV{USE_OPENTELEMETRY} || 0;
+
+BEGIN {
+    if(USE_OPENTELEMETRY) {
+        require OpenTelemetry::Context;
+        require OpenTelemetry::Trace;
+        require OpenTelemetry::Constants;
+        OpenTelemetry::Constants->import(qw( SPAN_STATUS_ERROR SPAN_STATUS_OK ));
+    }
+}
 
 sub MODIFY_CODE_ATTRIBUTES {
     my ($class, $code, @attrs) = @_;
