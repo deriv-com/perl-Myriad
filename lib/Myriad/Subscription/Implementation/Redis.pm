@@ -235,7 +235,7 @@ async method receive_items {
                     } catch($e) {
                         $e = Myriad::Exception::InternalError->new(
                             reason => $e
-                        ) unless blessed($e) and $e->does('Myriad::Exception');
+                        ) unless blessed($e) and $e->DOES('Myriad::Exception');
                         $log->errorf(
                             'An error happened while decoding event data for stream %s message: %s, error: %s',
                             $stream,
