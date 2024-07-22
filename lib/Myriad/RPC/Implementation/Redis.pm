@@ -90,27 +90,28 @@ async method stop () {
 }
 
 async method create_group ($rpc) {
-    unless ($rpc->{group}) {
-        await $self->redis->create_group(
-            $rpc->{stream},
-            $self->group_name,
-            '0',
-            1
-        );
-        my ($service, $method) = service_from_stream_name($rpc->{stream});
-        await $self->redis->hset(
-            "rpc.group.{$service}",
-            $method,
-            $self->group_name,
-        );
-        await $self->check_pending($rpc);
-        $rpc->{group} = 1;
-    }
+    return if $rpc->{group};
+
+    await $self->redis->create_group(
+        $rpc->{stream},
+        $self->group_name,
+        '0',
+        1
+    );
+    my ($service, $method) = service_from_stream_name($rpc->{stream});
+    await $self->redis->hset(
+        "rpc.group.{$service}",
+        $method,
+        $self->group_name,
+    );
+    $rpc->{group} = 1;
+    await $self->check_pending($rpc);
+    return;
 }
 
 async method check_pending ($rpc) {
     my $done = 0;
-    while ( !$done && !$rpc->{group}) {
+    until ( $done ) {
         my @items = await $self->redis->pending(
             stream => $rpc->{stream},
             group  => $self->group_name,
@@ -126,13 +127,15 @@ async method check_pending ($rpc) {
 async method stream_items_messages ($rpc, @items) {
     ITEM:
     for my $item (@items) {
-        next unless $item->{args} || exists $processing->{$item->{id}};
+        next ITEM unless $item->{args} || exists $processing->{$item->{id}};
         my $data = {
             $item->{extra}->%*,
             data         => $item->{data},
             transport_id => $item->{id},
         };
-        $processing->{$rpc->{stream}}->{$item->{id}} = $self->loop->new_future(label => "rpc::response::$rpc->{stream}::$item->{id}");
+        $processing->{$rpc->{stream}}->{$item->{id}} = $self->loop->new_future(
+            label => "rpc::response::$rpc->{stream}::$item->{id}"
+        );
         try {
             my $message = Myriad::RPC::Message::from_hash($data->%*);
             $log->tracef('Passing message: %s to: %s', $message, $rpc->{sink}->label);
@@ -207,6 +210,7 @@ async method drop ($stream, $id) {
     $log->tracef("Going to drop message ID: %s on stream: %s", $id, $stream);
     await $self->redis->ack($stream, $self->group_name, $id);
     $processing->{$stream}->{$id}->done('published');
+    return;
 }
 
 async method has_pending_requests ($service) {

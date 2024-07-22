@@ -121,7 +121,7 @@ async method start {
                 } catch ($e) {
                     $e = Myriad::Exception::InternalError->new(
                         reason => $e
-                    ) unless blessed($e) and $e->does('Myriad::Exception');
+                    ) unless blessed($e) and $e->DOES('Myriad::Exception');
                     $log->errorf('Failed to process event %s - %s', $event_id, $e);
                     $span->record_exception($e);
                     $span->set_status(
