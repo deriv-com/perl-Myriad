@@ -18,7 +18,7 @@ See L<Myriad::Exception> for the rôle that defines the exception API.
 =cut
 
 # We deliberately *don't* want class/method keywords, but *do* want MOP
-use Object::Pad qw(:experimental);
+use Object::Pad qw(:experimental(mop));
 
 use Myriad::Exception;
 use Myriad::Exception::Base;
