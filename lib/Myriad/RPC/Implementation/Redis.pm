@@ -104,13 +104,14 @@ async method create_group ($rpc) {
         $method,
         $self->group_name,
     );
-    await $self->check_pending($rpc);
     $rpc->{group} = 1;
+    await $self->check_pending($rpc);
+    return;
 }
 
 async method check_pending ($rpc) {
     my $done = 0;
-    while ( !$done && !$rpc->{group}) {
+    until ( $done ) {
         my @items = await $self->redis->pending(
             stream => $rpc->{stream},
             group  => $self->group_name,
