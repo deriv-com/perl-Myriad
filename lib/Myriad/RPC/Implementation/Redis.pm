@@ -91,7 +91,6 @@ async method stop () {
 
 async method create_group ($rpc) {
     unless ($rpc->{group}) {
-        await $self->check_pending($rpc);
         await $self->redis->create_group(
             $rpc->{stream},
             $self->group_name,
@@ -104,6 +103,7 @@ async method create_group ($rpc) {
             $method,
             $self->group_name,
         );
+        await $self->check_pending($rpc);
         $rpc->{group} = 1;
     }
 }

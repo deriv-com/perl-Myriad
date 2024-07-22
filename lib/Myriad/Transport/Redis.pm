@@ -425,7 +425,7 @@ async method pending (%args) {
             concurrent => 0 + @$pending
         );
     } catch ($e) {
-        $log->warnf('Could not read pending messages on stream: %s | error: %s', $stream, $e);
+        $log->warnf('Could not read pending messages on stream: %s | error: %s', $stream, $e) unless $e =~ /^NOGROUP/;
     }
     $self->return_instance_to_pool($instance) if $instance;
     undef $instance;
