@@ -9,13 +9,19 @@ use Myriad::Class ':v2', extends => qw(IO::Async::Notifier), does => [
 
 use Myriad::Util::UUID;
 use Compress::Zstd ();
-use OpenTelemetry::Context;
-use OpenTelemetry::Trace;
-use OpenTelemetry::Constants qw( SPAN_STATUS_ERROR SPAN_STATUS_OK );
 
 use constant MAX_ALLOWED_STREAM_LENGTH => 10_000;
 
-use constant USE_OPENTELEMETRY => 0;
+use constant USE_OPENTELEMETRY => $ENV{USE_OPENTELEMETRY};
+
+BEGIN {
+    if(USE_OPENTELEMETRY) {
+        require OpenTelemetry::Context;
+        require OpenTelemetry::Trace;
+        require OpenTelemetry::Constants;
+        OpenTelemetry::Constants->import(qw( SPAN_STATUS_ERROR SPAN_STATUS_OK ));
+    }
+}
 
 field $redis;
 

@@ -215,9 +215,20 @@ use Heap;
 use IO::Async::Notifier;
 
 use Log::Any qw($log);
-use OpenTelemetry;
-use OpenTracing::Any qw($tracer);
 use Metrics::Any;
+
+use constant USE_OPENTELEMETRY => $ENV{USE_OPENTELEMETRY};
+
+BEGIN {
+    if(USE_OPENTELEMETRY) {
+        require OpenTelemetry;
+        require OpenTelemetry::Context;
+        require OpenTelemetry::Trace;
+        require OpenTelemetry::Constants;
+    }
+}
+
+require OpenTracing::Any;
 
 sub import {
     my $called_on = shift;
@@ -359,12 +370,19 @@ sub import {
     {
         no strict 'refs';
         if($version >= 2) {
-            my $provider = OpenTelemetry->tracer_provider;
-            *{$pkg . '::log'} = \(OpenTelemetry->logger);
-            *{$pkg . '::tracer'}  = \($provider->tracer(
-                name    => 'myriad',
-                version => $version,
-            ));
+            if(USE_OPENTELEMETRY) {
+                my $provider = OpenTelemetry->tracer_provider;
+                *{$pkg . '::log'} = \(OpenTelemetry->logger);
+                *{$pkg . '::tracer'}  = \($provider->tracer(
+                    name    => 'myriad',
+                    version => $version,
+                ));
+            } else {
+                *{$pkg . '::log'} = \Log::Any->get_logger(
+                    category => $pkg
+                );
+                *{$pkg . '::tracer'} = \undef;
+            }
         } else {
             # Essentially the same as importing Log::Any qw($log) for now,
             # but we may want to customise this with some additional attributes.
