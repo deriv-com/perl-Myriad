@@ -122,8 +122,8 @@ subtest 'Object::Pad' => sub {
     can_ok($obj, 'test');
     is($obj->test, 'ok', 'we find our own methods');
     is(exception {
-        $obj->diagnostics
-    }, undef, 'we created our own happiness');
+        $obj->diagnostics(0)
+    }, undef, 'we are able to call the built-in ->diagnostics method without issues');
 };
 
 subtest 'attributes' => sub {
