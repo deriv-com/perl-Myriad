@@ -19,10 +19,10 @@ requires 'Future::IO', '>= 0.15';
 requires 'XS::Parse::Sublike', '>= 0.21';
 requires 'Object::Pad', '>= 0.808';
 requires 'Role::Tiny', '>= 2.002004';
-requires 'Data::Checks', '>= 0.07';
+requires 'Data::Checks', '>= 0.09';
 requires 'Object::Pad::FieldAttr::Checked';
 requires 'Sublike::Extended';
-requires 'Signature::Attribute::Checked';
+requires 'Signature::Attribute::Checked', '>= 0.06';
 # Streams
 requires 'Ryu', '>= 3.005';
 requires 'Ryu::Async', '>= 0.020';
