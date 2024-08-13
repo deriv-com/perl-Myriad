@@ -69,7 +69,7 @@ sub new {
         require Myriad::Storage::Implementation::Memory;
         $STORAGE = Myriad::Storage::Implementation::Memory->new();
     } else {
-        Myriad::Exception::Storage::UnKnownTransport->throw();
+        Myriad::Exception::Storage::UnknownTransport->throw();
     }
     return $STORAGE;
 }

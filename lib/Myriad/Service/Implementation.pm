@@ -23,14 +23,19 @@ use Myriad::Util::UUID;
 
 use Myriad::Service::Attributes;
 
-use OpenTelemetry::Context;
-use OpenTelemetry::Trace;
-use OpenTelemetry::Constants qw( SPAN_STATUS_ERROR SPAN_STATUS_OK );
-
 # Only defer up to this many seconds between batch iterations
 use constant MAX_EXPONENTIAL_BACKOFF => 2;
 
-use constant USE_OPENTELEMETRY => 0;
+use constant USE_OPENTELEMETRY => $ENV{USE_OPENTELEMETRY} || 0;
+
+BEGIN {
+    if(USE_OPENTELEMETRY) {
+        require OpenTelemetry::Context;
+        require OpenTelemetry::Trace;
+        require OpenTelemetry::Constants;
+        OpenTelemetry::Constants->import(qw( SPAN_STATUS_ERROR SPAN_STATUS_OK ));
+    }
+}
 
 sub MODIFY_CODE_ATTRIBUTES {
     my ($class, $code, @attrs) = @_;
@@ -255,9 +260,13 @@ async method load () {
             });
 
             await $self->subscription->create_from_source(
-                source  => $spec->{src}->pause,
-                channel => $chan,
-                service => $service_name,
+                source             => $spec->{src}->pause,
+                channel            => $chan,
+                service            => $service_name,
+                max_len            => $spec->{args}{max_len},
+                compress           => $spec->{args}{compress},
+                compress_threshold => $spec->{args}{compress_threshold},
+                subchannel_key     => $spec->{args}{subchannel_key},
             );
         }
     }
@@ -268,6 +277,10 @@ async method load () {
                 $log->tracef('Adding Receiver %s as %s for %s', $method, $receivers->{$method}, $service_name);
                 my $spec = $receivers->{$method};
                 my $chan = $spec->{args}{channel} // die 'expected a channel, but there was none to be found';
+                if(defined($spec->{args}{subchannel})) {
+                    my $k = $spec->{args}{subchannel};
+                    $chan .= "{$k}";
+                }
                 my $sink = $spec->{sink} = $ryu->sink(
                     label => "receiver:$chan",
                 );
@@ -287,12 +300,16 @@ async method load () {
     if (my $batches = $registry->batches_for(ref($self))) {
         for my $method (sort keys $batches->%*) {
             $log->tracef('Adding Batch %s for %s', $method, $service_name);
-            my $sink = $batches->{$method}{sink} = $ryu->sink(label => 'batch:' . $method);
+            my $spec = $batches->{$method};
+            my $sink = $spec->{sink} = $ryu->sink(label => 'batch:' . $method);
             $sink->pause;
             await $self->subscription->create_from_source(
-                source  => $sink->source,
-                channel => $method,
-                service => $service_name,
+                source             => $sink->source,
+                channel            => $method,
+                service            => $service_name,
+                max_len            => $spec->{args}{max_len},
+                compress           => $spec->{args}{compress},
+                compress_threshold => $spec->{args}{compress_threshold},
             );
         }
     }
@@ -358,7 +375,9 @@ async method load () {
                         return await $self->rpc->reply_success($service_name, $message, $response);
                     }
                 } catch ($e) {
-                    $e = Myriad::Exception::InternalError->new(reason => $e) unless blessed $e and $e->DOES('Myriad::Exception');
+                    $e = Myriad::Exception::InternalError->new(
+                        reason => $e
+                    ) unless blessed($e) and $e->DOES('Myriad::Exception');
                     if(USE_OPENTELEMETRY) {
                         $span->record_exception($e);
                         $span->set_status(

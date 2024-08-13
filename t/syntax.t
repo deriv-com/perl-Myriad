@@ -122,8 +122,8 @@ subtest 'Object::Pad' => sub {
     can_ok($obj, 'test');
     is($obj->test, 'ok', 'we find our own methods');
     is(exception {
-        $obj->diagnostics
-    }, undef, 'we created our own happiness');
+        $obj->diagnostics(0)
+    }, undef, 'we are able to call the built-in ->diagnostics method without issues');
 };
 
 subtest 'attributes' => sub {
@@ -152,6 +152,7 @@ subtest 'Myriad::Class :v2' => sub {
             await $f;
             return;
         }
+        extended method checked ($v : Checked(NumGE(5))) { 'ok' }
         __PACKAGE__
     }), 'local::v2') or diag $@;
     my $obj = local::v2->new;
@@ -161,6 +162,15 @@ subtest 'Myriad::Class :v2' => sub {
     $pending->done;
     is($obj->suspended // 0, 1, 'have still suspended once');
     is($obj->resumed // 0, 1, 'and resumed once now');
+    is(exception {
+        $obj->checked(5)
+    }, undef, 'can check numeric >= 5');
+    like(exception {
+        $obj->checked(-3)
+    }, qr/\Qsatisfying :Checked(NumGE(5))/, 'numeric check fails on number out of range');
+    like(exception {
+        $obj->checked('xx')
+    }, qr/\Qsatisfying :Checked(NumGE(5))/, 'numeric check fails on invalid number');
     done_testing;
 };
 done_testing;

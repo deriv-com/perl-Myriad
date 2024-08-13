@@ -273,13 +273,15 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-async method hash_set : Defer ($k, %args) {
-    for my $hash_key (sort keys %args) {
-        my $v = $args{$hash_key};
+async method hash_set : Defer ($k, $hash_key, $v = undef) {
+    if(ref $hash_key eq 'HASH') {
+        @{$data{$k}}{keys $hash_key->%*} = values $hash_key->%*;
+        return 0 + keys $hash_key->%*;
+    } else {
         die 'value cannot be a reference for ' . $k . ' hash key ' . $hash_key . ' - ' . ref($v) if ref $v;
+        $data{$k}{$hash_key} = $v;
+        return 1;
     }
-    @{$data{$k}}{keys %args} = values %args;
-    return 0 + keys %args;
 }
 
 =head2 hash_get
@@ -411,6 +413,19 @@ async method hash_as_list : Defer ($k) {
     return $data{$k}->%*;
 }
 
+async method list_count : Defer ($k) {
+    return 0 + $data{$k}->@*;
+}
+
+async method list_range : Defer ($k, $start = 0, $end = -1) {
+    my $len = 0 + $data{$k}->@*
+        or return [ ];
+    # Handle negative values as offset from end (-1 being last element)
+    $start = $len - $start if $start < 0;
+    $end = $len - $end if $end < 0;
+    return [ $data{$k}->@[$start .. $end] ];
+}
+
 =head2 orderedset_add
 
 Takes the following parameters:
@@ -488,6 +503,62 @@ async method orderedset_remove_byscore : Defer ($k, $min, $max) {
     return 0 + @keys_before - @keys_after;
 }
 
+=head2 unorderedset_add
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $m >> - the scalar member value
+
+=back
+
+Note that references are currently B<not> supported - attempts to write an arrayref, hashref
+or object will fail.
+
+Returns a L<Future> which will resolve on completion.
+
+=cut
+
+async method unorderedset_add : Defer ($k, $m) {
+    $m = [ $m ] unless ref($m) eq 'ARRAY';
+    die 'set member values cannot be a reference for key:' . $k . ' - ' . ref($_) for grep { ref } $m->@*;
+    $data{$k} = {} unless defined $data{$k};
+    return @{$data{$k}}{$m->@*} = ();
+}
+
+=head2 unorderedset_remove
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $m >> - the scalar member value
+
+=back
+
+Returns a L<Future> which will resolve on completion.
+
+=cut
+
+async method unorderedset_remove : Defer ($k, $m) {
+    $m = [ $m ] unless ref($m) eq 'ARRAY';
+    my $keys_before = 0 + keys $data{$k}->%*;
+    delete @{$data{$k}}{$m->@*};
+    return $keys_before - keys $data{$k}->%*;
+}
+
+async method unorderedset_replace : Defer ($k, $m) {
+    $m = [ $m ] unless ref($m) eq 'ARRAY';
+    delete @{$data{$k}}{keys $data{$k}->%*};
+    @{$data{$k}}{$m->@*} = ();
+    return 0 + keys $data{$k}->%*;
+}
+
 async method unlink : Defer (@keys) {
     delete @data{@keys};
     $key_change->{$_}->done for grep { $key_change->{$_} } @keys;
@@ -546,6 +617,50 @@ async method orderedset_members : Defer ($k, $min = '-inf', $max = '+inf', $with
     $min = -100000 if $min =~ /-inf/;
     $max = 100000 if $max =~ /\+inf/;
     return [ map { ($_ >= $min and $_ <= $max ) ? $with_score ? ($data{$k}->{$_}, $_) : ($data{$k}->{$_}) : ()  } sort keys $data{$k}->%* ];
+}
+
+=head2 unorderedset_member_count
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=back
+
+Returns a L<Future> which will resolve on completion.
+
+=cut
+
+async method unorderedset_member_count : Defer ($k) {
+    return 0 + keys $data{$k}->%*;
+}
+
+=head2 unorderedset_members
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $min >> - minimum score for selection
+
+=item * C<< $max >> - maximum score for selection
+
+=back
+
+Returns a L<Future> which will resolve on completion.
+
+=cut
+
+async method unorderedset_members : Defer ($k) {
+    return [ keys $data{$k}->%* ];
+}
+
+async method unorderedset_is_member : Defer ($k, $m) {
+    return exists $data{$k}{$m};
 }
 
 1;

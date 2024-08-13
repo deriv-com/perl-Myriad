@@ -45,7 +45,27 @@ a concrete implementation - instead, see classes such as:
 
 =cut
 
-our @WRITE_METHODS = qw(set getset getdel incr push unshift pop shift hash_set hash_add orderedset_add orderedset_remove_member orderedset_remove_byscore del unlink set_unless_exists);
+our @WRITE_METHODS = qw(
+    set
+    getset
+    getdel
+    incr
+    push
+    unshift
+    pop
+    shift
+    hash_set
+    hash_add
+    orderedset_add
+    orderedset_remove_member
+    orderedset_remove_byscore
+    unorderedset_add
+    unorderedset_remove
+    unorderedset_replace
+    del
+    unlink
+    set_unless_exists
+);
 
 =head2 set
 
@@ -216,7 +236,7 @@ Returns a L<Future>.
 
 method orderedset_add;
 
-=head2 orderedset_remove_memeber
+=head2 orderedset_remove_member
 
 Removes a member from an orderedset structure
 Takes the following parameters:
@@ -256,6 +276,63 @@ Returns a L<Future>.
 
 method orderedset_remove_byscore;
 
+=head2 unorderedset_add
+
+Adds members to a set.
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $members >> - an arrayref holding zero or more members to add
+
+=back
+
+Returns a L<Future>.
+
+=cut
+
+method unorderedset_add;
+
+=head2 unorderedset_remove
+
+Removes members from a set.
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $members >> - an arrayref holding zero or more members to remove
+
+=back
+
+Returns a L<Future>.
+
+=cut
+
+method unorderedset_remove;
+
+=head2 unorderedset_replace
+
+Atomically replace all members in a set.
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $members >> - an arrayref holding zero or more members to form the new set
+
+=back
+
+Returns a L<Future>.
+
+=cut
+
+method unorderedset_replace;
+
 method del;
 method unlink;
 method set_unless_exists;
@@ -264,7 +341,25 @@ method set_unless_exists;
 
 =cut
 
-our @READ_METHODS = qw(get observe watch_keyspace hash_get hash_keys hash_values hash_exists hash_count hash_as_list orderedset_member_count orderedset_members when_key_changed);
+our @READ_METHODS = qw(
+    get
+    observe
+    watch_keyspace
+    hash_get
+    hash_keys
+    hash_values
+    hash_exists
+    hash_count
+    hash_as_list
+    list_count
+    list_range
+    orderedset_member_count
+    orderedset_members
+    unorderedset_is_member
+    unorderedset_member_count
+    unorderedset_members
+    when_key_changed
+);
 
 =head2 get
 
@@ -389,6 +484,42 @@ suitable for assigning to a hash.
 
 method hash_as_list;
 
+=head2 list_count
+
+Takes the following parameters:
+
+=over 4
+
+=item * key
+
+=back
+
+Returns a L<Future> which will resolve to the integer count of values currently in the list.
+
+=cut
+
+method list_count;
+
+=head2 list_range
+
+Takes the following parameters:
+
+=over 4
+
+=item * key
+
+=item * start index (from 0), use negative values to indicate distance from end of list (-1 being the last element)
+
+=item * end index (from 0), as above
+
+=back
+
+Returns a L<Future> which will resolve to a list of values from the list.
+
+=cut
+
+method list_range;
+
 =head2 orderedset_member_count
 
 Returns the count of members that have scores within the range passed from an orderedset structure
@@ -430,6 +561,60 @@ Returns a L<Future>.
 =cut
 
 method orderedset_members;
+
+=head2 unorderedset_is_member
+
+Returns true if the given key is a member in the set.
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $value >> - the value to check for presence in the set
+
+=back
+
+Returns a L<Future>.
+
+=cut
+
+method unorderedset_is_member;
+
+=head2 unorderedset_member_count
+
+Returns the count of all members.
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=back
+
+Returns a L<Future>.
+
+=cut
+
+method unorderedset_member_count;
+
+=head2 unorderedset_members
+
+Returns a list of all members in the set.
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=back
+
+Returns a L<Future>.
+
+=cut
+
+method unorderedset_members;
 
 method when_key_changed;
 

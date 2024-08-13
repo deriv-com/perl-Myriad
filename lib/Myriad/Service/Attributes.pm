@@ -97,6 +97,16 @@ sub rpc {
 Mark this as an async method which should be called repeatedly to generate
 arrayref batches of data.
 
+Takes the following parameters as a hashref:
+
+=over 4
+
+=item * C<compress> - compress all data, regardless of size
+
+=item * C<compress_threshold> - compress any data which would be larger than the given size after encoding, in bytes
+
+=back
+
  field $id = 0;
  async method example_batch : Batch {
   return [ ++$id ];
@@ -118,6 +128,18 @@ sub batch {
 
 Indicates a method which should be called on startup, which given a
 L<Ryu::Sink> will emit events to that sink until it's done.
+
+Takes the following parameters as a hashref:
+
+=over 4
+
+=item * C<compress> - compress all data, regardless of size
+
+=item * C<compress_threshold> - compress any data which would be larger than the given size after encoding, in bytes
+
+=item * C<subchannel_key> - emit to zero or more separate streams defined by this key in the emitted items
+
+=back
 
 =cut
 

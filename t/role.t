@@ -12,7 +12,7 @@ BEGIN {
 use Test::More;
 use Test::Fatal;
 use Test::Deep;
-use Object::Pad qw(:experimental);
+use Object::Pad qw(:experimental(mop));
 
 is(exception {
     eval <<'EOS' or die $@;

@@ -10,7 +10,7 @@ use IO::Async::Loop;
 use Future::Utils qw(fmap0);
 use Future::AsyncAwait;
 use Check::UnitCheck;
-use Object::Pad qw(:experimental);
+use Object::Pad qw(:experimental(mop));
 
 use Myriad;
 use Myriad::Service::Implementation;

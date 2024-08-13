@@ -76,6 +76,13 @@ async method service (@args) {
         }
     }
 
+    # Ensure we have valid transports in place before we start
+    for my $type (qw(storage subscription rpc)) {
+        $log->tracef('Set up transport for [%s]', $type);
+        my $instance = $myriad->transport($type);
+        await $instance->start if $instance->can('start');
+    }
+
     # Load services into Myriad but don't start them yet
 
     $log->tracef('Attempt to add services for %s', join ',', @services_modules);

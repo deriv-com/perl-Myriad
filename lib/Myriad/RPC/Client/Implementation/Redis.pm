@@ -61,12 +61,11 @@ async method start() {
         } catch ($e) {
             $log->warnf('failed to parse rpc response due %s', $e);
         }
-    })->completed;
+    });
 
     $started->done('started');
     $log->tracef('Started RPC client subscription on %s', $whoami);
-
-    await $subscription;
+    return;
 }
 
 async method call_rpc($service, $method, %args) {
@@ -93,7 +92,10 @@ async method call_rpc($service, $method, %args) {
         await $redis->xadd($stream_name => '*', $request->as_hash->%*);
 
         # The subscription loop will parse the message for us
-        my $message = await Future->wait_any($self->loop->timeout_future(after => $timeout), $pending);
+        my $message = await Future->wait_any(
+            $self->loop->timeout_future(after => $timeout),
+            $pending
+        );
 
         unless (exists $message->response->{response}) {
             my $reason = $message->response->{error}{message} // "Unknown";
@@ -102,10 +104,11 @@ async method call_rpc($service, $method, %args) {
 
         return $message->response->{response};
     } catch ($e) {
+        $log->warnf('Failed on RPC call - %s', $e);
         if ($e =~ /Timeout/) {
             $e  = Myriad::Exception::RPC::Timeout->new(reason => 'deadline is due');
         } else {
-            $e = Myriad::Exception::InternalError->new(reason => $e) unless blessed $e and $e->DOES('Myriad::Exception');
+            $e = Myriad::Exception::InternalError->new(reason => $e) unless blessed $e && $e->DOES('Myriad::Exception');
         }
         $pending->fail($e) unless $pending->is_ready;
         delete $pending_requests->{$message_id};
@@ -114,7 +117,7 @@ async method call_rpc($service, $method, %args) {
 }
 
 async method stop {
-    $subscription->done();
+    $subscription->finish
 }
 
 method next_id {

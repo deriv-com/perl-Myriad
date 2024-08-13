@@ -53,6 +53,11 @@ sub stream_name_from_service ($service, $method) {
     return RPC_PREFIX . ".$service.". RPC_SUFFIX . "/$method"
 }
 
+sub service_from_stream_name ($stream_name) {
+    my ($service, $method) = $stream_name =~ m{\Q@{[RPC_PREFIX()]}\E\.([^/]+)\.\Q@{[RPC_SUFFIX]}\E/(.*)};
+    return ($service, $method);
+}
+
 method configure (%args) {
     $redis = delete $args{redis} if exists $args{redis};
     $whoami = hostname();
@@ -85,18 +90,34 @@ async method stop () {
 }
 
 async method create_group ($rpc) {
-    unless ($rpc->{group}) {
-        await $self->check_pending($rpc);
-        await $self->redis->create_group($rpc->{stream}, $self->group_name, '$', 1);
-        $rpc->{group} = 1;
-    }
+    return if $rpc->{group};
+
+    await $self->redis->create_group(
+        $rpc->{stream},
+        $self->group_name,
+        '0',
+        1
+    );
+    my ($service, $method) = service_from_stream_name($rpc->{stream});
+    await $self->redis->hset(
+        "rpc.group.{$service}",
+        $method,
+        $self->group_name,
+    );
+    $rpc->{group} = 1;
+    await $self->check_pending($rpc);
+    return;
 }
 
 async method check_pending ($rpc) {
     my $done = 0;
-    while ( !$done && !$rpc->{group}) {
-        my @items = await $self->redis->pending(stream => $rpc->{stream}, group => $self->group_name, client => $self->whoami);
-        $done = 1 if @items < 1;
+    until ( $done ) {
+        my @items = await $self->redis->pending(
+            stream => $rpc->{stream},
+            group  => $self->group_name,
+            client => $self->whoami
+        );
+        $done = 1 unless @items;
         $log->tracef('Pending messages in stream: %s | Done: %s', \@items, $done);
 
         await $self->stream_items_messages($rpc, @items);
@@ -104,19 +125,25 @@ async method check_pending ($rpc) {
 }
 
 async method stream_items_messages ($rpc, @items) {
-
+    ITEM:
     for my $item (@items) {
-        next unless $item->{data}->@* || exists $processing->{$item->{id}};
-        push $item->{data}->@*, ('transport_id', $item->{id});
-        $processing->{$rpc->{stream}}->{$item->{id}} = $self->loop->new_future(label => "rpc::response::$rpc->{stream}::$item->{id}");
+        next ITEM unless $item->{args} || exists $processing->{$item->{id}};
+        my $data = {
+            $item->{extra}->%*,
+            data         => $item->{data},
+            transport_id => $item->{id},
+        };
+        $processing->{$rpc->{stream}}->{$item->{id}} = $self->loop->new_future(
+            label => "rpc::response::$rpc->{stream}::$item->{id}"
+        );
         try {
-            my $message = Myriad::RPC::Message::from_hash($item->{data}->@*);
+            my $message = Myriad::RPC::Message::from_hash($data->%*);
             $log->tracef('Passing message: %s to: %s', $message, $rpc->{sink}->label);
             if ($message->passed_deadline) {
                 $log->tracef('Skipping message %s because deadline is due - deadline: %s now: %s',
                     $message->transport_id, $message->deadline, time);
                 await $self->drop($rpc->{stream}, $item->{id});
-                next;
+                next ITEM;
             }
             $rpc->{sink}->emit($message);
         } catch ($error) {
@@ -128,31 +155,38 @@ async method stream_items_messages ($rpc, @items) {
     $processing->{$rpc->{stream}} = {};
 }
 
-async method listen () {
+method listen () {
     return $running //= (async sub {
-        $log->tracef('Start listening to (%d) RPC streams', scalar($self->rpc_list->@*));
-        await &fmap_void($self->$curry::curry(async method ($rpc) {
-            await $self->create_group($rpc);
+        $log->tracef('Start listening to (%d) RPC stream(s)', scalar($self->rpc_list->@*));
+        await &fmap_void($self->$curry::weak(async method ($rpc) {
+            try {
+                await $self->create_group($rpc);
 
-            while (1) {
-                my @items = await $self->redis->read_from_stream(
-                    stream => $rpc->{stream},
-                    group => $self->group_name,
-                    client => $self->whoami
-                );
-                await $self->stream_items_messages($rpc, @items);
-                await $self->redis->cleanup(
-                    stream => $rpc->{stream},
-                    limit => MAX_ALLOWED_STREAM_LENGTH,
-                );
+                while (1) {
+                    if(my @items = await $self->redis->read_from_stream(
+                        stream => $rpc->{stream},
+                        group  => $self->group_name,
+                        client => $self->whoami
+                    )) {
+                        await $self->stream_items_messages($rpc, @items);
+                        await $self->redis->cleanup(
+                            stream => $rpc->{stream},
+                            limit  => MAX_ALLOWED_STREAM_LENGTH,
+                        );
+                    }
+                }
+            } catch ($e) {
+                $log->errorf('Failed on RPC listen - %s', $e);
+                die $e;
             }
-        }), foreach => [$self->rpc_list->@*], concurrent => scalar $self->rpc_list->@*);
+        }), foreach => [$self->rpc_list->@*], concurrent => 0 + $self->rpc_list->@*);
     })->();
 }
 
 async method reply ($service, $message) {
     my $stream = stream_name_from_service($service, $message->rpc);
     try {
+        $log->tracef('Reply to [%s] with %s', $message->who, $message->as_json);
         await $self->redis->publish($message->who, $message->as_json);
         await $self->redis->ack($stream, $self->group_name, $message->transport_id);
         $processing->{$stream}->{$message->transport_id}->done('published');
@@ -176,6 +210,7 @@ async method drop ($stream, $id) {
     $log->tracef("Going to drop message ID: %s on stream: %s", $id, $stream);
     await $self->redis->ack($stream, $self->group_name, $id);
     $processing->{$stream}->{$id}->done('published');
+    return;
 }
 
 async method has_pending_requests ($service) {

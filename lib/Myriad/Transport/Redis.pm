@@ -31,6 +31,7 @@ It should also cover retry for stateless calls.
 =cut
 
 use Class::Method::Modifiers qw(:all);
+use Compress::Zstd ();
 use Sub::Util qw(subname);
 
 use Myriad::Redis::Pending;
@@ -77,6 +78,7 @@ field $max_pool_count;
 field $clientside_cache_size;
 field $prefix;
 field $ryu;
+field $starting;
 
 field $cache_events;
 
@@ -122,7 +124,10 @@ Number of items to allow per batch (pending / readgroup calls).
 method batch_count () { $batch_count }
 
 async method start {
-    $redis = await $self->redis;
+    await $starting if $starting;
+    return if $starting or $redis;
+
+    $redis = await $starting = $self->redis->on_ready(sub { undef $starting });
     return;
 }
 
@@ -270,11 +275,15 @@ async method read_from_stream (%args) {
     if ($batch) {
         my ($stream, $data) = $batch->@*;
         return map {
-            my ($id, $args) = $_->@*;
+            my ($id, $kv_pairs) = $_->@*;
+            my $args = { $kv_pairs->@* };
+            my $data = exists $args->{zstd} ? Compress::Zstd::decompress(delete $args->{zstd}) : delete($args->{data});
             +{
                 stream => $self->remove_prefix($stream),
                 id     => $id,
-                data   => $args,
+                data   => $data,
+                args   => $args->{args},
+                extra  => $args,
             }
         } $data->@*;
     }
@@ -314,8 +323,33 @@ async method cleanup (%args) {
         my $oldest = await $self->oldest_processed_id($stream);
         $log->tracef('Attempting to clean up [%s] Size: %d | Earliest ID to care about: %s', $stream, $info->{length}, $oldest);
         if ($oldest and $oldest ne '0-0' and $self->compare_id($oldest, $info->{first_entry}[0]) > 0) {
-            my ($total) = await $redis->xtrim($stream, MINID => ($use_trim_exact ? () : '~'), $oldest);
-            $log->tracef('Trimmed %d items from stream: %s', $total, $stream);
+            my $total = 0;
+            my $count;
+            do {
+                ($count) = await $redis->xtrim(
+                    $self->apply_prefix($stream),
+                    MINID => ($use_trim_exact ? '=' : '~'),
+                    $oldest,
+                );
+                $total += $count if $count;
+                $log->tracef('Trimmed %d items from stream: %s', $count, $stream) if $count;
+            } while $count;
+            $log->tracef('Trimmed %d total items from stream: %s', $total, $stream);
+
+            unless($total) {
+                # At this point, we know we _can_ remove things, but the approximate attempt earlier didn't
+                # make any progress - so we fall back to a full removal instead
+                ($count) = await $redis->xtrim(
+                    $self->apply_prefix($stream),
+                    MINID => '=',
+                    $oldest,
+                );
+                $log->debugf(
+                    'Approximate trimming failed to remove any items, resorting to slower exact trim method for stream %s, removed %d items total',
+                    $stream,
+                    $count
+                );
+            }
         }
         else {
             $log->tracef('No point in trimming (%s) where: oldest is %s and this compares to %s', $stream, $oldest, $info->{first_entry}[0]);
@@ -373,16 +407,25 @@ async method pending (%args) {
                     10,
                     $id
                 );
+                return unless $claim and $claim->@*;
                 $log->tracef('Claim is %s', $claim);
-                my $args = $claim->[0]->[1];
+                my $kv_pairs = $claim->[0]->[1] || [];
 
-                return {stream => $self->remove_prefix($stream), id => $id, data => $args ? $args : []};
+                my $args = { $kv_pairs->@* };
+                my $data = exists $args->{zstd} ? Compress::Zstd::decompress(delete $args->{zstd}) : delete($args->{data});
+                return {
+                    stream => $self->remove_prefix($stream),
+                    id     => $id,
+                    data   => $data,
+                    args   => $args->{args},
+                    extra  => $args,
+                };
             }),
             foreach => $pending,
-            concurrent => scalar @$pending
+            concurrent => 0 + @$pending
         );
     } catch ($e) {
-        $log->warnf('Could not read pending messages on stream: %s | error: %s', $stream, $e);
+        $log->warnf('Could not read pending messages on stream: %s | error: %s', $stream, $e) unless $e =~ /^NOGROUP/;
     }
     $self->return_instance_to_pool($instance) if $instance;
     undef $instance;
@@ -633,8 +676,8 @@ Acknowledge a message from a Redis stream.
 
 =cut
 
-async method ack ($stream, $group, $message_id) {
-    await $redis->xack($self->apply_prefix($stream), $group, $message_id);
+async method ack ($stream, $group, @message_ids) {
+    await $redis->xack($self->apply_prefix($stream), $group, @message_ids);
 }
 
 =head2 publish
@@ -689,7 +732,7 @@ async method set_unless_exists ($key, $v, $ttl) {
     await $redis->set(
         $self->apply_prefix($key),
         $v,
-        qw(NX GET), 
+        qw(NX GET),
         defined $ttl ? ('PX', $ttl * 1000.0) : ()
     );
 }
@@ -726,6 +769,10 @@ async method hset ($k, $hash_key, $v) {
     await $redis->hset($self->apply_prefix($k), $hash_key, $v);
 }
 
+async method hmset ($k, @kvs) {
+    await $redis->hmset($self->apply_prefix($k), @kvs);
+}
+
 async method hget($k, $hash_key) {
     await $redis->hget($self->apply_prefix($k), $hash_key);
 }
@@ -754,6 +801,26 @@ async method hincrby($k, $hash_key, $v) {
     await $redis->hincrby($self->apply_prefix($k), $hash_key, $v);
 }
 
+async method sadd ($key, @v) {
+    await $redis->sadd($self->apply_prefix($key), @v);
+}
+
+async method sismember ($key, @v) {
+    await $redis->sismember($self->apply_prefix($key), @v);
+}
+
+async method smembers ($key) {
+    await $redis->smembers($self->apply_prefix($key));
+}
+
+async method scard ($key) {
+    await $redis->scard($self->apply_prefix($key));
+}
+
+async method srem ($key, @v) {
+    await $redis->srem($self->apply_prefix($key), @v);
+}
+
 async method zadd ($key, @v) {
     await $redis->zadd($self->apply_prefix($key), @v);
 }
@@ -774,6 +841,14 @@ async method zrange ($k, @v) {
     await $redis->zrange($self->apply_prefix($k), @v);
 }
 
+async method lrange ($k, @v) {
+    await $redis->lrange($self->apply_prefix($k), @v);
+}
+
+async method llen ($k, @v) {
+    await $redis->llen($self->apply_prefix($k), @v);
+}
+
 method clientside_cache_events {
     $cache_events ||= $redis->clientside_cache_events
         ->map($self->curry::weak::remove_prefix)
@@ -781,10 +856,13 @@ method clientside_cache_events {
 
 async method watch_keyspace ($pattern) {
     # Net::Async::Redis will handle the connection in this case
-    return $redis->clientside_cache_events->map($self->$curry::weak(method {
-        $log->tracef('Have clientside cache event with [%s] and will remove prefix [%s.]', $_, $prefix);
-        return $self->remove_prefix($_);
-    })) if $clientside_cache_size;
+    if($clientside_cache_size) {
+        return $redis->clientside_cache_events
+            ->map($self->$curry::weak(method {
+                $log->tracef('Have clientside cache event with [%s] and will remove prefix [%s.]', $_, $prefix);
+                return $self->remove_prefix($_);
+            }));
+    }
 
     $log->tracef(
         'Falling back to keyspace notifications for %s due to client cache size = %d or unsupported',
@@ -794,9 +872,10 @@ async method watch_keyspace ($pattern) {
 
     # Keyspace notification is a psubscribe
     my $instance = await $self->borrow_instance_from_pool;
-    my $src = await $instance->watch_keyspace(
+    my $sub = await $instance->watch_keyspace(
         $self->apply_prefix($pattern)
     );
+    my $src = $sub->events;
     my $events = $src->map(sub {
         my $chan = $_->{channel} =~ s/__key.*:$prefix\.//r;
         return $chan;

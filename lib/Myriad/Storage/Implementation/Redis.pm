@@ -215,6 +215,14 @@ async method watch_keyspace ($keyspace) {
     });
 }
 
+async method list_count ($k) {
+    await $redis->llen($self->apply_prefix($k));
+}
+
+async method list_range ($k, $start = 0, $end = -1) {
+    await $redis->lrange($self->apply_prefix($k), $start, $end);
+}
+
 =head2 push
 
 Takes the following parameters:
@@ -305,9 +313,13 @@ Returns a L<Future> which will resolve to .
 
 =cut
 
-async method hash_set ($k, $hash_key, $v) {
-    die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
-    await $redis->hset($self->apply_prefix($k), $hash_key, $v);
+async method hash_set ($k, $hash_key, $v = undef) {
+    if(ref $hash_key eq 'HASH') {
+        await $redis->hmset($self->apply_prefix($k), $hash_key->%*);
+    } else {
+        die 'value cannot be a reference for ' . $k . ' - ' . ref($v) if ref $v;
+        await $redis->hset($self->apply_prefix($k), $hash_key, $v);
+    }
 }
 
 =head2 hash_get
@@ -517,6 +529,80 @@ async method orderedset_remove_byscore ($k, $min, $max) {
     await $redis->zremrangebyscore($self->apply_prefix($k), $min => $max);
 }
 
+=head2 unorderedset_add
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $m >> - the scalar member value
+
+=back
+
+Note that references are B<not> supported - attempts to write an arrayref, hashref
+or object will fail.
+
+Redis sorted sets data structure family.
+add a scored member value to a storage key
+
+Returns a L<Future> which will resolve on completion.
+
+=cut
+
+async method unorderedset_add ($k, $m) {
+    $m = [ $m ] unless ref($m) eq 'ARRAY';
+    die 'set member values cannot be a reference for key:' . $k . ' - ' . ref($_) for grep { ref } $m->@*;
+    await $redis->sadd($self->apply_prefix($k), $m->@*);
+}
+
+=head2 unorderedset_remove
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $m >> - the scalar member value
+
+=back
+
+Returns a L<Future> which will resolve on completion.
+
+=cut
+
+async method unorderedset_remove ($k, $m) {
+    $m = [ $m ] unless ref($m) eq 'ARRAY';
+    await $redis->srem($self->apply_prefix($k), $m->@*);
+}
+
+=head2 unorderedset_replace
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=item * C<< $m >> - the scalar member value
+
+=back
+
+Returns a L<Future> which will resolve on completion.
+
+=cut
+
+async method unorderedset_replace ($k, $m) {
+    $m = [ $m ] unless ref($m) eq 'ARRAY';
+    my $prefixed = $self->apply_prefix($k);
+    await $redis->multi(sub ($redis) {
+        $redis->unlink($prefixed);
+        $redis->sadd($prefixed, $m->@*);
+    });
+}
+
 async method unlink (@keys) {
     await $redis->unlink(map { $self->apply_prefix($_) } @keys);
     return $self;
@@ -577,6 +663,46 @@ Returns a L<Future> which will resolve on completion.
 
 async method orderedset_members ($k, $min = '-inf', $max = '+inf', $with_score = 0) {
     await $redis->zrange($self->apply_prefix($k), $min => $max, 'BYSCORE', ($with_score ? 'WITHSCORES' : ()));
+}
+
+=head2 unorderedset_member_count
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=back
+
+Returns a L<Future> which will resolve on completion.
+
+=cut
+
+async method unorderedset_member_count ($k) {
+    await $redis->scard($self->apply_prefix($k));
+}
+
+=head2 unorderedset_members
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >> - the relative key in storage
+
+=back
+
+Returns a L<Future> which will resolve on completion.
+
+=cut
+
+async method unorderedset_members ($k) {
+    await $redis->smembers($self->apply_prefix($k));
+}
+
+async method unorderedset_is_member ($k, $m) {
+    await $redis->sismember($self->apply_prefix($k), $m);
 }
 
 1;
