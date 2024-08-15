@@ -396,7 +396,7 @@ sub import {
     }
 
     if(my $class = $args{class} // $pkg) {
-        Object::Pad->import_into($pkg, ":experimental(init_expr mop custom_field_attr adjust_params)");
+        Object::Pad->import_into($pkg, ":experimental(init_expr mop custom_field_attr)");
 
         my $method = 'begin_' . ($args{type} || 'class');
         Module::Load::load($args{extends}) if $args{extends};
