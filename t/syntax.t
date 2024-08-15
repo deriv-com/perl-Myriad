@@ -167,10 +167,10 @@ subtest 'Myriad::Class :v2' => sub {
     }, undef, 'can check numeric >= 5');
     like(exception {
         $obj->checked(-3)
-    }, qr/\Qsatisfying :Checked(NumGE(5))/, 'numeric check fails on number out of range');
+    }, qr/\Qsatisfying NumGE(5)/, 'numeric check fails on number out of range');
     like(exception {
         $obj->checked('xx')
-    }, qr/\Qsatisfying :Checked(NumGE(5))/, 'numeric check fails on invalid number');
+    }, qr/\Qsatisfying NumGE(5)/, 'numeric check fails on invalid number');
     done_testing;
 };
 done_testing;
