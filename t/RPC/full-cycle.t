@@ -8,7 +8,7 @@ use Log::Any::Adapter qw(TAP);
 
 use Future;
 use Future::AsyncAwait;
-use Object::Pad qw(:experimental);
+use Object::Pad;
 
 my ($ping_service, $pong_service);
 

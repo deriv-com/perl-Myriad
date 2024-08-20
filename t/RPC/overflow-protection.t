@@ -12,7 +12,7 @@ use Myriad::Transport::Memory;
 use Myriad::Transport::Redis;
 use Myriad::RPC::Message;
 use Sys::Hostname qw(hostname);
-use Object::Pad qw(:experimental);
+use Object::Pad qw(:experimental(mop));
 
 use Myriad;
 

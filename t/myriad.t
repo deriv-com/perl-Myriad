@@ -10,7 +10,7 @@ use Test::MockObject;
 use Future::AsyncAwait;
 use IO::Async::Test;
 
-use Object::Pad qw(:experimental);
+use Object::Pad qw(:experimental(mop));
 
 sub loop_notifiers {
     my $loop = shift;
