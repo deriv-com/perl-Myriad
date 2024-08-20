@@ -728,7 +728,7 @@ async method del (@keys) {
 }
 
 async method set_unless_exists ($key, $v, $ttl) {
-    $log->infof('Set [%s] to %s with TTL %s', $key, $v, $ttl);
+    $log->tracef('Set [%s] to %s with TTL %s', $key, $v, $ttl);
     await $redis->set(
         $self->apply_prefix($key),
         $v,
