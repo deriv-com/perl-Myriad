@@ -24,7 +24,7 @@ requires 'Object::Pad::FieldAttr::Checked';
 requires 'Sublike::Extended';
 requires 'Signature::Attribute::Checked', '>= 0.06';
 # Streams
-requires 'Ryu', '>= 3.005';
+requires 'Ryu', '>= 4.000';
 requires 'Ryu::Async', '>= 0.020';
 # IO::Async
 requires 'Heap', '>= 0.80';
