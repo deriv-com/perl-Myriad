@@ -95,12 +95,14 @@ method config ($key) {
 
 async method mutex (@args) {
     my ($code) = extract_by { ref($_) eq 'CODE' } @args;
+    # `name` is used for a shared mutex across services
     my $name = @args % 2 ? shift(@args) : $service_name;
     my %args = @args;
-    $log->infof('Service = %s', "$service");
+    # `key` is used for a suffix for a specific service
+    my $suffix = delete($args{key}) // '';
     my $mutex = Myriad::Mutex->new(
         %args,
-        key     => $name,
+        key     => $name . (length($suffix) ? "[$suffix]" : ''),
         storage => $storage,
         id      => $service->uuid,
     );
