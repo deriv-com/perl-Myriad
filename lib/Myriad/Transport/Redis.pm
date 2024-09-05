@@ -451,7 +451,15 @@ Then destroy that init consumer group.
 
 async method create_stream ($stream) {
     await $self->create_group($stream, 'INIT', '$', 1);
-    await $self->remove_group($stream, 'INIT');
+    try {
+        await $self->remove_group($stream, 'INIT');
+    } catch ($e) {
+        # If we have multiple instances, there's a race condition between creating the group
+        # and another instance trying to delete it before we get there. Ignore errors when
+        # that happens - we don't care who deleted the group, just that it goes away - but
+        # rethrow any other errors.
+        die $e unless $e =~ /NOGROUP/;
+    }
     $log->tracef('created a Redis stream: %s', $stream);
 }
 
