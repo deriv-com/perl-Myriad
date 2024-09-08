@@ -48,12 +48,18 @@ async method acquire {
         ) {
             $log->debugf('Mutex [%s] lost to [%s]', $key, $res);
             my $removed = $storage->when_key_changed($key);
-            await $removed if await $storage->get($key);
+            await Future->wait_any(
+                $self->loop->delay_future(after => 3 + rand),
+                $removed->without_cancel,
+            ) if await $storage->get($key);
         } else {
             $log->debugf('Acquired mutex [%s]', $key);
             $acquired = 1;
             return $self;
         }
+
+        # Slight delay between attempts
+        await $loop->delay_future(after => 0.01 * rand);
     }
 }
 
@@ -66,6 +72,12 @@ async method release {
 }
 
 method DESTROY {
+    if(${^GLOBAL_PHASE} eq 'DESTRUCT') {
+        $log->warnf('Mutex [%s] still acquired at global destruction time', $key)
+            if $acquired;
+        return;
+    }
+
     $self->release->retain;
 }
 
