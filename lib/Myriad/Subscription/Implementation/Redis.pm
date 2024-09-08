@@ -58,9 +58,20 @@ async method create_from_source (%args) {
         source  => $src,
         max_len => $args{max_len} // MAX_ALLOWED_STREAM_LENGTH
     } unless defined $args{subchannel_key};
-    await $redis->hset(
-        "subscription.channel",
-        map { encode_utf8($_) } $service, $args{channel}
+    await Future->wait_all(
+        $redis->zadd(
+            "subscription.channels",
+            $self->loop->time,
+            encode_utf8($service . '/' . $args{channel}),
+        ),
+        $redis->sadd(
+            "subscription.service",
+            map { encode_utf8($_) } $service
+        ),
+        $redis->sadd(
+            "subscription.service{$service}.channels",
+            map { encode_utf8($_) } $args{channel}
+        )
     );
     my %seen_channel;
     $self->adopt_future(
