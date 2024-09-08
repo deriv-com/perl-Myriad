@@ -72,6 +72,12 @@ async method release {
 }
 
 method DESTROY {
+    if(${^GLOBAL_PHASE} eq 'DESTRUCT') {
+        $log->warnf('Mutex [%s] still acquired at global destruction time', $key)
+            if $acquired;
+        return;
+    }
+
     $self->release->retain;
 }
 
