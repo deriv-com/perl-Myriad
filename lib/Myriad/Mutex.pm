@@ -24,6 +24,7 @@ field $key;
 field $id;
 field $storage;
 field $ttl;
+field $loop;
 
 field $acquired;
 
@@ -32,6 +33,7 @@ BUILD (%args) {
     $key = delete $args{key};
     $storage = delete $args{storage};
     $ttl = delete $args{ttl} // 60;
+    $loop = delete $args{loop} // IO::Async::Loop->new;
     die 'invalid remaining keys in %args - '. join ',', sort keys %args if %args;
 }
 
