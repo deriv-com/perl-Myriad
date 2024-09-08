@@ -51,7 +51,7 @@ async method acquire {
             $log->debugf('Mutex [%s] lost to [%s]', $key, $res);
             my $removed = $storage->when_key_changed($key);
             await Future->wait_any(
-                $self->loop->delay_future(after => 3 + rand),
+                $loop->delay_future(after => 3 + rand),
                 $removed->without_cancel,
             ) if await $storage->get($key);
         } else {
