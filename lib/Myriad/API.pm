@@ -102,6 +102,7 @@ async method mutex (@args) {
     my $suffix = delete($args{key}) // '';
     my $mutex = Myriad::Mutex->new(
         %args,
+        loop    => $service->loop,
         key     => $name . (length($suffix) ? "[$suffix]" : ''),
         storage => $storage,
         id      => $service->uuid,
