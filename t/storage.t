@@ -12,6 +12,7 @@ use Test::MemoryGrowth;
 use Log::Any qw($log);
 use Log::Any::Adapter qw(TAP);
 
+use Myriad::Mutex;
 use Myriad::Storage::Implementation::Memory;
 
 use IO::Async::Test;
@@ -77,6 +78,22 @@ for my $class (@classes) {
             await $storage->set(missing_key => 123);
             await $storage->set_unless_exists(missing_key => 456);
             is(await $storage->get(missing_key => ), 123, '->set_unless_exists does not override existing key');
+        })->()->get;
+
+        (async sub {
+            my $mutex = new_ok('Myriad::Mutex', [
+                id      => 123,
+                key     => 'testing_key',
+                storage => $storage,
+                ttl     => 5,
+                loop    => $loop,
+            ]);
+            my $f = $mutex->acquire;
+            isa_ok($f, 'Future');
+            ok(!$f->is_ready, 'acquire starts off incomplete');
+            await $f;
+            ok($f->is_done, 'succeeds');
+            await $mutex->release;
         })->()->get;
 
         done_testing;
