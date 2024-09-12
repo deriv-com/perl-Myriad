@@ -23,30 +23,24 @@ and defaults to no delay.
 use constant RANDOM_DELAY => $ENV{MYRIAD_RANDOM_DELAY} || 0;
 
 use Sub::Util;
+use Attribute::Storage;
 
-sub MODIFY_CODE_ATTRIBUTES ($class, $code, @attrs) {
-    my $name = Sub::Util::subname($code);
-    my ($method_name) = $name =~ m{::([^:]+)$};
+# Attribute for code that wants to defer execution
+sub Defer :ATTR(CODE,NAME) ($class, $method_name, @attrs) {
     my $defer = __PACKAGE__->can('defer_method');
-    for my $attr (@attrs) {
-        if($attr eq 'Defer') {
-            $defer->($class, $method_name, $name);
-        } else {
-            die 'unknown attribute ' . $attr;
-        }
-    }
-    return;
+    $defer->($class, $method_name);
+    return 1;
 }
 
 sub import ($class, @) {
     my $pkg = caller;
-    no strict;
-    *{$pkg . '::MODIFY_CODE_ATTRIBUTES'} = $class->can('MODIFY_CODE_ATTRIBUTES');
+    push meta::get_package($pkg)->get_or_add_symbol(q{@ISA})->reference->@*, __PACKAGE__;
+    return;
 }
 
 # Helper method that allows us to return a not-quite-immediate
 # Future from some inherently non-async code.
-sub defer_method ($package, $name, $fqdn) {
+sub defer_method ($package, $name) {
     $log->tracef('will defer handler for %s::%s by %f', $package, $name, RANDOM_DELAY);
     my $code = $package->can($name);
     my $replacement = async sub ($self, @args) {

@@ -49,6 +49,8 @@ The following Perl language features and modules are applied:
 
 =item * no L<bareword::filehandles>
 
+=item * L<meta>
+
 =item * L<Syntax::Keyword::Try>
 
 =item * L<Syntax::Keyword::Dynamically>
@@ -190,6 +192,8 @@ no multidimensional;
 no bareword::filehandles;
 use mro;
 use experimental qw(signatures);
+use meta;
+no warnings qw(meta::experimental);
 use curry;
 use Data::Checks;
 use Object::Pad::FieldAttr::Checked;
@@ -248,6 +252,8 @@ sub import {
     strict->import;
     warnings->import;
     utf8->import;
+    # ... but turn off experimental warnings for things that we use frequently
+    warnings->unimport(qw(meta::experimental));
 
     # We want mostly the 5.36 featureset, but since that includes `say` and `switch`
     # we need to customise the list somewhat

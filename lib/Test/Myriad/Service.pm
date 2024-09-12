@@ -6,6 +6,7 @@ use warnings;
 # VERSION
 # AUTHORITY
 
+use Attribute::Storage qw(apply_subattrs_for_pkg);
 use Scalar::Util qw(weaken);
 use Sub::Util;
 
@@ -84,25 +85,26 @@ Attaches a new RPC to the service with a defaultt response.
 =cut
 
 method add_rpc ($name, %response) {
-    my $faker = async sub {
-        if ($mocked_rpc->{$name}) {
-            return delete $mocked_rpc->{$name};
-        } elsif (my $default_response = $default_rpc->{$name}) {
-            return $default_response;
+    my $faker = Sub::Util::set_subname(
+        $name, async sub {
+            if ($mocked_rpc->{$name}) {
+                return delete $mocked_rpc->{$name};
+            } elsif (my $default_response = $default_rpc->{$name}) {
+                return $default_response;
+            }
         }
-    };
+    );
 
     # Don't prefix the RPC name it's used in messages delivery.
-
-    Myriad::Service::Attributes->apply_attributes(
-        class => $meta_service->name,
-        code => Sub::Util::set_subname($name, $faker),
-        attributes => ['RPC'],
-    );
 
     $default_rpc->{$name} = \%response;
     $meta_service->add_method($name, $faker);
 
+    apply_subattrs_for_pkg(
+        $pkg,
+        RPC => '',
+        $pkg->can($name),
+    );
     $self;
 }
 
@@ -169,19 +171,21 @@ described in the parameters section, only one of them required.
 
 method add_subscription ($channel, %args) {
     if (my $data = $args{array}) {
-        my $batch = async sub {
-            while (my @next = splice($data->@*, 0, 5)) {
-                return \@next;
+        my $batch = Sub::Util::set_subname(
+            $channel,
+            async sub {
+                while (my @next = splice($data->@*, 0, 5)) {
+                    return \@next;
+                }
             }
-        };
-
-        Myriad::Service::Attributes->apply_attributes(
-            class => $meta_service->name,
-            code => Sub::Util::set_subname($channel, $batch),
-            attributes => ['Batch'],
         );
 
         $meta_service->add_method("batch_$channel", $batch);
+        apply_subattrs_for_pkg(
+            $pkg,
+            Batch => '',
+            $pkg->can("batch_$channel"),
+        );
 
         $self
     } else {
@@ -206,18 +210,19 @@ Adds a new receiver in the given service.
 =cut
 
 method add_receiver ($from, $channel, $handler) {
-    my $receiver = async sub {
-        my ($self, $src) = @_;
-        await $src->each($handler)->completed;
-    };
-
-    Myriad::Service::Attributes->apply_attributes(
-        class => $meta_service->name,
-        code => Sub::Util::set_subname("receiver_$channel", $receiver),
-        attributes => ["Receiver(from => '$from', channel => '$channel')"]
+    my $receiver = Sub::Util::set_subname(
+        "receiver_$channel", async sub {
+            my ($self, $src) = @_;
+            await $src->each($handler)->completed;
+        }
     );
 
     $meta_service->add_method("receiver_$channel", $receiver);
+    apply_subattrs_for_pkg(
+        $pkg,
+        Receiver => "(from => '$from', channel => '$channel')",
+        $pkg->can("receiver_$channel"),
+    );
 
     $self;
 }

@@ -1,5 +1,5 @@
 # Syntax
-requires 'meta', '>= 0.004';
+requires 'meta', '>= 0.008';
 requires 'mro';
 requires 'indirect';
 requires 'multidimensional';
@@ -23,6 +23,7 @@ requires 'Data::Checks', '>= 0.09';
 requires 'Object::Pad::FieldAttr::Checked';
 requires 'Sublike::Extended';
 requires 'Signature::Attribute::Checked', '>= 0.06';
+requires 'Attribute::Storage', '>= 0.12';
 # Streams
 requires 'Ryu', '>= 4.000';
 requires 'Ryu::Async', '>= 0.020';

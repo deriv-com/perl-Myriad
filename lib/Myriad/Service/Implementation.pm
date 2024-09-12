@@ -21,7 +21,7 @@ use Myriad::Storage::Implementation::Redis;
 use Myriad::Subscription;
 use Myriad::Util::UUID;
 
-use Myriad::Service::Attributes;
+use parent qw(Myriad::Service::Attributes);
 
 # Only defer up to this many seconds between batch iterations
 use constant MAX_EXPONENTIAL_BACKOFF => 2;
@@ -35,15 +35,6 @@ BEGIN {
         require OpenTelemetry::Constants;
         OpenTelemetry::Constants->import(qw( SPAN_STATUS_ERROR SPAN_STATUS_OK ));
     }
-}
-
-sub MODIFY_CODE_ATTRIBUTES {
-    my ($class, $code, @attrs) = @_;
-    Myriad::Service::Attributes->apply_attributes(
-        class      => $class,
-        code       => $code,
-        attributes => \@attrs
-    );
 }
 
 field $ryu;

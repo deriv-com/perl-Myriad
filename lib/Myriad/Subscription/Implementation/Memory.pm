@@ -2,7 +2,6 @@ package Myriad::Subscription::Implementation::Memory;
 
 use Myriad::Class ':v2', extends => qw(IO::Async::Notifier), does => [
     'Myriad::Role::Subscription',
-    'Myriad::Util::Defer'
 ];
 
 use constant USE_OPENTELEMETRY => $ENV{USE_OPENTELEMETRY};
@@ -16,6 +15,8 @@ BEGIN {
     }
 }
 
+use Myriad::Util::Defer;
+
 # VERSION
 # AUTHORITY
 
@@ -25,9 +26,6 @@ field $receivers;
 
 field $should_shutdown = 0;
 field $stopped;
-
-# FIXME Need to update :Defer for Object::Pad
-sub MODIFY_CODE_ATTRIBUTES { }
 
 BUILD {
     $receivers = [];

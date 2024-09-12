@@ -1,6 +1,6 @@
 package Myriad::Service::Attributes;
 
-use Myriad::Class;
+use Myriad::Class class => '';
 
 # VERSION
 # AUTHORITY
@@ -26,16 +26,22 @@ which does all the real work.
 
 =cut
 
+use Attribute::Storage qw(get_subattr);
+
 use Myriad::Registry;
 
+use List::Util qw(pairmap);
 use Sub::Util ();
 
-our %KNOWN_ATTRIBUTES = (
-    RPC      => 'rpc',
-    Batch    => 'batch',
-    Emitter  => 'emitter',
-    Receiver => 'receiver',
-);
+our %KNOWN_ATTRIBUTES = map {;
+    my ($sym) = /[A-Za-z0-9_]+/g;
+    $sym => $sym
+} pairmap {
+    my $attr = get_subattr($b->reference, 'ATTR');
+    ($attr && $attr->{code})
+    ? $a
+    : ()
+} meta::get_this_package()->list_symbols(sigils => '&');
 
 =head1 METHODS
 
@@ -45,29 +51,6 @@ Due to L<Attribute::Handlers> limitations at runtime, we need to pick
 up attributes ourselves.
 
 =cut
-
-sub apply_attributes {
-    my ($class, %args) = @_;
-    my $pkg = $args{class};
-    my ($method) = Sub::Util::subname($args{code}) =~ /::([^:]+)$/;
-    for my $attr ($args{attributes}->@*) {
-        my ($type, $args) = $attr =~ m{^([a-z]+)(.*$)}si;
-        # Nasty, but functional for now - this will likely be replaced by
-        # an m//gc parser later with a restricted set of options.
-        $args = eval "+{ $args }" // die 'invalid attribute parameters: ' . $@ if length $args;
-
-        $log->tracef('Applying %s attribute to %s::%s with args (%s)', $type, $pkg, $method, $args);
-        my $handler = $KNOWN_ATTRIBUTES{$type}
-            or die 'unknown attribute ' . $type;
-        $class->$handler(
-            $pkg,
-            $method,
-            $args{code},
-            $args
-        );
-    }
-    return;
-}
 
 =head2 RPC
 
@@ -81,14 +64,14 @@ This will cause the method to be registered in L<Myriad::Registry/add_rpc>.
 
 =cut
 
-sub rpc {
-    my ($class, $pkg, $method, $code, $args) = @_;
+sub RPC:ATTR(CODE,NAME) ($class, $method_name, @args) {
     require Myriad;
+    my $code = $class->can($method_name);
     $Myriad::REGISTRY->add_rpc(
-        $pkg,
-        $method,
+        $class,
+        $method_name,
         $code,
-        $args
+        +{ @args }
     );
 }
 
@@ -114,13 +97,14 @@ Takes the following parameters as a hashref:
 
 =cut
 
-sub batch {
-    my ($class, $pkg, $method, $code, $args) = @_;
+sub Batch:ATTR(CODE,NAME) ($class, $method_name, @args) {
+    require Myriad;
+    my $code = $class->can($method_name);
     $Myriad::REGISTRY->add_batch(
-        $pkg,
-        $method,
+        $class,
+        $method_name,
         $code,
-        $args,
+        +{ @args }
     );
 }
 
@@ -143,13 +127,14 @@ Takes the following parameters as a hashref:
 
 =cut
 
-sub emitter {
-    my ($class, $pkg, $method, $code, $args) = @_;
+sub Emitter:ATTR(CODE,NAME) ($class, $method_name, @args) {
+    require Myriad;
+    my $code = $class->can($method_name);
     $Myriad::REGISTRY->add_emitter(
-        $pkg,
-        $method,
+        $class,
+        $method_name,
         $code,
-        $args,
+        +{ @args }
     );
 }
 
@@ -160,13 +145,14 @@ L<Ryu::Source>. Events will be emitted to that source until termination.
 
 =cut
 
-sub receiver {
-    my ($class, $pkg, $method, $code, $args) = @_;
+sub Receiver:ATTR(CODE,NAME) ($class, $method_name, @args) {
+    require Myriad;
+    my $code = $class->can($method_name);
     $Myriad::REGISTRY->add_receiver(
-        $pkg,
-        $method,
+        $class,
+        $method_name,
         $code,
-        $args,
+        +{ @args }
     );
 }
 
