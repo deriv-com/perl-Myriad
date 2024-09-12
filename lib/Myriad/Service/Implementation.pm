@@ -37,15 +37,6 @@ BEGIN {
     }
 }
 
-sub MODIFY_CODE_ATTRIBUTES {
-    my ($class, $code, @attrs) = @_;
-    Myriad::Service::Attributes->apply_attributes(
-        class      => $class,
-        code       => $code,
-        attributes => \@attrs
-    );
-}
-
 field $ryu;
 field $storage;
 field $myriad;
