@@ -2,7 +2,6 @@ package Myriad::Subscription::Implementation::Memory;
 
 use Myriad::Class ':v2', extends => qw(IO::Async::Notifier), does => [
     'Myriad::Role::Subscription',
-    'Myriad::Util::Defer'
 ];
 
 use constant USE_OPENTELEMETRY => $ENV{USE_OPENTELEMETRY};
@@ -15,6 +14,8 @@ BEGIN {
         OpenTelemetry::Constants->import(qw( SPAN_STATUS_ERROR SPAN_STATUS_OK ));
     }
 }
+
+use Myriad::Util::Defer;
 
 # VERSION
 # AUTHORITY
