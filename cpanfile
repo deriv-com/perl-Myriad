@@ -1,5 +1,5 @@
 # Syntax
-requires 'meta', '>= 0.004';
+requires 'meta', '>= 0.008';
 requires 'mro';
 requires 'indirect';
 requires 'multidimensional';
