@@ -21,7 +21,7 @@ use Myriad::Storage::Implementation::Redis;
 use Myriad::Subscription;
 use Myriad::Util::UUID;
 
-use Myriad::Service::Attributes;
+use parent qw(Myriad::Service::Attributes);
 
 # Only defer up to this many seconds between batch iterations
 use constant MAX_EXPONENTIAL_BACKOFF => 2;

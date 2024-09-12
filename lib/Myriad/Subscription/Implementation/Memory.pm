@@ -26,9 +26,6 @@ field $receivers;
 field $should_shutdown = 0;
 field $stopped;
 
-# FIXME Need to update :Defer for Object::Pad
-sub MODIFY_CODE_ATTRIBUTES { }
-
 BUILD {
     $receivers = [];
 }
