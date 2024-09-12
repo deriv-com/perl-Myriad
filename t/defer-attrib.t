@@ -14,7 +14,7 @@ use Future::AsyncAwait;
 use IO::Async::Loop;
 
 class Example :isa(IO::Async::Notifier) {
-    use parent qw(Myriad::Util::Defer);
+    use Myriad::Util::Defer;
     use Log::Any qw($log);
 
     async method run : Defer (%args) {
