@@ -484,12 +484,16 @@ by default it's C<0> which means the first available message.
 
 async method create_group ($stream, $group, $start_from = '0', $make_stream = 0) {
     try {
-        my $info = await $redis->xinfo_groups($self->apply_prefix($stream));
-        return if grep {
-            my %info = $_->@*;
-            $info{name} eq $group
-        } $info->@*;
+        # If we have the key already, check to see if our groups are there
+        if(await $redis->exists($self->apply_prefix($stream))) {
+            my $info = await $redis->xinfo_groups($self->apply_prefix($stream));
+            return if grep {
+                my %info = $_->@*;
+                $info{name} eq $group
+            } $info->@*;
+        }
 
+        # Otherwise, we'll need to create the group (and possibly the stream too)
         $log->tracef('Need to create group %s on stream %s', $group, $self->apply_prefix($stream));
         my @args = ('CREATE', $self->apply_prefix($stream), $group, $start_from);
         push @args, 'MKSTREAM' if $make_stream;
