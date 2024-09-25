@@ -209,13 +209,13 @@ sure that we have the needed information.
 
 sub is_valid ($message) {
     for my $field (qw(rpc message_id who deadline args)) {
-        Myriad::Exception::RPC::InvalidRequest->throw(reason => "$field is requried") unless exists $message->{$field};
+        Myriad::Exception::RPC::InvalidRequest->throw(reason => "$field is required") unless exists $message->{$field};
     }
 }
 
 =head2 apply_encoding
 
-A helper method to enode the hash fields into JSON string.
+A helper method to encode the hash fields into JSON string.
 
 =cut
 
