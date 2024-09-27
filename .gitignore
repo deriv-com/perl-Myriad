@@ -15,6 +15,7 @@ nytprof.out
 
 # Dizt::Zilla
 /.build/
+/deps/
 
 # Module::Build
 _build/
@@ -33,6 +34,7 @@ inc/
 /MANIFEST.bak
 /pm_to_blib
 /*.zip
+/Myriad-*/
 
 # IDEs ( Some people !)
 .idea

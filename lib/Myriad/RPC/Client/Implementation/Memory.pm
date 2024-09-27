@@ -88,6 +88,12 @@ async method call_rpc ($service, $method, %args) {
             $self->loop->timeout_future(at => $deadline),
             $pending
         );
+
+        unless (exists $message->response->{response}) {
+            my $reason = $message->response->{error}{message} // "Unknown";
+            Myriad::Exception::RPC::RemoteException->throw(reason => "Remote exception is thrown: $reason");
+        }
+
         return $message->response->{response};
     } catch ($e) {
         if ($e =~ /Timeout/) {
@@ -95,7 +101,7 @@ async method call_rpc ($service, $method, %args) {
         } else {
             $e = Myriad::Exception::InternalError->new(reason => $e) unless blessed $e && $e->DOES('Myriad::Exception');
         }
-        $pending->fail($e);
+        $pending->fail($e) unless $pending->is_ready;
         delete $pending_requests->{$message_id};
         $e->throw();
     }
