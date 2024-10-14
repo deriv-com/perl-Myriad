@@ -296,7 +296,7 @@ sub import {
         List::Util->export($pkg => qw(uniqstr));
         # eval "package $pkg; use Object::Pad::FieldAttr::Checked; use Data::Checks qw(NumGE); 1" or die $@;
         Object::Pad::FieldAttr::Checked->import($pkg);
-        Sublike::Extended->import($pkg);
+        Sublike::Extended->import;
         Signature::Attribute::Checked->import($pkg);
         Data::Checks->import(qw(
             Defined
