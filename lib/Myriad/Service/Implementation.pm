@@ -317,7 +317,6 @@ async method load () {
                 sink => $sink
             );
 
-            my $code = $spec->{code};
             $spec->{current} = $sink->source->map($self->$curry::weak(async method ($message) {
                 my $span;
                 if(USE_OPENTELEMETRY) {
@@ -333,7 +332,7 @@ async method load () {
                     if(USE_OPENTELEMETRY) {
                         my $context = OpenTelemetry::Trace->context_with_span($span);
                         dynamically OpenTelemetry::Context->current = $context;
-                        my $response = await $self->$code(
+                        my $response = await $self->$method(
                             $message->args->%*
                         )->on_ready(sub {
                             my $f = shift;
@@ -351,7 +350,7 @@ async method load () {
                         );
                         return $res;
                     } else {
-                        my $response = await $self->$code(
+                        my $response = await $self->$method(
                             $message->args->%*
                         )->on_ready(sub {
                             my $f = shift;
