@@ -49,6 +49,14 @@ async method get : Defer ($k) {
     return $data{$k};
 }
 
+async method expire : Defer ($k) {
+    return undef;
+}
+
+async method hash_expire : Defer ($k) {
+    return undef;
+}
+
 =head2 set
 
 Takes the following parameters:

@@ -738,6 +738,34 @@ async method set ($key, $v, $ttl) {
     await $redis->set($self->apply_prefix($key), $v, defined $ttl ? ('EX', $ttl) : ());
 }
 
+async method expire ($key, $ttl) {
+    if($ttl) {
+        await $redis->expire($self->apply_prefix($key), $ttl);
+    } else {
+        await $redis->persist($self->apply_prefix($key));
+    }
+}
+
+async method hexpire ($key, $hk, $ttl) {
+    my @hk = ref($hk) eq 'ARRAY' ? $hk->@* : $hk;
+    if($ttl) {
+        return await $redis->hexpire(
+            $self->apply_prefix($key),
+            $ttl,
+            qw(fields),
+            0 + @hk,
+            @hk
+        );
+    } else {
+        return await $redis->hpersist(
+            $self->apply_prefix($key),
+            qw(fields),
+            0 + @hk,
+            @hk
+        );
+    }
+}
+
 async method unlink (@keys) {
     await $redis->unlink(map { $self->apply_prefix($_) } @keys);
 }
