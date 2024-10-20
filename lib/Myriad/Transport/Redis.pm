@@ -812,6 +812,10 @@ async method lpop($key) {
     await $redis->lpop($self->apply_prefix($key));
 }
 
+async method hdel ($k, @hash_keys) {
+    await $redis->hdel($self->apply_prefix($k), @hash_keys);
+}
+
 async method hset ($k, $hash_key, $v) {
     await $redis->hset($self->apply_prefix($k), $hash_key, $v);
 }
