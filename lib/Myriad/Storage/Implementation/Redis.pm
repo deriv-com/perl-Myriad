@@ -83,6 +83,14 @@ async method get ($k) {
     await $redis->get($self->apply_prefix($k));
 }
 
+async method expire ($k, $ttl) {
+    await $redis->expire($self->apply_prefix($k), $ttl);
+}
+
+async method hash_expire ($k, $hk, $ttl) {
+    await $redis->hexpire($self->apply_prefix($k), $hk, $ttl);
+}
+
 =head2 set
 
 Takes the following parameters:

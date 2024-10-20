@@ -46,26 +46,66 @@ a concrete implementation - instead, see classes such as:
 =cut
 
 our @WRITE_METHODS = qw(
-    set
-    getset
+    del
+    expire
     getdel
-    incr
-    push
-    unshift
-    pop
-    shift
-    hash_set
+    getset
     hash_add
+    hash_expire
+    hash_set
+    incr
     orderedset_add
-    orderedset_remove_member
     orderedset_remove_byscore
+    orderedset_remove_member
+    pop
+    push
+    set
+    set_unless_exists
+    shift
+    unlink
     unorderedset_add
     unorderedset_remove
     unorderedset_replace
-    del
-    unlink
-    set_unless_exists
+    unshift
 );
+
+=head2 expire
+
+Apply expiry to a value.
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >>   - the relative key in storage
+
+=item * C<< $ttl >> - the TTL of a key, Set this to C<undef> to mark it as permanent key.
+
+=back
+
+=cut
+
+method expire;
+
+=head2 hash_expire
+
+Apply expiry to a value in a hash.
+
+Takes the following parameters:
+
+=over 4
+
+=item * C<< $k >>   - the relative key in storage
+
+=item * C<< $hash_key >>   - the hash key
+
+=item * C<< $ttl >> - the TTL to apply, set this to C<undef> to mark it as permanent key.
+
+=back
+
+=cut
+
+method hash_expire;
 
 =head2 set
 
