@@ -348,6 +348,24 @@ async method hash_get ($k, $hash_key) {
     await $redis->hget($self->apply_prefix($k), $hash_key);
 }
 
+=head2 hash_remove
+
+Takes the following parameters:
+
+=over 4
+
+=item *
+
+=back
+
+Returns a L<Future> indicating success or failure.
+
+=cut
+
+async method hash_remove ($k, $hash_key) {
+    await $redis->hdel($self->apply_prefix($k), ref($hash_key) eq 'ARRAY' ? $hash_key->@* : $hash_key);
+}
+
 =head2 hash_add
 
 Takes the following parameters:

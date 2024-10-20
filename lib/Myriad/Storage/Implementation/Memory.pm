@@ -267,6 +267,30 @@ async method shift : Defer ($k) {
     return shift $data{$k}->@*;
 }
 
+=head2 hash_remove
+
+Takes the following parameters:
+
+=over 4
+
+=item *
+
+=back
+
+Returns a L<Future> which will resolve to .
+
+=cut
+
+async method hash_remove : Defer ($k, $hash_key) {
+    if(ref $hash_key eq 'ARRAY') {
+        return 0 + delete $data{$k}->@{$hash_key->@*};
+    } else {
+        die 'value cannot be a reference for ' . $k if ref $hash_key;
+        delete $data{$k}->{$hash_key};
+        return 1;
+    }
+}
+
 =head2 hash_set
 
 Takes the following parameters:

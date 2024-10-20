@@ -52,6 +52,7 @@ our @WRITE_METHODS = qw(
     getset
     hash_add
     hash_expire
+    hash_remove
     hash_set
     incr
     orderedset_add
@@ -222,6 +223,22 @@ or C<undef> if none available.
 =cut
 
 method shift;
+
+=head2 hash_remove
+
+Takes the following parameters:
+
+=over 4
+
+=item *
+
+=back
+
+Returns a L<Future> which will resolve to .
+
+=cut
+
+method hash_remove;
 
 =head2 hash_set
 
