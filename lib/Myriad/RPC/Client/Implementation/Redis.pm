@@ -97,6 +97,11 @@ async method call_rpc($service, $method, %args) {
             $pending
         );
 
+        if(my $err = $message->response->{error}) {
+            Myriad::Exception::InternalError->new(
+                reason => $err
+            )->throw;
+        }
         return $message->response->{response};
     } catch ($e) {
         $log->warnf('Failed on RPC call - %s', $e);
