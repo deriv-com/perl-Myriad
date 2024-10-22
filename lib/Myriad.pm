@@ -580,10 +580,10 @@ async method shutdown () {
         } splice $shutdown_tasks->@*;
 
         await Future->wait_any(
-            Future->wait_all(
+            $self->loop->timeout_future(after => $ENV{MYRIAD_SHUTDOWN_TIMEOUT} // 10),
+            also => Future->wait_all(
                 @shutdown_operations
             ),
-            $self->loop->timeout_future(after => 5)
         );
 
         $f->done unless $f->is_ready;
@@ -780,11 +780,17 @@ async method run () {
 
     try {
         # Run the startup tasks, order is important
-        for my $task ($startup_tasks->@*) {
+        while(my $task = shift $startup_tasks->@*) {
             $log->tracef('Startup task %s', $task);
             await $self->$task;
         }
     } catch ($e) {
+        try {
+            # Cancel all remaining tasks
+            $_->cancel for splice $startup_tasks->@*;
+        } catch ($e) {
+            $log->errorf('Unable to cancel pending startup tasks: %s', $e);
+        }
         die "Startup tasks failed - $e";
     }
     $log->tracef('Startup tasks done');

@@ -139,9 +139,9 @@ async method start {
     $log->tracef('Starting subscription handler client_id: %s', $client_id);
     await $self->create_streams;
     await Future->wait_any(
-        $should_shutdown->without_cancel,
         $self->receive_items,
-        $self->check_for_overflow
+        $self->check_for_overflow,
+        also => $should_shutdown,
     );
 }
 

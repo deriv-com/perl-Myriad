@@ -87,8 +87,8 @@ async method start () {
             ) if %$messages;
         }), foreach => [ $self->rpc_list->@* ], concurrent => 0 + $self->rpc_list->@*);
         await Future->wait_any(
-            $should_shutdown->without_cancel,
-            $self->loop->delay_future(after => 0.1)
+            $self->loop->delay_future(after => 0.1),
+            also => $should_shutdown,
         );
     }
 }
