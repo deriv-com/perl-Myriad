@@ -104,7 +104,7 @@ async method call_rpc ($service, $method, %args) {
                 reason => $e
             ) unless blessed $e && $e->DOES('Myriad::Exception');
         }
-        $pending->fail($e);
+        $pending->fail($e) unless $pending->is_ready;
         delete $pending_requests->{$message_id};
         $e->throw();
     }
