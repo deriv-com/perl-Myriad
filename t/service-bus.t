@@ -1,7 +1,7 @@
 use Myriad::Class;
 
 use Test::More;
-use Test::Deep;
+use Test::Deep qw(bag cmp_deeply);
 use Test::Fatal;
 use Test::Myriad;
 use Log::Any::Adapter qw(TAP);
