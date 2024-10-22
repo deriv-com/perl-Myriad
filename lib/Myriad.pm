@@ -580,10 +580,10 @@ async method shutdown () {
         } splice $shutdown_tasks->@*;
 
         await Future->wait_any(
-            Future->wait_all(
+            $self->loop->timeout_future(after => $ENV{MYRIAD_SHUTDOWN_TIMEOUT} // 10),
+            also => Future->wait_all(
                 @shutdown_operations
             ),
-            $self->loop->timeout_future(after => 5)
         );
 
         $f->done unless $f->is_ready;
