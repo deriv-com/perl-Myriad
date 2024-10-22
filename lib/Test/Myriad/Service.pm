@@ -72,7 +72,7 @@ BUILD (%args) {
 
 =head2 add_rpc
 
-Attaches a new RPC to the service with a defaultt response.
+Attaches a new RPC to the service with a default response.
 
 =over 4
 

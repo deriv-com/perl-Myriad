@@ -25,12 +25,14 @@ use Myriad::Config;
 use Myriad::Mutex;
 use Myriad::Service::Remote;
 use Myriad::Service::Storage;
+use Myriad::Service::Bus;
 
 field $myriad;
 field $service;
 field $service_name;
 field $storage;
 field $config;
+field $bus;
 
 =head1 METHODS
 
@@ -122,6 +124,17 @@ async method mutex (@args) {
     } else {
         return await $mutex->acquire;
     }
+}
+
+method bus {
+    unless($bus) {
+        $bus = Myriad::Service::Bus->new(
+            service   => $service_name,
+            myriad    => $myriad,
+        );
+        $bus->setup->retain;
+    }
+    return $bus;
 }
 
 1;
