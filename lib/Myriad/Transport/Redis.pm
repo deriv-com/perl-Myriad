@@ -714,7 +714,7 @@ Publish a message through a Redis channel (pub/sub system)
 =cut
 
 async method publish ($channel, $message) {
-    await $redis->publish($self->apply_prefix($channel), "$message");
+    await $redis->spublish($self->apply_prefix($channel), "$message");
 }
 
 =head2 subscribe
@@ -725,7 +725,7 @@ Subscribe to a redis channel.
 
 async method subscribe ($channel) {
     my $instance = await $self->borrow_instance_from_pool;
-    await $instance->subscribe($self->apply_prefix($channel))->on_ready(sub {
+    await $instance->ssubscribe($self->apply_prefix($channel))->on_ready(sub {
         $self->return_instance_to_pool($instance);
     });
 }

@@ -21,6 +21,7 @@ Myriad::Service::Remote - abstraction to access other services over the network.
 use Myriad::Class;
 use Myriad::Service::Storage::Remote;
 use Myriad::Service::Remote::RPC;
+use Myriad::Service::Remote::Bus;
 
 field $myriad;
 field $service_name;
@@ -76,8 +77,14 @@ method rpc () {
     );
 }
 
-=head2 subscribe
+method bus () {
+    return Myriad::Service::Remote::Bus->new(
+        myriad  => $myriad,
+        service => $service_name,
+    );
+}
 
+=head2 subscribe
 
 Please use the C<Receiver> attribute in Myriad.
 
@@ -91,9 +98,9 @@ it subscribes to a channel in the remote service.
 async method subscribe ($channel, $client = "remote_service") {
    my $sink = $myriad->ryu->sink;
    await $myriad->subscription->create_from_sink(
-        sink => $sink,
+        sink    => $sink,
         service => $service_name,
-        client => $client,
+        client  => $client,
         channel => $channel,
     );
    return $sink->source;
