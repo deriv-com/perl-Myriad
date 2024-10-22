@@ -3,6 +3,7 @@ use warnings;
 
 use Test::More;
 use Test::Deep;
+use Test::Fatal;
 use Test::Myriad;
 use Log::Any::Adapter qw(TAP);
 
@@ -16,6 +17,9 @@ package Test::Ping {
     use Myriad::Service;
     async method ping : RPC (%args) {
         return await $api->service_by_name('Test::Pong')->call_rpc('pong');
+    }
+    async method throws_error : RPC (%args) {
+        die 'some error here';
     }
 }
 
@@ -35,14 +39,26 @@ BEGIN {
 await Test::Myriad->ready();
 
 subtest 'RPC should return a response to caller' => sub {
-    my $resposne = $pong_service->call_rpc('pong')->get;
-    cmp_deeply($resposne, {pong => 1});
+    my $response = $pong_service->call_rpc('pong')->get;
+    cmp_deeply($response, {pong => 1});
+    done_testing;
 };
 
 subtest 'RPC client should receive a response' => sub {
     my $response = $ping_service->call_rpc('ping')->get();
     cmp_deeply($response, {pong => 1});
+    done_testing;
 };
 
-done_testing();
+subtest 'Methods which throw errors should raise an exception in the caller too' => sub {
+    my $ex = exception {
+        my $response = $ping_service->call_rpc('throws_error')->get();
+        note explain $response;
+    };
+    isa_ok($ex, 'Myriad::Exception::InternalError');
+    like($ex->reason->{reason}, qr/some error here/, 'exception had original message');
+    done_testing;
+};
+
+done_testing;
 

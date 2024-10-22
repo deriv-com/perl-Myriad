@@ -97,17 +97,26 @@ async method call_rpc($service, $method, %args) {
             $pending
         );
 
+        if(my $err = $message->response->{error}) {
+            Myriad::Exception::InternalError->new(
+                reason => $err
+            )->throw;
+        }
         return $message->response->{response};
     } catch ($e) {
         $log->warnf('Failed on RPC call - %s', $e);
         if ($e =~ /Timeout/) {
-            $e  = Myriad::Exception::RPC::Timeout->new(reason => 'deadline is due');
+            $e  = Myriad::Exception::RPC::Timeout->new(
+                reason => 'deadline is due'
+            );
         } else {
-            $e = Myriad::Exception::InternalError->new(reason => $e) unless blessed $e && $e->DOES('Myriad::Exception');
+            $e = Myriad::Exception::InternalError->new(
+                reason => $e
+            ) unless blessed $e && $e->DOES('Myriad::Exception');
         }
-        $pending->fail($e);
+        $pending->fail($e) unless $pending->is_ready;
         delete $pending_requests->{$message_id};
-        $e->throw();
+        $e->throw;
     }
 }
 
