@@ -91,9 +91,13 @@ async method call_rpc ($service, $method, %args) {
         return $message->response->{response};
     } catch ($e) {
         if ($e =~ /Timeout/) {
-            $e  = Myriad::Exception::RPC::Timeout->new(reason => 'deadline is due');
+            $e  = Myriad::Exception::RPC::Timeout->new(
+                reason => 'deadline is due'
+            );
         } else {
-            $e = Myriad::Exception::InternalError->new(reason => $e) unless blessed $e && $e->DOES('Myriad::Exception');
+            $e = Myriad::Exception::InternalError->new(
+                reason => $e
+            ) unless blessed $e && $e->DOES('Myriad::Exception');
         }
         $pending->fail($e);
         delete $pending_requests->{$message_id};
