@@ -65,6 +65,30 @@ declare_exception 'NoSuchStream' => (
     message => 'There is no such stream, is the other service running?',
 );
 
+BEGIN {
+    unless(eval { Net::Async::Redis::Cluster->VERSION('6.004') }) {
+        # Hotfix for older Net::Async::Redis versions - make sure we use the sharded
+        # lookup for the ->ssubscribe / ->spublish keys, otherwise we'll end up with
+        # an infinite series of `MOVED` redirections
+        no warnings 'redefine';
+        *Net::Async::Redis::Cluster::find_node = async sub {
+            my ($self, @cmd) = @_;
+            my @keys = Net::Async::Redis->extract_keys_for_command(\@cmd);
+            unless(@keys) {
+                warn "could not find the right node, picking one at random - @cmd";
+                return $self->{nodes}[rand($self->{nodes}->@*)];
+            }
+
+            my @slots = map { $self->hash_slot_for_key($_) } @keys;
+            my %slots = map { $_ => 1 } @slots;
+            die 'Multiple slots for command' if keys(%slots) > 1;
+            my $slot = $cmd[0] =~ /^p?(?:un)?subscribe/i ? 0 : shift(@slots);
+            $log->tracef('Look up hash slot for %s - %d', \@keys, $slot);
+            return $self->node_for_slot($slot);
+        };
+    }
+}
+
 field $use_cluster;
 field $use_trim_exact;
 field $redis_uri;
