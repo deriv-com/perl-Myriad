@@ -49,7 +49,7 @@ method is_started() {
 async method start() {
     $started = $self->loop->new_future(label => 'rpc_client_subscription');
     my $sub = await $redis->subscribe($whoami);
-    $subscription = $sub->events->map('payload')->map(sub{
+    $subscription = $sub->map(sub{
         try {
             my $payload = $_;
             $log->tracef('Received RPC response as %s', $payload);
