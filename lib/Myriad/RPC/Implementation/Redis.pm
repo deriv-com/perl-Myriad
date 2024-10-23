@@ -163,7 +163,8 @@ method listen () {
                 await $self->create_group($rpc);
 
                 while (1) {
-                    if(my @items = await $self->redis->read_from_stream(
+                    my $f = $self->redis->when_key_changed($rpc->{stream});
+                    while(my @items = await $self->redis->read_from_stream(
                         stream => $rpc->{stream},
                         group  => $self->group_name,
                         client => $self->whoami
@@ -174,6 +175,9 @@ method listen () {
                             limit  => MAX_ALLOWED_STREAM_LENGTH,
                         );
                     }
+                    $log->tracef('Wait for key change notification on [%s]', $rpc->{stream});
+                    await $f;
+                    $log->tracef('Key [%s] changed, poll again', $rpc->{stream});
                 }
             } catch ($e) {
                 $log->errorf('Failed on RPC listen - %s', $e);

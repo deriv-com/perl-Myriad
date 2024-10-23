@@ -937,6 +937,30 @@ async method watch_keyspace ($pattern) {
     return $events;
 }
 
+field $key_change { +{ } }
+field $key_watcher;
+
+method key_watcher {
+    $key_watcher ||= $self->clientside_cache_events
+        ->each($self->$curry::weak(method {
+            $log->infof('Key change detected for %s', $_);
+            $key_change->{$_}->done if $key_change->{$_};
+            return;
+        }));
+}
+
+method when_key_changed ($k) {
+    $self->key_watcher;
+    my $key = $self->remove_prefix($k);
+    return +(
+        $key_change->{$key} //= $redis->loop->new_future->on_ready(
+            $self->$curry::weak(method {
+                delete $key_change->{$key}
+            })
+        )
+    )->without_cancel;
+}
+
 1;
 
 =head1 AUTHOR
