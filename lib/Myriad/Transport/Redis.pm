@@ -261,8 +261,12 @@ async method read_from_stream (%args) {
     );
     my $claim_required = $claimed->[1]->@* ? 1 : 0;
 
+    # Trigger read-invalidation
+    await $self->stream_info(
+        $args{stream}
+    );
     my ($delivery) = await $self->xreadgroup(
-        BLOCK   => $self->wait_time,
+        BLOCK   => 1, # $self->wait_time,
         GROUP   => $group, $client,
         COUNT   => $self->batch_count,
         STREAMS => ($stream, ($claim_required ? '0' : '>')),
