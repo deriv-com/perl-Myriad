@@ -41,7 +41,9 @@ method configure (%args) {
 }
 
 method is_started() {
-    return defined $started ? $started : Myriad::Exception::InternalError->new(message => '->start was not called')->throw;
+    return defined($started)
+    ? $started
+    : Myriad::Exception::InternalError->new(message => '->start was not called')->throw;
 }
 
 async method start() {
