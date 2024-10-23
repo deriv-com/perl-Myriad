@@ -729,9 +729,10 @@ Subscribe to a redis channel.
 
 async method subscribe ($channel) {
     my $instance = await $self->borrow_instance_from_pool;
-    await $instance->ssubscribe($self->apply_prefix($channel))->on_ready(sub {
+    my $sub = await $instance->ssubscribe($self->apply_prefix($channel))->on_ready(sub {
         $self->return_instance_to_pool($instance);
     });
+    return $sub->events->map('payload');
 }
 
 async method get($key) {
