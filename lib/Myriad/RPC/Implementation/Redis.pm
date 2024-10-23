@@ -34,17 +34,10 @@ with 'Myriad::Role::RPC';
 
 our @EXPORT_OK = qw(stream_name_from_service);
 
-field $redis;
-method redis { $redis }
-
-field $group_name;
-method group_name { $group_name }
-
-field $whoami;
-method whoami { $whoami }
-
-field $rpc_list;
-method rpc_list { $rpc_list }
+field $redis:reader;
+field $group_name:reader;
+field $whoami:reader;
+field $rpc_list:reader;
 
 field $running;
 field $processing;
