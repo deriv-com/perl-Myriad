@@ -949,7 +949,7 @@ method key_watcher {
     $key_watcher ||= $self->clientside_cache_events
         ->each($self->$curry::weak(method {
             $log->tracef('Key change detected for %s, waiting for %s', $_, [ sort keys $key_change->%* ]);
-            $key_change->{$_}->done if $key_change->{$_};
+            $key_change->{$_}->done if $key_change->{$_} and !$key_change->{$_}->is_ready;
             return;
         }));
 }
