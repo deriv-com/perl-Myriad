@@ -956,7 +956,7 @@ method key_watcher {
 
 method when_key_changed ($k) {
     $self->key_watcher;
-    my $key = $self->remove_prefix($k);
+    my $key = $k; # we use original key here, since our ->clientside_cache_events watcher automatically removes the prefix
     return +(
         $key_change->{$key} //= $redis->loop->new_future->on_ready(
             $self->$curry::weak(method {
