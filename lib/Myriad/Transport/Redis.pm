@@ -948,15 +948,15 @@ field $key_watcher;
 method key_watcher {
     $key_watcher ||= $self->clientside_cache_events
         ->each($self->$curry::weak(method {
-            $log->infof('Key change detected for %s', $_);
-            $key_change->{$_}->done if $key_change->{$_};
+            $log->tracef('Key change detected for %s, waiting for %s', $_, [ sort keys $key_change->%* ]);
+            $key_change->{$_}->done if $key_change->{$_} and !$key_change->{$_}->is_ready;
             return;
         }));
 }
 
 method when_key_changed ($k) {
     $self->key_watcher;
-    my $key = $self->remove_prefix($k);
+    my $key = $k; # we use original key here, since our ->clientside_cache_events watcher automatically removes the prefix
     return +(
         $key_change->{$key} //= $redis->loop->new_future->on_ready(
             $self->$curry::weak(method {
