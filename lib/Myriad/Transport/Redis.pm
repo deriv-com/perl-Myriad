@@ -261,8 +261,12 @@ async method read_from_stream (%args) {
     );
     my $claim_required = $claimed->[1]->@* ? 1 : 0;
 
+    # Trigger read-invalidation
+    await $self->stream_info(
+        $args{stream}
+    );
     my ($delivery) = await $self->xreadgroup(
-        BLOCK   => $self->wait_time,
+        BLOCK   => 1, # $self->wait_time,
         GROUP   => $group, $client,
         COUNT   => $self->batch_count,
         STREAMS => ($stream, ($claim_required ? '0' : '>')),
@@ -935,6 +939,30 @@ async method watch_keyspace ($pattern) {
         shift->return_instance_to_pool($instance);
     }));
     return $events;
+}
+
+field $key_change { +{ } }
+field $key_watcher;
+
+method key_watcher {
+    $key_watcher ||= $self->clientside_cache_events
+        ->each($self->$curry::weak(method {
+            $log->infof('Key change detected for %s', $_);
+            $key_change->{$_}->done if $key_change->{$_};
+            return;
+        }));
+}
+
+method when_key_changed ($k) {
+    $self->key_watcher;
+    my $key = $self->remove_prefix($k);
+    return +(
+        $key_change->{$key} //= $redis->loop->new_future->on_ready(
+            $self->$curry::weak(method {
+                delete $key_change->{$key}
+            })
+        )
+    )->without_cancel;
 }
 
 1;

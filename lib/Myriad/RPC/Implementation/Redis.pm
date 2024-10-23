@@ -34,27 +34,20 @@ with 'Myriad::Role::RPC';
 
 our @EXPORT_OK = qw(stream_name_from_service);
 
-field $redis;
-method redis { $redis }
-
-field $group_name;
-method group_name { $group_name }
-
-field $whoami;
-method whoami { $whoami }
-
-field $rpc_list;
-method rpc_list { $rpc_list }
+field $redis:reader;
+field $group_name:reader;
+field $whoami:reader;
+field $rpc_list:reader;
 
 field $running;
 field $processing;
 
 sub stream_name_from_service ($service, $method) {
-    return RPC_PREFIX . ".$service.". RPC_SUFFIX . "/$method"
+    return RPC_PREFIX . ".{$service}.". RPC_SUFFIX . "/$method"
 }
 
 sub service_from_stream_name ($stream_name) {
-    my ($service, $method) = $stream_name =~ m{\Q@{[RPC_PREFIX()]}\E\.([^/]+)\.\Q@{[RPC_SUFFIX]}\E/(.*)};
+    my ($service, $method) = $stream_name =~ m{\Q@{[RPC_PREFIX()]}\E\.\{([^\}]+)\}\.\Q@{[RPC_SUFFIX]}\E/(.*)};
     return ($service, $method);
 }
 
@@ -163,7 +156,8 @@ method listen () {
                 await $self->create_group($rpc);
 
                 while (1) {
-                    if(my @items = await $self->redis->read_from_stream(
+                    my $f = $self->redis->when_key_changed($rpc->{stream});
+                    while(my @items = await $self->redis->read_from_stream(
                         stream => $rpc->{stream},
                         group  => $self->group_name,
                         client => $self->whoami
@@ -174,6 +168,9 @@ method listen () {
                             limit  => MAX_ALLOWED_STREAM_LENGTH,
                         );
                     }
+                    $log->tracef('Wait for key change notification on [%s]', $rpc->{stream});
+                    await $f;
+                    $log->tracef('Key [%s] changed, poll again', $rpc->{stream});
                 }
             } catch ($e) {
                 $log->errorf('Failed on RPC listen - %s', $e);
