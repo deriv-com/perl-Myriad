@@ -27,22 +27,8 @@ use constant STORAGE_PREFIX => 'storage';
 # L<Myriad::Transport::Redis> instance to manage the connections.
 field $redis;
 
-# L<Future>s which complete when there's a change notification for the given key
-field $key_change { +{ } }
-
-field $key_watcher;
-
 BUILD (%args) {
     $redis = delete $args{redis} // die 'need a Transport instance';
-}
-
-method key_watcher {
-    $key_watcher ||= $redis->clientside_cache_events
-        ->each($self->$curry::weak(method {
-            $log->infof('Key change detected for %s', $_);
-            $key_change->{$_}->done if $key_change->{$_};
-            return;
-        }));
 }
 
 =head2 apply_prefix
@@ -150,15 +136,7 @@ async method getset ($k, $v) {
 }
 
 method when_key_changed ($k) {
-    $self->key_watcher;
-    my $key = $self->remove_prefix($k);
-    return +(
-        $key_change->{$key} //= $redis->loop->new_future->on_ready(
-            $self->$curry::weak(method {
-                delete $key_change->{$key}
-            })
-        )
-    )->without_cancel;
+    return $redis->when_key_changed($self->apply_prefix($k));
 }
 
 =head2 getdel
