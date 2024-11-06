@@ -76,6 +76,7 @@ field $wait_time;
 field $batch_count = 500;
 field $max_pool_count;
 field $clientside_cache_size;
+field $use_read_replica = 0;
 field $prefix;
 field $ryu;
 field $starting;
@@ -98,6 +99,7 @@ method configure (%args) {
     $max_pool_count = exists $args{max_pool_count} ? delete $args{max_pool_count} : 10;
     $prefix //= exists $args{prefix} ? delete $args{prefix} : 'myriad';
     $clientside_cache_size = delete $args{client_side_cache_size} if exists $args{client_side_cache_size};
+    $use_read_replica = delete $args{use_read_replica} if exists $args{use_read_replica};
     $wait_time = exists $args{wait_time} ? delete $args{wait_time} : 15_000;
     # limit minimum wait time to 100ms
     $wait_time = 100 if $wait_time < 100;
@@ -640,6 +642,7 @@ async method redis () {
     if($use_cluster) {
         $instance = $cluster_class->new(
             client_side_cache_size => $clientside_cache_size,
+            use_read_replica       => $use_read_replica,
         );
         $self->add_child(
             $instance
