@@ -27,14 +27,32 @@ use Myriad::Service::Remote;
 use Myriad::Service::Storage;
 use Myriad::Service::Bus;
 
+=head1 METHODS - Accessors
+
+=cut
+
 field $myriad;
 field $service;
-field $service_name;
-field $storage;
+
+=head2 service_name
+
+Returns the name of this service (as a plain string).
+
+=cut
+
+field $service_name : reader;
+
+=head2 storage
+
+Returns a L<Myriad::Role::Storage>-compatible instance for interacting with storage.
+
+=cut
+
+field $storage : reader;
 field $config;
 field $bus;
 
-=head1 METHODS
+=head1 METHODS - Other
 
 =cut
 
@@ -48,14 +66,6 @@ BUILD (%args) {
         storage => $myriad->storage
     );
 }
-
-=head2 storage
-
-Returns a L<Myriad::Role::Storage>-compatible instance for interacting with storage.
-
-=cut
-
-method storage () { $storage }
 
 =head2 service_by_name
 
