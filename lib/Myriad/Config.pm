@@ -55,6 +55,7 @@ our %DEFAULTS = (
     transport_redis                 => 'redis://localhost:6379',
     transport_redis_cache           => 0,
     transport_use_trim_exact        => 0,
+    transport_use_read_replica      => 0,
     transport_cluster               => 0,
     transport_pool_count            => 10,
     transport_wait_time             => 15_000,

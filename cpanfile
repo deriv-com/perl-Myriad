@@ -70,7 +70,7 @@ requires 'Net::Async::OpenTracing', '>= 1.001';
 requires 'Log::Any::Adapter::OpenTracing', '>= 0.001';
 requires 'Metrics::Any::Adapter::Statsd', '>= 0.03';
 # Transport
-requires 'Net::Async::Redis', '>= 6.003';
+requires 'Net::Async::Redis', '>= 6.004';
 recommends 'Net::Async::Redis::XS', '>= 1.001';
 requires 'Net::Async::HTTP', '>= 0.49';
 requires 'Net::Async::HTTP::Server', '>= 0.14';
