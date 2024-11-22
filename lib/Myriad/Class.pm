@@ -186,7 +186,7 @@ The latest available version is C<:v2>.
 =cut
 
 use Object::Pad;
-use Object::Pad qw(:experimental(mop));
+use Object::Pad ":experimental(mop composed_adjust)";
 no indirect qw(fatal);
 no multidimensional;
 no bareword::filehandles;
@@ -196,6 +196,13 @@ use meta;
 no warnings qw(meta::experimental);
 use curry;
 use Data::Checks;
+use Object::Pad::Operator::Of;
+use Object::Pad::LexicalMethods;
+use Object::Pad::Keyword::Accessor;
+use Object::Pad::FieldAttr::Final;
+use Object::Pad::FieldAttr::Isa;
+use Object::Pad::FieldAttr::Trigger;
+use Object::Pad::FieldAttr::LazyInit;
 use Object::Pad::FieldAttr::Checked;
 use Sublike::Extended;
 use Signature::Attribute::Checked;
@@ -318,6 +325,13 @@ sub import {
             Any
             All
         ));
+        Object::Pad::Operator::Of->import;
+        Object::Pad::LexicalMethods->import;
+        Object::Pad::Keyword::Accessor->import;
+        Object::Pad::FieldAttr::Final->import;
+        Object::Pad::FieldAttr::Isa->import;
+        Object::Pad::FieldAttr::Trigger->import;
+        Object::Pad::FieldAttr::LazyInit->import;
     }
 
     {
@@ -402,7 +416,7 @@ sub import {
     }
 
     if(my $class = $args{class} // $pkg) {
-        Object::Pad->import_into($pkg, ":experimental(init_expr mop custom_field_attr)");
+        Object::Pad->import_into($pkg, ":experimental(init_expr mop composed_adjust custom_field_attr)");
 
         my $method = 'begin_' . ($args{type} || 'class');
         Module::Load::load($args{extends}) if $args{extends};

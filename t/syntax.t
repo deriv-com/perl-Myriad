@@ -171,6 +171,36 @@ subtest 'Myriad::Class :v2' => sub {
     like(exception {
         $obj->checked('xx')
     }, qr/\Qsatisfying NumGE(5)/, 'numeric check fails on invalid number');
+
+    {
+        is(eval(q{
+            package local::v2::of;
+            use Myriad::Class qw(:v2);
+            field $example:param;
+            method diff ($obj) {
+             $example - ($example of $obj)
+            }
+            __PACKAGE__
+        }), 'local::v2::of', 'can compile using of') or diag $@;
+        my $x = new_ok('local::v2::of' => [example => 7]);
+        my $y = new_ok('local::v2::of' => [example => 3]);
+        is($x->diff($y), 4, 'of operator');
+    }
+    {
+        is(eval(q{
+            package local::v2::lex;
+            use Myriad::Class qw(:v2);
+
+            field $f = 4;
+            my method lex () { $f + 1 }
+            method example () {
+             2 * $self->&lex
+            }
+            __PACKAGE__
+        }), 'local::v2::lex', 'can compile using lexical methods') or diag $@;
+        my $x = new_ok('local::v2::lex');
+        is($x->example, 10, 'lexical method calling');
+    }
     done_testing;
 };
 done_testing;
