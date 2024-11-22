@@ -186,7 +186,7 @@ The latest available version is C<:v2>.
 =cut
 
 use Object::Pad;
-use Object::Pad qw(:experimental(mop));
+use Object::Pad ":experimental(mop composed_adjust)";
 no indirect qw(fatal);
 no multidimensional;
 no bareword::filehandles;
@@ -416,7 +416,7 @@ sub import {
     }
 
     if(my $class = $args{class} // $pkg) {
-        Object::Pad->import_into($pkg, ":experimental(init_expr mop custom_field_attr)");
+        Object::Pad->import_into($pkg, ":experimental(init_expr mop composed_adjust custom_field_attr)");
 
         my $method = 'begin_' . ($args{type} || 'class');
         Module::Load::load($args{extends}) if $args{extends};
