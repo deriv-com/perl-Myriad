@@ -130,7 +130,7 @@ subtest 'attributes' => sub {
     isa_ok(eval(q{
         package local::attributes;
         use Myriad::Service;
-        method test:RPC { $self->can('test') ? 'ok' : 'not ok' }
+        method test :RPC { $self->can('test') ? 'ok' : 'not ok' }
         __PACKAGE__
     }), 'IO::Async::Notifier') or diag $@;
     my $obj = new_ok('local::attributes' => [name => 'test_attributes']);

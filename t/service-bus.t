@@ -21,7 +21,7 @@ package Test::Sender {
         $log->debugf('Startup complete');
     }
 
-    async method send:RPC (%args) {
+    async method send :RPC (%args) {
         $log->debugf('Calling send with %s', \%args);
         try {
             $log->debugf('Send to remote bus');
@@ -44,7 +44,7 @@ package Test::Receiver {
            push $events->@*, $ev;
        });
    }
-   async method events:RPC {
+   async method events :RPC {
        return $events;
    }
 }
